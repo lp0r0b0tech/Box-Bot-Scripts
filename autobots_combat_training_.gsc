@@ -535,16 +535,17 @@ serverBotFill()
         target = combatTrainingMaxPlayers;
         if (target < 0) target = 0;
 
-        spawnTeam = "autoassign";
-        preferredTeam = getPreferredBotSpawnTeam();
-        if (preferredTeam != "")
-            spawnTeam = preferredTeam;
-
         attempts = 0;
         while (countTotalPlayersForCap() < target && attempts < maxSpawnAttemptsPerTick)
         {
             if (countTotalPlayersForCap() >= target) break;
             attempts++;
+
+            spawnTeam = "autoassign";
+            preferredTeam = getPreferredBotSpawnTeam();
+            if (preferredTeam != "")
+                spawnTeam = preferredTeam;
+
             if (!spawnBotsSafe(1, spawnTeam)) wait spawnFailBackoff;
             else wait (awStyleEnable ? awPressureSpawnDelay : 0.25);
         }
@@ -603,8 +604,10 @@ getPreferredBotSpawnTeam()
     otherTeam = "allies";
     if (preferredTeam == "allies") otherTeam = "axis";
 
-    currentLead = countPlayersOnTeam(preferredTeam) - countPlayersOnTeam(otherTeam);
-    if (currentLead < botWinBiasLead) return preferredTeam;
+    humanLead = countHumansOnTeam(preferredTeam) - countHumansOnTeam(otherTeam);
+    totalLead = countPlayersOnTeam(preferredTeam) - countPlayersOnTeam(otherTeam);
+    botLead = totalLead - humanLead;
+    if (botLead < botWinBiasLead) return preferredTeam;
 
     return "";
 }
