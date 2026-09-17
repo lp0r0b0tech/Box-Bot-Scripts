@@ -532,6 +532,18 @@ runSpawnBiasSanityCheck()
         failures++;
     }
 
+    if (pickPreferredBotWinTeamByCounts(0, 1) != "allies")
+    {
+        warnOnce("spawn_bias_pref_allies_zero", "spawn bias sanity failed for solo axis humans");
+        failures++;
+    }
+
+    if (pickPreferredBotWinTeamByCounts(1, 0) != "axis")
+    {
+        warnOnce("spawn_bias_pref_axis_zero", "spawn bias sanity failed for solo allies humans");
+        failures++;
+    }
+
     if (pickPreferredBotWinTeamByCounts(2, 2) != "")
     {
         warnOnce("spawn_bias_pref_tie", "spawn bias sanity failed for tied human teams");
