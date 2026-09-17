@@ -9,7 +9,7 @@
 // --------------------------
 // Config
 // --------------------------
-combatTrainingMaxPlayers = 12;
+combatTrainingMaxPlayers = 18;
 
 botDifficultyMode = "god";
 botDifficultyFallback = "ultra";
@@ -47,9 +47,9 @@ debugHeartbeatInterval = 5.0;
 botDifficultyEnforcerInterval = 2.0;
 godTierTeamBalanceEnable = true;
 godTierTeamBalanceDelta = 1;
-godTierTeamBalanceInterval = 2.0;
+godTierTeamBalanceInterval = 0.25;
 botWinBiasEnable = true;
-botWinBiasLead = 2;
+botWinBiasLead = 6;
 spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 8;
 
@@ -456,6 +456,13 @@ onPlayerConnect()
 
         if (player isBotEntity())
         {
+            if (botWinBiasEnable)
+            {
+                preferredTeam = getPreferredBotWinTeam();
+                if (preferredTeam != "")
+                    moveBotToTeamCompat(player, preferredTeam);
+            }
+
             player applyAutobotDifficulty(getSelectedBotDifficulty());
             player setBotRankCompat(defaultBotLevel);
             player applyBotPrestigeSetting();
