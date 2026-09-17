@@ -335,7 +335,60 @@ getDifficultyApplyToken(difficulty)
 {
     diff = normalizeDifficultyName(difficulty);
     if (diff != "sbmm") return diff;
-    return "sbmm_" + getSbmmDifficultyBucket(getSbmmScale());
+    token = "sbmm_" + getSbmmDifficultyBucket(getSbmmScale());
+    if (!isValidDifficultyApplyToken(diff, token))
+    {
+        warnOnce("sbmm_token_contract", "sbmm apply token contract failed; falling back to sbmm_0");
+        return "sbmm_0";
+    }
+    return token;
+}
+
+isValidDifficultyApplyToken(difficulty, token)
+{
+    diff = normalizeDifficultyName(difficulty);
+    if (!isDefined(token) || token == "") return false;
+    if (diff != "sbmm") return token == diff;
+    if (!isSubStr(token, "sbmm_")) return false;
+    if (token == "sbmm" || token == "sbmm_") return false;
+    return true;
+}
+
+verifyAppliedDifficultyTokens(expectedDifficulty, context)
+{
+    if (!isDefined(level.players)) return 0;
+
+    diff = normalizeDifficultyName(expectedDifficulty);
+    expectedToken = getDifficultyApplyToken(diff);
+    failures = 0;
+
+    foreach (p in level.players)
+    {
+        if (!isDefined(p) || !(p isBotEntity())) continue;
+
+        if (!isDefined(p.pers) || !isDefined(p.pers["autobot_diff_applied"]))
+        {
+            warnOnce("diff_apply_missing_" + context, "missing autobot_diff_applied after " + context);
+            failures++;
+            continue;
+        }
+
+        appliedToken = p.pers["autobot_diff_applied"];
+        if (!isValidDifficultyApplyToken(diff, appliedToken))
+        {
+            warnOnce("diff_apply_invalid_" + context, "invalid autobot_diff_applied token \"" + appliedToken + "\" after " + context);
+            failures++;
+            continue;
+        }
+
+        if (diff != "sbmm" && appliedToken != expectedToken)
+        {
+            warnOnce("diff_apply_mismatch_" + context, "unexpected autobot_diff_applied token \"" + appliedToken + "\" after " + context);
+            failures++;
+        }
+    }
+
+    return failures;
 }
 
 getActiveDifficultyLabel()
@@ -893,8 +946,8 @@ serverBotFill()
 getEntityTeamName(ent)
 {
     if (!isDefined(ent)) return "";
-    if (isDefined(ent.team)) return normalizeTeamName(ent.team);
     if (isDefined(ent.sessionteam)) return normalizeTeamName(ent.sessionteam);
+    if (isDefined(ent.team)) return normalizeTeamName(ent.team);
     if (isDefined(ent.pers) && isDefined(ent.pers["team"])) return normalizeTeamName(ent.pers["team"]);
     return "";
 }
@@ -980,6 +1033,7 @@ delayedBotDifficultyApply()
     wait 0.5;
     safeSetBotDifficultyDvar();
     applyDifficultyToAllBots(true);
+    level.delayedDifficultyApplyFailures = verifyAppliedDifficultyTokens(getSelectedBotDifficulty(), "delayed_apply");
 }
 
 botDifficultyEnforcer()
