@@ -732,7 +732,8 @@ runSpawnBiasSanityCheck()
         failures++;
     }
 
-    if (normalizeSpawnTeam(undefined) != "autoassign")
+    undefinedTeam = level.autobotsWarnOnce["spawn_bias_missing_team"];
+    if (normalizeSpawnTeam(undefinedTeam) != "autoassign")
     {
         warnOnce("spawn_bias_undef", "spawn bias sanity failed for undefined");
         failures++;
