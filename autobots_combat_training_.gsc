@@ -9,9 +9,7 @@
 // --------------------------
 // Config
 // --------------------------
-combatTrainingForce = true;
 combatTrainingMaxPlayers = 12;
-dedicatedMaxPlayers = 18;
 
 botDifficultyMode = "god";
 botDifficultyFallback = "ultra";
@@ -29,7 +27,6 @@ defaultBotPrestige = 23;
 
 awStyleEnable = true;
 awPressureSpawnDelay = 0.15;
-awTrimDelay = 0.03;
 awHealthRegenOnSpawn = true;
 
 opWeaponsEnable = true;
@@ -42,7 +39,6 @@ opGiveFullAmmo = true;
 
 compatUseSetPrestigeNative = false;
 compatUseSetRankNative = false;
-compatUseBotDropNative = true;
 
 debugAutobots = true;
 debugVerbose = false;
@@ -68,8 +64,6 @@ strictBotIdentityMode = true;
 spawnConfirmPhase1Delay = 0.05;
 spawnConfirmPhase2Delay = 0.10;
 spawnConfirmPhase3Delay = 0.20;
-trimSafetyMaxDrops = 32;
-countStateLogUnknownOnce = true;
 
 // --------------------------
 // Init
@@ -83,9 +77,7 @@ init()
     }
 
     if (combatTrainingMaxPlayers < 0) combatTrainingMaxPlayers = 0;
-    if (dedicatedMaxPlayers < 0) dedicatedMaxPlayers = 0;
     if (awPressureSpawnDelay < 0.05) awPressureSpawnDelay = 0.05;
-    if (awTrimDelay < 0.01) awTrimDelay = 0.01;
     if (debugHeartbeatInterval < 0.2) debugHeartbeatInterval = 0.2;
     if (botDifficultyEnforcerInterval < 1.0) botDifficultyEnforcerInterval = 1.0;
     if (godTierTeamBalanceInterval < 0.2) godTierTeamBalanceInterval = 0.2;
@@ -98,7 +90,6 @@ init()
     if (spawnConfirmPhase1Delay < 0.01) spawnConfirmPhase1Delay = 0.01;
     if (spawnConfirmPhase2Delay < 0.01) spawnConfirmPhase2Delay = 0.01;
     if (spawnConfirmPhase3Delay < 0.01) spawnConfirmPhase3Delay = 0.01;
-    if (trimSafetyMaxDrops < 1) trimSafetyMaxDrops = 1;
 
     if (!isDefined(level.autobotsWarnOnce)) level.autobotsWarnOnce = [];
     if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
@@ -109,7 +100,6 @@ init()
     defaultBotDifficulty = botDifficultyMode;
     lockedBotDifficulty = botDifficultyMode;
 
-    level.combatTraining = true;
     safeSetBotDifficultyDvar();
 
     level thread onPlayerConnect();
@@ -455,10 +445,6 @@ onPlayerConnect()
 
             if (awHealthRegenOnSpawn) safeFullHeal(player);
         }
-        else if (!level.combatTraining)
-        {
-            trimBotsToTarget();
-        }
     }
 }
 
@@ -483,49 +469,6 @@ spawnBotsSafe(amount)
     return false;
 }
 
-pickBotForDrop()
-{
-    bots = [];
-    if (!isDefined(level.players)) return undefined;
-
-    foreach (p in level.players)
-        if (isDefined(p) && (p isBotEntity()))
-            bots[bots.size] = p;
-
-    if (bots.size <= 0) return undefined;
-    return bots[randomint(bots.size)];
-}
-
-kickOneBot()
-{
-    p = pickBotForDrop();
-    if (!isDefined(p)) return false;
-    if (!compatUseBotDropNative) return false;
-    p bot_drop();
-    return true;
-}
-
-trimBotsToTarget()
-{
-    if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
-
-    hadLock = level.autobotAdjusting;
-    if (!hadLock) level.autobotAdjusting = true;
-
-    target = level.combatTraining ? combatTrainingMaxPlayers : dedicatedMaxPlayers;
-    if (target < 0) target = 0;
-
-    safety = trimSafetyMaxDrops;
-    while (countTotalPlayersForCap() > target && countBots() > 0 && safety > 0)
-    {
-        if (!kickOneBot()) break;
-        safety--;
-        wait (awStyleEnable ? awTrimDelay : 0.05);
-    }
-
-    if (!hadLock) level.autobotAdjusting = false;
-}
-
 serverBotFill()
 {
     level endon("game_ended");
@@ -537,7 +480,7 @@ serverBotFill()
         if (level.autobotAdjusting) { wait 0.10; continue; }
         level.autobotAdjusting = true;
 
-        target = level.combatTraining ? combatTrainingMaxPlayers : dedicatedMaxPlayers;
+        target = combatTrainingMaxPlayers;
         if (target < 0) target = 0;
 
         attempts = 0;
@@ -548,9 +491,6 @@ serverBotFill()
             if (!spawnBotsSafe(1)) wait spawnFailBackoff;
             else wait (awStyleEnable ? awPressureSpawnDelay : 0.25);
         }
-
-        if (!level.combatTraining && countTotalPlayersForCap() > target)
-            trimBotsToTarget();
 
         level.autobotAdjusting = false;
         wait (awStyleEnable ? 0.15 : 0.25);
@@ -683,13 +623,12 @@ liveDebugHeartbeat()
     {
         if (debugAutobots && debugVerbose)
         {
-            target = level.combatTraining ? combatTrainingMaxPlayers : dedicatedMaxPlayers;
+            target = combatTrainingMaxPlayers;
             dbg("heartbeat totalCap=" + countTotalPlayersForCap()
                 + " totalRaw=" + (isDefined(level.players) ? level.players.size : 0)
                 + " humans=" + countHumans()
                 + " bots=" + countBots()
                 + " target=" + target
-                + " ct=" + level.combatTraining
                 + " diff=" + getSelectedBotDifficulty()
                 + " dvar(bot_difficulty)=" + level.autobotDvarDifficulty
                 + " alliesBots=" + countAlliedBots()
@@ -712,7 +651,6 @@ run60SecondSanityTest()
 
     samples = 0;
     dvarFailures = 0;
-    overTargetFailures = 0;
     anyBotsSeen = false;
     badBotDiffSeen = 0;
     maxOvershoot = 0;
@@ -727,14 +665,13 @@ run60SecondSanityTest()
 
         total = countTotalPlayersForCap();
         bots = countBots();
-        target = level.combatTraining ? combatTrainingMaxPlayers : dedicatedMaxPlayers;
+        target = combatTrainingMaxPlayers;
         dvarNow = getdvar("bot_difficulty");
         if (!isDefined(dvarNow)) dvarNow = "";
         dvarNow = toLower(dvarNow);
 
         if (bots > 0) anyBotsSeen = true;
         if (dvarNow != expectedDvar) dvarFailures++;
-        if (!level.combatTraining && total > target) overTargetFailures++;
 
         overshoot = total - target;
         if (overshoot > maxOvershoot) maxOvershoot = overshoot;
@@ -760,7 +697,6 @@ run60SecondSanityTest()
         + " expectedApplied=" + expectedApplied
         + " expectedDvar=" + expectedDvar
         + " dvarFailures=" + dvarFailures
-        + " overTargetFailures=" + overTargetFailures
         + " anyBotsSeen=" + anyBotsSeen
         + " badBotDiffSeen=" + badBotDiffSeen
         + " maxOvershoot=" + maxOvershoot
