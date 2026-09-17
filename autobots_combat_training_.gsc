@@ -143,6 +143,7 @@ init()
 
     refreshSbmmState();
     safeSetBotDifficultyDvar();
+    level.initNormalizationFailures = validateInitConfigNormalization();
     level.spawnBiasSanityFailures = 0;
     if (sanityTestEnable)
         level.spawnBiasSanityFailures = runSpawnBiasSanityCheck();
@@ -207,7 +208,10 @@ detectCombatTraining()
 normalizeTeamName(value)
 {
     if (!isDefined(value)) return "";
-    return toLower(value + "");
+    teamName = toLower(value + "");
+    if (teamName == "team_allies") return "allies";
+    if (teamName == "team_axis") return "axis";
+    return teamName;
 }
 
 dbg(msg)
@@ -271,6 +275,42 @@ clampFloat(value, minValue, maxValue)
     if (value < minValue) return minValue;
     if (value > maxValue) return maxValue;
     return value;
+}
+
+validateInitConfigNormalization()
+{
+    failures = 0;
+
+    if (combatTrainingMaxPlayers < 0) { warnOnce("init_norm_max_players", "combatTrainingMaxPlayers normalization failed"); failures++; }
+    if (awPressureSpawnDelay < 0.05) { warnOnce("init_norm_spawn_delay", "awPressureSpawnDelay normalization failed"); failures++; }
+    if (debugHeartbeatInterval < 0.2) { warnOnce("init_norm_heartbeat", "debugHeartbeatInterval normalization failed"); failures++; }
+    if (botDifficultyEnforcerInterval < 1.0) { warnOnce("init_norm_enforcer", "botDifficultyEnforcerInterval normalization failed"); failures++; }
+    if (godTierTeamBalanceInterval < 0.2) { warnOnce("init_norm_team_balance_interval", "godTierTeamBalanceInterval normalization failed"); failures++; }
+    if (godTierTeamBalanceDelta < 0) { warnOnce("init_norm_team_balance_delta", "godTierTeamBalanceDelta normalization failed"); failures++; }
+    if (botWinBiasLead < 0) { warnOnce("init_norm_win_bias", "botWinBiasLead normalization failed"); failures++; }
+    if (botSbmmUpdateInterval < 1.0) { warnOnce("init_norm_sbmm_interval", "botSbmmUpdateInterval normalization failed"); failures++; }
+    if (botSbmmStartScale < 0.0 || botSbmmStartScale > 1.0) { warnOnce("init_norm_sbmm_start", "botSbmmStartScale normalization failed"); failures++; }
+    if (botSbmmMinimumScale < 0.0 || botSbmmMinimumScale > 1.0) { warnOnce("init_norm_sbmm_min", "botSbmmMinimumScale normalization failed"); failures++; }
+    if (botSbmmKdCeiling < botSbmmKdFloor) { warnOnce("init_norm_sbmm_kd", "botSbmm KD normalization failed"); failures++; }
+    if (botSbmmSpreadCeiling < botSbmmSpreadFloor) { warnOnce("init_norm_sbmm_spread", "botSbmm spread normalization failed"); failures++; }
+    if (botSbmmScoreCeiling < botSbmmScoreFloor) { warnOnce("init_norm_sbmm_score", "botSbmm score normalization failed"); failures++; }
+    if (botSbmmTopPlayerWeight < 0.0) { warnOnce("init_norm_sbmm_top_weight", "botSbmmTopPlayerWeight normalization failed"); failures++; }
+    if (botSbmmLobbyAverageWeight < 0.0) { warnOnce("init_norm_sbmm_average_weight", "botSbmmLobbyAverageWeight normalization failed"); failures++; }
+    if (botSbmmTopPlayerWeight <= 0.0 && botSbmmLobbyAverageWeight <= 0.0) { warnOnce("init_norm_sbmm_weights", "botSbmm weight normalization failed"); failures++; }
+    if (botSbmmRiseSpeed < 0.01 || botSbmmRiseSpeed > 1.0) { warnOnce("init_norm_sbmm_rise", "botSbmmRiseSpeed normalization failed"); failures++; }
+    if (botSbmmFallSpeed < 0.01 || botSbmmFallSpeed > 1.0) { warnOnce("init_norm_sbmm_fall", "botSbmmFallSpeed normalization failed"); failures++; }
+    if (botSbmmMinWinBiasLead < 0) { warnOnce("init_norm_sbmm_min_lead", "botSbmmMinWinBiasLead normalization failed"); failures++; }
+    if (botSbmmMaxWinBiasLead < botSbmmMinWinBiasLead) { warnOnce("init_norm_sbmm_max_lead", "botSbmmMaxWinBiasLead normalization failed"); failures++; }
+    if (spawnFailBackoff < 0.10) { warnOnce("init_norm_spawn_backoff", "spawnFailBackoff normalization failed"); failures++; }
+    if (maxSpawnAttemptsPerTick < 1) { warnOnce("init_norm_spawn_attempts", "maxSpawnAttemptsPerTick normalization failed"); failures++; }
+    if (sanityTestDuration < 5.0) { warnOnce("init_norm_sanity_duration", "sanityTestDuration normalization failed"); failures++; }
+    if (sanityTestSampleInterval < 1.0) { warnOnce("init_norm_sanity_interval", "sanityTestSampleInterval normalization failed"); failures++; }
+    if (defaultBotPrestige < 0) { warnOnce("init_norm_prestige", "defaultBotPrestige normalization failed"); failures++; }
+    if (spawnConfirmPhase1Delay < 0.01) { warnOnce("init_norm_spawn_confirm_1", "spawnConfirmPhase1Delay normalization failed"); failures++; }
+    if (spawnConfirmPhase2Delay < 0.01) { warnOnce("init_norm_spawn_confirm_2", "spawnConfirmPhase2Delay normalization failed"); failures++; }
+    if (spawnConfirmPhase3Delay < 0.01) { warnOnce("init_norm_spawn_confirm_3", "spawnConfirmPhase3Delay normalization failed"); failures++; }
+
+    return failures;
 }
 
 getRangeFactor(value, minValue, maxValue)
@@ -854,11 +894,19 @@ runSpawnBiasSanityCheck()
         failures++;
     }
 
-    if (getDifficultyApplyToken("sbmm") == "sbmm")
+    hadSbmmScale = isDefined(level.autobotSbmmScale);
+    if (hadSbmmScale) savedSbmmScale = level.autobotSbmmScale;
+    testSbmmScale = clampFloat(botSbmmStartScale, 0.0, 1.0);
+    if (testSbmmScale < botSbmmMinimumScale) testSbmmScale = botSbmmMinimumScale;
+    level.autobotSbmmScale = testSbmmScale;
+    expectedSbmmToken = "sbmm_" + getSbmmDifficultyBucket(testSbmmScale);
+    actualSbmmToken = getDifficultyApplyToken("sbmm");
+    if (!isValidDifficultyApplyToken("sbmm", actualSbmmToken) || actualSbmmToken != expectedSbmmToken)
     {
         warnOnce("sbmm_token", "sbmm apply token sanity failed");
         failures++;
     }
+    if (hadSbmmScale) level.autobotSbmmScale = savedSbmmScale;
 
     if (getSbmmLeadForScale(0.0) != botSbmmMinWinBiasLead)
     {
