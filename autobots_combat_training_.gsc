@@ -48,6 +48,8 @@ botDifficultyEnforcerInterval = 2.0;
 godTierTeamBalanceEnable = true;
 godTierTeamBalanceDelta = 1;
 godTierTeamBalanceInterval = 2.0;
+botWinBiasEnable = true;
+botWinBiasLead = 2;
 spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 8;
 
@@ -82,6 +84,7 @@ init()
     if (botDifficultyEnforcerInterval < 1.0) botDifficultyEnforcerInterval = 1.0;
     if (godTierTeamBalanceInterval < 0.2) godTierTeamBalanceInterval = 0.2;
     if (godTierTeamBalanceDelta < 0) godTierTeamBalanceDelta = 0;
+    if (botWinBiasLead < 0) botWinBiasLead = 0;
     if (spawnFailBackoff < 0.10) spawnFailBackoff = 0.10;
     if (maxSpawnAttemptsPerTick < 1) maxSpawnAttemptsPerTick = 1;
     if (sanityTestDuration < 5.0) sanityTestDuration = 5.0;
@@ -374,6 +377,23 @@ countHumans()
     return n;
 }
 
+countHumansOnTeam(teamName)
+{
+    if (!isDefined(level.players)) return 0;
+
+    tl = toLower(teamName);
+    n = 0;
+    foreach (p in level.players)
+    {
+        if (!isDefined(p) || (p isBotEntity())) continue;
+        if (!isPlayerCountable(p)) continue;
+        if (getEntityTeamName(p) != tl) continue;
+        n++;
+    }
+
+    return n;
+}
+
 setBotRankCompat(rankValue)
 {
     r = int(rankValue);
@@ -532,6 +552,23 @@ countAxisBots()
     return countBotsOnTeam("axis");
 }
 
+getOppositeTeamName(teamName)
+{
+    if (toLower(teamName) == "allies") return "axis";
+    return "allies";
+}
+
+getPreferredBotWinTeam()
+{
+    alliesHumans = countHumansOnTeam("allies");
+    axisHumans = countHumansOnTeam("axis");
+
+    if (alliesHumans <= 0 && axisHumans <= 0) return "";
+    if (alliesHumans > axisHumans) return "axis";
+    if (axisHumans > alliesHumans) return "allies";
+    return "";
+}
+
 shouldRunGodTierTeamBalance()
 {
     return godTierTeamBalanceEnable && getSelectedBotDifficulty() == "god";
@@ -554,6 +591,46 @@ balanceGodTierBotTeams()
 {
     if (!shouldRunGodTierTeamBalance()) return;
     if (!isDefined(level.players)) return;
+
+    preferredTeam = "";
+    if (botWinBiasEnable && botWinBiasLead > 0)
+        preferredTeam = getPreferredBotWinTeam();
+
+    if (preferredTeam != "")
+    {
+        otherTeam = getOppositeTeamName(preferredTeam);
+        preferredBots = countBotsOnTeam(preferredTeam);
+        otherBots = countBotsOnTeam(otherTeam);
+        currentLead = preferredBots - otherBots;
+
+        if (currentLead < botWinBiasLead)
+        {
+            foreach (p in level.players)
+            {
+                if (!isDefined(p) || !(p isBotEntity())) continue;
+                if (getEntityTeamName(p) != otherTeam) continue;
+                if (moveBotToTeamCompat(p, preferredTeam))
+                {
+                    dbg("win bias: moved one bot " + otherTeam + "->" + preferredTeam + " | lead=" + currentLead + " targetLead=" + botWinBiasLead);
+                    return;
+                }
+            }
+        }
+
+        if (currentLead > (botWinBiasLead + godTierTeamBalanceDelta))
+        {
+            foreach (p in level.players)
+            {
+                if (!isDefined(p) || !(p isBotEntity())) continue;
+                if (getEntityTeamName(p) != preferredTeam) continue;
+                if (moveBotToTeamCompat(p, otherTeam))
+                {
+                    dbg("win bias: trimmed one bot " + preferredTeam + "->" + otherTeam + " | lead=" + currentLead + " targetLead=" + botWinBiasLead);
+                    return;
+                }
+            }
+        }
+    }
 
     allies = countAlliedBots();
     axis = countAxisBots();
