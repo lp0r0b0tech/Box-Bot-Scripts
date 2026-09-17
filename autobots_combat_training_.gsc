@@ -706,8 +706,8 @@ getPreferredBotSpawnTeam()
         queuedOther = level.autobotPendingSpawnAllies;
     }
 
-    totalLead = (countPlayersOnTeam(preferredTeam) + queuedPreferred) - (countPlayersOnTeam(otherTeam) + queuedOther);
-    if (totalLead < botWinBiasLead) return preferredTeam;
+    botLead = (countBotsOnTeam(preferredTeam) + queuedPreferred) - (countBotsOnTeam(otherTeam) + queuedOther);
+    if (botLead < botWinBiasLead) return preferredTeam;
 
     return "";
 }
