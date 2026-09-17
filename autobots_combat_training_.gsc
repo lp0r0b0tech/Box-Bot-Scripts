@@ -250,7 +250,7 @@ getSelectedBotDifficulty()
 getBotDifficultyDvarTarget()
 {
     desired = getSelectedBotDifficulty();
-    fallback = normalizeDifficultyName(botDifficultyFallback);
+    fallback = normalizeDifficultyFallbackName(botDifficultyFallback);
     if (desired == "god")
         return fallback;
     return desired;
