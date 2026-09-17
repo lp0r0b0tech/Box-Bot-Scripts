@@ -538,7 +538,12 @@ serverBotFill()
             if (spawnTeam == "allies") level.autobotPendingSpawnAllies++;
             else if (spawnTeam == "axis") level.autobotPendingSpawnAxis++;
 
-            if (!spawnBotsSafe(1, spawnTeam)) wait spawnFailBackoff;
+            if (!spawnBotsSafe(1, spawnTeam))
+            {
+                if (spawnTeam == "allies" && level.autobotPendingSpawnAllies > 0) level.autobotPendingSpawnAllies--;
+                else if (spawnTeam == "axis" && level.autobotPendingSpawnAxis > 0) level.autobotPendingSpawnAxis--;
+                wait spawnFailBackoff;
+            }
             else wait (awStyleEnable ? awPressureSpawnDelay : 0.25);
         }
 
