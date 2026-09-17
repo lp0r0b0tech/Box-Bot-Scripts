@@ -1,7 +1,7 @@
 // ============================================================
 // Autobots Combat Training Script (CT-ONLY, HARDENED v6)
 // - Restricts execution to multiplayer Combat Training only
-// - Supports configurable GOD difficulty with ULTRA dvar fallback
+// - Supports a selected difficulty profile mirrored into compatibility globals
 // - Fixes persistence by normalizing + enforcing dvar + per-bot state
 // ============================================================
 #include scripts/mp/_bots;
@@ -14,6 +14,7 @@ combatTrainingMaxPlayers = 18;
 botDifficultyMode = "god";
 botDifficultyFallback = "ultra";
 
+// These compatibility aliases are forced to the selected profile during init().
 defaultBotDifficulty = "god";
 lockedBotDifficulty  = "god";
 
@@ -353,23 +354,6 @@ countTotalPlayersForCap()
     return n;
 }
 
-countPlayersOnTeam(teamName)
-{
-    if (!isDefined(level.players)) return 0;
-
-    tl = normalizeTeamName(teamName);
-    n = 0;
-    foreach (p in level.players)
-    {
-        if (!isDefined(p)) continue;
-        if (!isPlayerCountable(p)) continue;
-        if (getEntityTeamName(p) != tl) continue;
-        n++;
-    }
-
-    return n;
-}
-
 countBots()
 {
     if (!isDefined(level.players)) return 0;
@@ -629,10 +613,8 @@ getPreferredBotSpawnTeam()
         queuedOther = level.autobotPendingSpawnAllies;
     }
 
-    humanLead = countHumansOnTeam(preferredTeam) - countHumansOnTeam(otherTeam);
-    totalLead = (countPlayersOnTeam(preferredTeam) + queuedPreferred) - (countPlayersOnTeam(otherTeam) + queuedOther);
-    extraBotLead = totalLead - humanLead;
-    if (extraBotLead < botWinBiasLead) return preferredTeam;
+    botLead = (countBotsOnTeam(preferredTeam) + queuedPreferred) - (countBotsOnTeam(otherTeam) + queuedOther);
+    if (botLead < botWinBiasLead) return preferredTeam;
 
     return "";
 }
