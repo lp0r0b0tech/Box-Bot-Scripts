@@ -3,6 +3,9 @@
 
 init()
 {
+    if (isDefined(level.gungameInitialized) && level.gungameInitialized) return;
+    level.gungameInitialized = true;
+
     level.gg_weapons = [];
 
     // Base rotation

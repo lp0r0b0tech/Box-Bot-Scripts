@@ -94,6 +94,12 @@ spawnConfirmPhase3Delay = 0.20;
 // --------------------------
 init()
 {
+    if (shouldRunGunGameHere())
+    {
+        initExternalGunGame();
+        return;
+    }
+
     if (!shouldRunAutobotsHere())
     {
         dbg("init(): disabled outside Combat Training multiplayer");
@@ -156,6 +162,27 @@ init()
 
     dbg("init(): Combat Training only active | diff=" + getActiveDifficultyLabel() + " | dvar=" + level.autobotDvarDifficulty);
     if (sanityTestEnable) level thread run60SecondSanityTest();
+}
+
+shouldRunGunGameHere()
+{
+    gt = "";
+    if (isDefined(level.gametype)) gt = toLower(level.gametype);
+    if (gt == "gun" || gt == "gungame" || isSubStr(gt, "gun game")) return true;
+
+    pl = "";
+    if (isDefined(level.playlist)) pl = toLower(level.playlist);
+    if (pl == "gun" || pl == "gungame" || isSubStr(pl, "gun game")) return true;
+
+    return false;
+}
+
+initExternalGunGame()
+{
+    if (isDefined(level.autobotsGunGameDelegated) && level.autobotsGunGameDelegated) return;
+    level.autobotsGunGameDelegated = true;
+    dbg("init(): delegating Gun Game mode to separate gungame.gsc");
+    gungame::init();
 }
 
 shouldRunAutobotsHere()
