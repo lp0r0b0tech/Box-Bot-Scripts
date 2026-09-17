@@ -562,6 +562,18 @@ runSpawnBiasSanityCheck()
         failures++;
     }
 
+    if (getPreferredBotSpawnTeamByCounts(2, 1, 1, 0, 1) != "axis")
+    {
+        warnOnce("spawn_bias_team_pick", "spawn bias sanity failed for preferred spawn team selection");
+        failures++;
+    }
+
+    if (getPreferredBotSpawnTeamByCounts(2, 1, 3, 2, 1) != "")
+    {
+        warnOnce("spawn_bias_team_cap", "spawn bias sanity failed for preferred spawn team lead cap");
+        failures++;
+    }
+
     return failures;
 }
 
@@ -662,6 +674,20 @@ isSpawnLeadAllowed(currentLead, maxLead)
     return currentLead < maxLead;
 }
 
+getPreferredBotSpawnTeamByCounts(alliesHumans, axisHumans, alliesPlayers, axisPlayers, maxLead)
+{
+    preferredTeam = pickPreferredBotWinTeamByCounts(alliesHumans, axisHumans);
+    if (preferredTeam == "") return "";
+
+    if (preferredTeam == "allies")
+        totalLead = alliesPlayers - axisPlayers;
+    else
+        totalLead = axisPlayers - alliesPlayers;
+
+    if (isSpawnLeadAllowed(totalLead, maxLead)) return preferredTeam;
+    return "";
+}
+
 getPreferredBotWinTeam()
 {
     alliesHumans = countHumansOnTeam("allies");
@@ -672,17 +698,13 @@ getPreferredBotWinTeam()
 getPreferredBotSpawnTeam()
 {
     if (!botWinBiasEnable || botWinBiasLead <= 0) return "";
-
-    preferredTeam = getPreferredBotWinTeam();
-    if (preferredTeam == "") return "";
-
-    otherTeam = "allies";
-    if (preferredTeam == "allies") otherTeam = "axis";
-
-    totalLead = countPlayersOnTeam(preferredTeam) - countPlayersOnTeam(otherTeam);
-    if (isSpawnLeadAllowed(totalLead, botWinBiasLead)) return preferredTeam;
-
-    return "";
+    return getPreferredBotSpawnTeamByCounts(
+        countHumansOnTeam("allies"),
+        countHumansOnTeam("axis"),
+        countPlayersOnTeam("allies"),
+        countPlayersOnTeam("axis"),
+        botWinBiasLead
+    );
 }
 
 
