@@ -244,32 +244,14 @@ getBotDifficultyDvarTarget()
 safeSetBotDifficultyDvar()
 {
     desired = getSelectedBotDifficulty();
-    fallback = getBotDifficultyDvarTarget();
+    target = getBotDifficultyDvarTarget();
+    setdvar("bot_difficulty", target);
+    level.autobotDvarDifficulty = target;
 
-    setdvar("bot_difficulty", desired);
-    wait 0.05;
+    if (target != desired)
+        warnOnce("bot_diff_dvar_" + desired, "using bot_difficulty dvar fallback \"" + target + "\" while keeping script profile \"" + desired + "\"");
 
-    actual = getdvar("bot_difficulty");
-    if (!isDefined(actual)) actual = "";
-    actual = toLower(actual);
-
-    if (actual != desired)
-    {
-        if (fallback != desired)
-        {
-            setdvar("bot_difficulty", fallback);
-            level.autobotDvarDifficulty = fallback;
-            dbg("bot_difficulty dvar rejected \"" + desired + "\"; using fallback \"" + fallback + "\" while keeping script profile \"" + desired + "\"");
-            return fallback;
-        }
-
-        level.autobotDvarDifficulty = desired;
-        warnOnce("bot_diff_dvar_" + desired, "bot_difficulty dvar mismatch observed for \"" + desired + "\"");
-        return desired;
-    }
-
-    level.autobotDvarDifficulty = desired;
-    return desired;
+    return target;
 }
 
 setBotDifficulty(difficulty)
@@ -557,21 +539,8 @@ countBotsOnTeam(teamName)
     return n;
 }
 
-countAlliedBots()
-{
-    return countBotsOnTeam("allies");
-}
-
-countAxisBots()
-{
-    return countBotsOnTeam("axis");
-}
-
-getOppositeTeamName(teamName)
-{
-    if (toLower(teamName) == "allies") return "axis";
-    return "allies";
-}
+countAlliedBots() { return countBotsOnTeam("allies"); }
+countAxisBots()   { return countBotsOnTeam("axis"); }
 
 getPreferredBotWinTeam()
 {
@@ -584,109 +553,6 @@ getPreferredBotWinTeam()
     return "";
 }
 
-shouldRunGodTierTeamBalance()
-{
-    return godTierTeamBalanceEnable && getSelectedBotDifficulty() == "god";
-}
-
-moveBotToTeamCompat(bot, targetTeam)
-{
-    if (!isDefined(bot) || !(bot isBotEntity())) return false;
-    if (!isDefined(bot.pers)) bot.pers = [];
-
-    // Without a verified native team-switch API in this repo, only keep a
-    // preferred target marker and report failure so callers do not assume the
-    // engine-side team assignment actually changed.
-    bot.pers["preferred_team"] = targetTeam;
-    return false;
-}
-
-balanceGodTierBotTeams()
-{
-    if (!shouldRunGodTierTeamBalance()) return;
-    if (!isDefined(level.players)) return;
-
-    preferredTeam = "";
-    if (botWinBiasEnable && botWinBiasLead > 0)
-        preferredTeam = getPreferredBotWinTeam();
-
-    if (preferredTeam != "")
-    {
-        otherTeam = getOppositeTeamName(preferredTeam);
-        preferredBots = countBotsOnTeam(preferredTeam);
-        otherBots = countBotsOnTeam(otherTeam);
-        currentLead = preferredBots - otherBots;
-
-        if (currentLead < botWinBiasLead)
-        {
-            foreach (p in level.players)
-            {
-                if (!isDefined(p) || !(p isBotEntity())) continue;
-                if (getEntityTeamName(p) != otherTeam) continue;
-                if (moveBotToTeamCompat(p, preferredTeam))
-                {
-                    dbg("win bias: moved one bot " + otherTeam + "->" + preferredTeam + " | lead=" + currentLead + " targetLead=" + botWinBiasLead);
-                    return;
-                }
-            }
-        }
-
-        if (currentLead > (botWinBiasLead + godTierTeamBalanceDelta))
-        {
-            foreach (p in level.players)
-            {
-                if (!isDefined(p) || !(p isBotEntity())) continue;
-                if (getEntityTeamName(p) != preferredTeam) continue;
-                if (moveBotToTeamCompat(p, otherTeam))
-                {
-                    dbg("win bias: trimmed one bot " + preferredTeam + "->" + otherTeam + " | lead=" + currentLead + " targetLead=" + botWinBiasLead);
-                    return;
-                }
-            }
-        }
-    }
-
-    allies = countAlliedBots();
-    axis = countAxisBots();
-    delta = allies - axis;
-
-    if (delta > godTierTeamBalanceDelta)
-    {
-        foreach (p in level.players)
-        {
-            if (!isDefined(p) || !(p isBotEntity())) continue;
-            if (getEntityTeamName(p) != "allies") continue;
-            if (moveBotToTeamCompat(p, "axis"))
-            {
-                dbg("god balance: moved one bot allies->axis | allies=" + allies + " axis=" + axis);
-                return;
-            }
-        }
-    }
-    else if ((0 - delta) > godTierTeamBalanceDelta)
-    {
-        foreach (p in level.players)
-        {
-            if (!isDefined(p) || !(p isBotEntity())) continue;
-            if (getEntityTeamName(p) != "axis") continue;
-            if (moveBotToTeamCompat(p, "allies"))
-            {
-                dbg("god balance: moved one bot axis->allies | allies=" + allies + " axis=" + axis);
-                return;
-            }
-        }
-    }
-}
-
-godTierTeamBalanceLoop()
-{
-    level endon("game_ended");
-    for (;;)
-    {
-        balanceGodTierBotTeams();
-        wait godTierTeamBalanceInterval;
-    }
-}
 
 delayedBotDifficultyApply()
 {

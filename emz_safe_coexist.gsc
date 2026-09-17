@@ -8,6 +8,7 @@
 init()
 {
     level.emz_debug = true;
+    // Keep the coexist EMP probe tighter so EMZ checks stay local.
     level.emz_emp_range = 1.5;
     level.emz_tick = 0.25;
     level.emz_log_interval = 1.0;
@@ -92,7 +93,7 @@ emz_test_loop()
             return;
 
         if (!isDefined(level.emz_emp_range) || level.emz_emp_range <= 0)
-            level.emz_emp_range = 1.5;
+            level.emz_emp_range = 1.5; // Match the tighter default coexist range.
 
         if (!isDefined(level.emz_tick) || level.emz_tick < 0.05)
             level.emz_tick = 0.25;
