@@ -104,7 +104,7 @@ init()
     lockedBotDifficulty = botDifficultyMode;
 
     safeSetBotDifficultyDvar();
-    runSpawnBiasSanityCheck();
+    level.spawnBiasSanityFailures = runSpawnBiasSanityCheck();
 
     level thread onPlayerConnect();
     level thread serverBotFill();
@@ -129,12 +129,12 @@ shouldRunAutobotsHere()
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
     if (isSubStr(gt, "survival") || isSubStr(gt, "zombie") || isSubStr(gt, "infect")) return false;
-    if (isSubStr(gt, "exo")) return false;
 
     if (isDefined(level.playlist))
     {
         pl = toLower(level.playlist);
-        if (isSubStr(pl, "survival") || isSubStr(pl, "zombie") || isSubStr(pl, "exo")) return false;
+        if (isSubStr(pl, "survival") || isSubStr(pl, "zombie")) return false;
+        if (isSubStr(pl, "exo survival") || isSubStr(pl, "exo zombies")) return false;
     }
 
     return detectCombatTraining();
@@ -768,6 +768,7 @@ run60SecondSanityTest()
     spawnSuccessStreak = 0;
     spawnFailStreak = 0;
     spawnBiasSanityFailures = 0;
+    if (isDefined(level.spawnBiasSanityFailures)) spawnBiasSanityFailures = level.spawnBiasSanityFailures;
 
     for (;;)
     {
@@ -784,7 +785,6 @@ run60SecondSanityTest()
 
         if (bots > 0) anyBotsSeen = true;
         if (dvarNow != expectedDvar) dvarFailures++;
-        spawnBiasSanityFailures += runSpawnBiasSanityCheck();
 
         overshoot = total - target;
         if (overshoot > maxOvershoot) maxOvershoot = overshoot;
