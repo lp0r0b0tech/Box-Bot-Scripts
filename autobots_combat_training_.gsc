@@ -359,6 +359,23 @@ countTotalPlayersForCap()
     return n;
 }
 
+countPlayersOnTeam(teamName)
+{
+    if (!isDefined(level.players)) return 0;
+
+    tl = normalizeTeamName(teamName);
+    n = 0;
+    foreach (p in level.players)
+    {
+        if (!isDefined(p)) continue;
+        if (!isPlayerCountable(p)) continue;
+        if (getEntityTeamName(p) != tl) continue;
+        n++;
+    }
+
+    return n;
+}
+
 countBots()
 {
     if (!isDefined(level.players)) return 0;
@@ -633,8 +650,8 @@ getPreferredBotSpawnTeam()
     otherTeam = "allies";
     if (preferredTeam == "allies") otherTeam = "axis";
 
-    botLead = countBotsOnTeam(preferredTeam) - countBotsOnTeam(otherTeam);
-    if (botLead < botWinBiasLead) return preferredTeam;
+    totalLead = countPlayersOnTeam(preferredTeam) - countPlayersOnTeam(otherTeam);
+    if (totalLead < botWinBiasLead) return preferredTeam;
 
     return "";
 }
