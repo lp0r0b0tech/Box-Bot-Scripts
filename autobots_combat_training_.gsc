@@ -1,6 +1,7 @@
 // ============================================================
-// Autobots Combat Training Script (MP-ONLY, HARDENED v5)
-// - Forces locked difficulty to ULTRA
+// Autobots Combat Training Script (CT-ONLY, HARDENED v6)
+// - Restricts execution to multiplayer Combat Training only
+// - Supports configurable GOD difficulty with ULTRA dvar fallback
 // - Fixes persistence by normalizing + enforcing dvar + per-bot state
 // ============================================================
 #include scripts/mp/_bots;
@@ -12,9 +13,16 @@ combatTrainingForce = true;
 combatTrainingMaxPlayers = 12;
 dedicatedMaxPlayers = 18;
 
-// FORCE ULTRA
-defaultBotDifficulty = "ultra";
-lockedBotDifficulty  = "ultra";
+botDifficultyMode = "god";
+botDifficultyFallback = "ultra";
+
+defaultBotDifficulty = "god";
+lockedBotDifficulty  = "god";
+
+godMaxAccuracy = 1000.0;
+godMinReactionTime = 0.0;
+godMaxHealth = 1000000;
+godMaxAggression = 1000.0;
 
 defaultBotLevel = 50;
 defaultBotPrestige = 23;
@@ -41,6 +49,9 @@ debugVerbose = false;
 debugHeartbeatInterval = 5.0;
 
 botDifficultyEnforcerInterval = 2.0;
+godTierTeamBalanceEnable = true;
+godTierTeamBalanceDelta = 1;
+godTierTeamBalanceInterval = 2.0;
 spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 8;
 
@@ -79,7 +90,7 @@ init()
 {
     if (!shouldRunAutobotsHere())
     {
-        dbg("init(): disabled for this mode/map (Exo Survival/Exo Zombies or non-MP context)");
+        dbg("init(): disabled outside Combat Training multiplayer");
         return;
     }
 
@@ -89,6 +100,8 @@ init()
     if (awTrimDelay < 0.01) awTrimDelay = 0.01;
     if (debugHeartbeatInterval < 0.2) debugHeartbeatInterval = 0.2;
     if (botDifficultyEnforcerInterval < 1.0) botDifficultyEnforcerInterval = 1.0;
+    if (godTierTeamBalanceInterval < 0.2) godTierTeamBalanceInterval = 0.2;
+    if (godTierTeamBalanceDelta < 0) godTierTeamBalanceDelta = 0;
     if (spawnFailBackoff < 0.10) spawnFailBackoff = 0.10;
     if (maxSpawnAttemptsPerTick < 1) maxSpawnAttemptsPerTick = 1;
     if (sanityTestDuration < 5.0) sanityTestDuration = 5.0;
@@ -102,21 +115,25 @@ init()
 
     if (!isDefined(level.autobotsWarnOnce)) level.autobotsWarnOnce = [];
     if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
+    if (!isDefined(level.autobotDvarDifficulty)) level.autobotDvarDifficulty = "";
 
-    if (!combatTrainingForce) level.combatTraining = detectCombatTraining();
-    else level.combatTraining = true;
+    botDifficultyMode = normalizeDifficultyName(botDifficultyMode);
+    botDifficultyFallback = normalizeDifficultyName(botDifficultyFallback);
+    defaultBotDifficulty = botDifficultyMode;
+    lockedBotDifficulty = botDifficultyMode;
 
-    lockedBotDifficulty = "ultra";
-    defaultBotDifficulty = "ultra";
-    setdvar("bot_difficulty", "ultra");
+    level.combatTraining = true;
+    safeSetBotDifficultyDvar();
 
     level thread onPlayerConnect();
     level thread serverBotFill();
     level thread liveDebugHeartbeat();
     level thread delayedBotDifficultyApply();
     level thread botDifficultyEnforcer();
+    if (godTierTeamBalanceEnable) level thread godTierTeamBalanceLoop();
     level thread atlas45GlobalMonitor();
 
+    dbg("init(): Combat Training only active | diff=" + defaultBotDifficulty + " | dvar=" + level.autobotDvarDifficulty);
     if (sanityTestEnable) level thread run60SecondSanityTest();
 }
 
@@ -133,6 +150,7 @@ shouldRunAutobotsHere()
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
     if (isSubStr(gt, "survival") || isSubStr(gt, "zombie") || isSubStr(gt, "infect")) return false;
+    if (isSubStr(gt, "exo")) return false;
 
     if (isDefined(level.playlist))
     {
@@ -140,7 +158,7 @@ shouldRunAutobotsHere()
         if (isSubStr(pl, "survival") || isSubStr(pl, "zombie") || isSubStr(pl, "exo")) return false;
     }
 
-    return true;
+    return detectCombatTraining();
 }
 
 isSubStr(hay, needle)
@@ -154,6 +172,10 @@ detectCombatTraining()
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
     if (isSubStr(gt, "combat") || isSubStr(gt, "training")) return true;
+
+    pl = "";
+    if (isDefined(level.playlist)) pl = toLower(level.playlist);
+    if (isSubStr(pl, "combat") || isSubStr(pl, "training") || isSubStr(pl, "readiness")) return true;
 
     mn = "";
     if (isDefined(level.mapname)) mn = toLower(level.mapname);
@@ -218,12 +240,79 @@ safeFullHeal(ent)
     ent.health = ent.maxHealth;
 }
 
+normalizeDifficultyName(difficulty)
+{
+    if (!isDefined(difficulty)) return "ultra";
+    difficulty = toLower(difficulty);
+    if (difficulty == "god") return "god";
+    if (difficulty == "ultra") return "ultra";
+    return "ultra";
+}
+
+getSelectedBotDifficulty()
+{
+    return normalizeDifficultyName(defaultBotDifficulty);
+}
+
+getBotDifficultyDvarTarget()
+{
+    desired = getSelectedBotDifficulty();
+    fallback = normalizeDifficultyName(botDifficultyFallback);
+    if (desired == "god")
+        return fallback;
+    return desired;
+}
+
+safeSetBotDifficultyDvar()
+{
+    desired = getSelectedBotDifficulty();
+    fallback = getBotDifficultyDvarTarget();
+
+    setdvar("bot_difficulty", desired);
+    wait 0.05;
+
+    actual = getdvar("bot_difficulty");
+    if (!isDefined(actual)) actual = "";
+    actual = toLower(actual);
+
+    if (actual != desired)
+    {
+        if (fallback != desired)
+        {
+            setdvar("bot_difficulty", fallback);
+            level.autobotDvarDifficulty = fallback;
+            dbg("bot_difficulty dvar rejected \"" + desired + "\"; using fallback \"" + fallback + "\" while keeping script profile \"" + desired + "\"");
+            return fallback;
+        }
+
+        level.autobotDvarDifficulty = desired;
+        warnOnce("bot_diff_dvar_" + desired, "bot_difficulty dvar mismatch observed for \"" + desired + "\"");
+        return desired;
+    }
+
+    level.autobotDvarDifficulty = desired;
+    return desired;
+}
+
 setBotDifficulty(difficulty)
 {
-    self.botAccuracy = 2.75;
-    self.reactionTime = 0.01;
-    self.maxHealth = 650;
-    self.botAggression = 2.75;
+    diff = normalizeDifficultyName(difficulty);
+
+    if (diff == "god")
+    {
+        self.botAccuracy = godMaxAccuracy;
+        self.reactionTime = godMinReactionTime;
+        self.maxHealth = godMaxHealth;
+        self.botAggression = godMaxAggression;
+    }
+    else
+    {
+        self.botAccuracy = 2.75;
+        self.reactionTime = 0.01;
+        self.maxHealth = 650;
+        self.botAggression = 2.75;
+    }
+
     if (awHealthRegenOnSpawn) safeFullHeal(self);
 }
 
@@ -328,15 +417,17 @@ applyBotPrestigeSetting()
 applyAutobotDifficulty(diff)
 {
     if (!isDefined(self.pers)) self.pers = [];
-    self.pers["autobot_diff_applied"] = "ultra";
-    self setBotDifficulty("ultra");
+    selectedDifficulty = normalizeDifficultyName(diff);
+    self.pers["autobot_diff_applied"] = selectedDifficulty;
+    self setBotDifficulty(selectedDifficulty);
     applyOpLoadout(self);
     atlas45ApplyTierBuff(self, atlas45GetCurrentWeaponSafe(self));
 }
 
 applyDifficultyToAllBots(forceWritePers)
 {
-    if (getdvar("bot_difficulty") != "ultra") setdvar("bot_difficulty", "ultra");
+    selectedDifficulty = getSelectedBotDifficulty();
+    safeSetBotDifficultyDvar();
     if (!isDefined(level.players)) return;
 
     foreach (p in level.players)
@@ -344,17 +435,17 @@ applyDifficultyToAllBots(forceWritePers)
         if (!isDefined(p) || !(p isBotEntity())) continue;
 
         needsApply = true;
-        if (isDefined(p.pers) && isDefined(p.pers["autobot_diff_applied"]) && p.pers["autobot_diff_applied"] == "ultra" && !forceWritePers)
+        if (isDefined(p.pers) && isDefined(p.pers["autobot_diff_applied"]) && p.pers["autobot_diff_applied"] == selectedDifficulty && !forceWritePers)
             needsApply = false;
 
         if (needsApply)
         {
-            p applyAutobotDifficulty("ultra");
+            p applyAutobotDifficulty(selectedDifficulty);
             p setBotRankCompat(defaultBotLevel);
             p applyBotPrestigeSetting();
 
             if (!isDefined(p.pers)) p.pers = [];
-            p.pers["autobot_diff_applied"] = "ultra";
+            p.pers["autobot_diff_applied"] = selectedDifficulty;
             if (awHealthRegenOnSpawn) safeFullHeal(p);
         }
     }
@@ -370,12 +461,12 @@ onPlayerConnect()
 
         if (player isBotEntity())
         {
-            player applyAutobotDifficulty("ultra");
+            player applyAutobotDifficulty(getSelectedBotDifficulty());
             player setBotRankCompat(defaultBotLevel);
             player applyBotPrestigeSetting();
 
             if (!isDefined(player.pers)) player.pers = [];
-            player.pers["autobot_diff_applied"] = "ultra";
+            player.pers["autobot_diff_applied"] = getSelectedBotDifficulty();
 
             if (awHealthRegenOnSpawn) safeFullHeal(player);
         }
@@ -481,11 +572,111 @@ serverBotFill()
     }
 }
 
+getEntityTeamName(ent)
+{
+    if (!isDefined(ent)) return "";
+    if (isDefined(ent.team)) return toLower(ent.team);
+    if (isDefined(ent.sessionteam)) return toLower(ent.sessionteam);
+    if (isDefined(ent.pers) && isDefined(ent.pers["team"])) return toLower(ent.pers["team"]);
+    return "";
+}
+
+countBotsOnTeam(teamName)
+{
+    if (!isDefined(level.players)) return 0;
+
+    tl = toLower(teamName);
+    n = 0;
+    foreach (p in level.players)
+    {
+        if (!isDefined(p) || !(p isBotEntity())) continue;
+        if (getEntityTeamName(p) != tl) continue;
+        n++;
+    }
+
+    return n;
+}
+
+countAlliedBots()
+{
+    return countBotsOnTeam("allies");
+}
+
+countAxisBots()
+{
+    return countBotsOnTeam("axis");
+}
+
+shouldRunGodTierTeamBalance()
+{
+    return godTierTeamBalanceEnable && getSelectedBotDifficulty() == "god";
+}
+
+moveBotToTeamCompat(bot, targetTeam)
+{
+    if (!isDefined(bot) || !(bot isBotEntity())) return false;
+    if (!isDefined(bot.pers)) bot.pers = [];
+
+    // Native reassignment may still be required by the host mod, so keep this
+    // to the persistent/team fields already used by this script environment.
+    bot.pers["team"] = targetTeam;
+    bot.team = targetTeam;
+    bot.sessionteam = targetTeam;
+    return true;
+}
+
+balanceGodTierBotTeams()
+{
+    if (!shouldRunGodTierTeamBalance()) return;
+    if (!isDefined(level.players)) return;
+
+    allies = countAlliedBots();
+    axis = countAxisBots();
+    delta = allies - axis;
+
+    if (delta > godTierTeamBalanceDelta)
+    {
+        foreach (p in level.players)
+        {
+            if (!isDefined(p) || !(p isBotEntity())) continue;
+            if (getEntityTeamName(p) != "allies") continue;
+            if (moveBotToTeamCompat(p, "axis"))
+            {
+                dbg("god balance: moved one bot allies->axis | allies=" + allies + " axis=" + axis);
+                return;
+            }
+        }
+    }
+    else if ((0 - delta) > godTierTeamBalanceDelta)
+    {
+        foreach (p in level.players)
+        {
+            if (!isDefined(p) || !(p isBotEntity())) continue;
+            if (getEntityTeamName(p) != "axis") continue;
+            if (moveBotToTeamCompat(p, "allies"))
+            {
+                dbg("god balance: moved one bot axis->allies | allies=" + allies + " axis=" + axis);
+                return;
+            }
+        }
+    }
+}
+
+godTierTeamBalanceLoop()
+{
+    level endon("game_ended");
+    for (;;)
+    {
+        balanceGodTierBotTeams();
+        wait godTierTeamBalanceInterval;
+    }
+}
+
 delayedBotDifficultyApply()
 {
     level endon("game_ended");
     wait 0.5;
-    setdvar("bot_difficulty", "ultra");
+    safeSetBotDifficultyDvar();
     applyDifficultyToAllBots(true);
 }
 
@@ -494,9 +685,7 @@ botDifficultyEnforcer()
     level endon("game_ended");
     for (;;)
     {
-        if (getdvar("bot_difficulty") != "ultra")
-            setdvar("bot_difficulty", "ultra");
-
+        safeSetBotDifficultyDvar();
         applyDifficultyToAllBots(false);
         wait botDifficultyEnforcerInterval;
     }
@@ -516,8 +705,10 @@ liveDebugHeartbeat()
                 + " bots=" + countBots()
                 + " target=" + target
                 + " ct=" + level.combatTraining
-                + " diff=ultra"
-                + " dvar(bot_difficulty)=" + getdvar("bot_difficulty"));
+                + " diff=" + getSelectedBotDifficulty()
+                + " dvar(bot_difficulty)=" + level.autobotDvarDifficulty
+                + " alliesBots=" + countAlliedBots()
+                + " axisBots=" + countAxisBots());
         }
         wait debugHeartbeatInterval;
     }
@@ -528,7 +719,9 @@ run60SecondSanityTest()
     level endon("game_ended");
     if (!debugAutobots) return;
 
-    expected = "ultra";
+    expectedApplied = getSelectedBotDifficulty();
+    expectedDvar = level.autobotDvarDifficulty;
+    if (!isDefined(expectedDvar) || expectedDvar == "") expectedDvar = getBotDifficultyDvarTarget();
     startTime = 0;
     if (isDefined(level.time)) startTime = level.time;
 
@@ -551,9 +744,11 @@ run60SecondSanityTest()
         bots = countBots();
         target = level.combatTraining ? combatTrainingMaxPlayers : dedicatedMaxPlayers;
         dvarNow = getdvar("bot_difficulty");
+        if (!isDefined(dvarNow)) dvarNow = "";
+        dvarNow = toLower(dvarNow);
 
         if (bots > 0) anyBotsSeen = true;
-        if (dvarNow != expected) dvarFailures++;
+        if (dvarNow != expectedDvar) dvarFailures++;
         if (!level.combatTraining && total > target) overTargetFailures++;
 
         overshoot = total - target;
@@ -567,7 +762,7 @@ run60SecondSanityTest()
             foreach (p in level.players)
             {
                 if (!isDefined(p) || !(p isBotEntity())) continue;
-                if (!isDefined(p.pers) || !isDefined(p.pers["autobot_diff_applied"]) || p.pers["autobot_diff_applied"] != expected)
+                if (!isDefined(p.pers) || !isDefined(p.pers["autobot_diff_applied"]) || p.pers["autobot_diff_applied"] != expectedApplied)
                     badBotDiffSeen++;
             }
         }
@@ -577,6 +772,8 @@ run60SecondSanityTest()
     }
 
     dbg("SANITY end samples=" + samples
+        + " expectedApplied=" + expectedApplied
+        + " expectedDvar=" + expectedDvar
         + " dvarFailures=" + dvarFailures
         + " overTargetFailures=" + overTargetFailures
         + " anyBotsSeen=" + anyBotsSeen
