@@ -538,6 +538,18 @@ runSpawnBiasSanityCheck()
         failures++;
     }
 
+    if (!isSpawnLeadAllowed(0, 1))
+    {
+        warnOnce("spawn_bias_lead_allow", "spawn bias sanity failed for allowed lead");
+        failures++;
+    }
+
+    if (isSpawnLeadAllowed(1, 1))
+    {
+        warnOnce("spawn_bias_lead_block", "spawn bias sanity failed for capped lead");
+        failures++;
+    }
+
     return failures;
 }
 
@@ -633,6 +645,11 @@ pickPreferredBotWinTeamByCounts(alliesHumans, axisHumans)
     return "";
 }
 
+isSpawnLeadAllowed(currentLead, maxLead)
+{
+    return currentLead < maxLead;
+}
+
 getPreferredBotWinTeam()
 {
     alliesHumans = countHumansOnTeam("allies");
@@ -651,7 +668,7 @@ getPreferredBotSpawnTeam()
     if (preferredTeam == "allies") otherTeam = "axis";
 
     totalLead = countPlayersOnTeam(preferredTeam) - countPlayersOnTeam(otherTeam);
-    if (totalLead < botWinBiasLead) return preferredTeam;
+    if (isSpawnLeadAllowed(totalLead, botWinBiasLead)) return preferredTeam;
 
     return "";
 }
