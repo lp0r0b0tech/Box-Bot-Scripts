@@ -1,7 +1,7 @@
 // ============================================================
 // Autobots Combat Training Script (CT-ONLY, HARDENED v6)
 // - Restricts execution to multiplayer Combat Training only
-// - Supports a selected difficulty profile mirrored into compatibility globals
+// - Supports selected fixed profiles and SBMM-style live scaling
 // - Fixes persistence by normalizing + enforcing dvar + per-bot state
 // ============================================================
 #include scripts/mp/_bots;
@@ -11,12 +11,17 @@
 // --------------------------
 combatTrainingMaxPlayers = 18;
 
-botDifficultyMode = "god";
+botDifficultyMode = "sbmm";
 botDifficultyFallback = "ultra";
 
 // These compatibility aliases are forced to the selected profile during init().
-defaultBotDifficulty = "god";
-lockedBotDifficulty  = "god";
+defaultBotDifficulty = "sbmm";
+lockedBotDifficulty  = "sbmm";
+
+ultraBotAccuracy = 2.75;
+ultraReactionTime = 0.01;
+ultraMaxHealth = 650;
+ultraBotAggression = 2.75;
 
 godMaxAccuracy = 1000.0;
 godMinReactionTime = 0.0;
@@ -53,6 +58,17 @@ botWinBiasEnable = true;
 botWinBiasLead = 6;
 spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 1;
+botSbmmEnable = true;
+botSbmmUpdateInterval = 3.0;
+botSbmmMinimumScale = 0.35;
+botSbmmKdFloor = 1.00;
+botSbmmKdCeiling = 2.25;
+botSbmmSpreadFloor = 0.0;
+botSbmmSpreadCeiling = 12.0;
+botSbmmScoreFloor = 0.0;
+botSbmmScoreCeiling = 3000.0;
+botSbmmMinWinBiasLead = 2;
+botSbmmMaxWinBiasLead = 6;
 
 sanityTestEnable = true;
 sanityTestDuration = 60.0;
@@ -86,6 +102,14 @@ init()
     if (godTierTeamBalanceInterval < 0.2) godTierTeamBalanceInterval = 0.2;
     if (godTierTeamBalanceDelta < 0) godTierTeamBalanceDelta = 0;
     if (botWinBiasLead < 0) botWinBiasLead = 0;
+    if (botSbmmUpdateInterval < 1.0) botSbmmUpdateInterval = 1.0;
+    if (botSbmmMinimumScale < 0.0) botSbmmMinimumScale = 0.0;
+    if (botSbmmMinimumScale > 1.0) botSbmmMinimumScale = 1.0;
+    if (botSbmmKdCeiling < botSbmmKdFloor) botSbmmKdCeiling = botSbmmKdFloor;
+    if (botSbmmSpreadCeiling < botSbmmSpreadFloor) botSbmmSpreadCeiling = botSbmmSpreadFloor;
+    if (botSbmmScoreCeiling < botSbmmScoreFloor) botSbmmScoreCeiling = botSbmmScoreFloor;
+    if (botSbmmMinWinBiasLead < 0) botSbmmMinWinBiasLead = 0;
+    if (botSbmmMaxWinBiasLead < botSbmmMinWinBiasLead) botSbmmMaxWinBiasLead = botSbmmMinWinBiasLead;
     if (spawnFailBackoff < 0.10) spawnFailBackoff = 0.10;
     if (maxSpawnAttemptsPerTick < 1) maxSpawnAttemptsPerTick = 1;
     if (sanityTestDuration < 5.0) sanityTestDuration = 5.0;
@@ -103,6 +127,7 @@ init()
     defaultBotDifficulty = botDifficultyMode;
     lockedBotDifficulty = botDifficultyMode;
 
+    refreshSbmmState();
     safeSetBotDifficultyDvar();
     level.spawnBiasSanityFailures = runSpawnBiasSanityCheck();
 
@@ -112,7 +137,7 @@ init()
     level thread delayedBotDifficultyApply();
     level thread botDifficultyEnforcer();
 
-    dbg("init(): Combat Training only active | diff=" + defaultBotDifficulty + " | dvar=" + level.autobotDvarDifficulty);
+    dbg("init(): Combat Training only active | diff=" + getActiveDifficultyLabel() + " | dvar=" + level.autobotDvarDifficulty);
     if (sanityTestEnable) level thread run60SecondSanityTest();
 }
 
@@ -225,11 +250,42 @@ safeFullHeal(ent)
     ent.health = ent.maxHealth;
 }
 
+clampFloat(value, minValue, maxValue)
+{
+    if (value < minValue) return minValue;
+    if (value > maxValue) return maxValue;
+    return value;
+}
+
+getRangeFactor(value, minValue, maxValue)
+{
+    if (maxValue <= minValue)
+    {
+        if (value >= maxValue) return 1.0;
+        return 0.0;
+    }
+
+    value = clampFloat(value, minValue, maxValue);
+    return (value - minValue) / (maxValue - minValue);
+}
+
+lerpFloat(minValue, maxValue, scale)
+{
+    scale = clampFloat(scale, 0.0, 1.0);
+    return minValue + ((maxValue - minValue) * scale);
+}
+
+lerpInt(minValue, maxValue, scale)
+{
+    return int(lerpFloat(minValue * 1.0, maxValue * 1.0, scale) + 0.5);
+}
+
 normalizeDifficultyName(difficulty)
 {
     if (!isDefined(difficulty)) return "ultra";
     difficulty = toLower(difficulty + "");
     if (difficulty == "god") return "god";
+    if (difficulty == "sbmm") return "sbmm";
     if (difficulty == "ultra") return "ultra";
     return "ultra";
 }
@@ -247,11 +303,37 @@ getSelectedBotDifficulty()
     return normalizeDifficultyName(defaultBotDifficulty);
 }
 
+getSbmmScale()
+{
+    if (!isDefined(level.autobotSbmmScale)) return clampFloat(botSbmmMinimumScale, 0.0, 1.0);
+    return clampFloat(level.autobotSbmmScale, 0.0, 1.0);
+}
+
+getSbmmDifficultyBucket(scale)
+{
+    scale = clampFloat(scale, 0.0, 1.0);
+    return int((scale * 10.0) + 0.5);
+}
+
+getDifficultyApplyToken(difficulty)
+{
+    diff = normalizeDifficultyName(difficulty);
+    if (diff != "sbmm") return diff;
+    return "sbmm_" + getSbmmDifficultyBucket(getSbmmScale());
+}
+
+getActiveDifficultyLabel()
+{
+    diff = getSelectedBotDifficulty();
+    if (diff != "sbmm") return diff;
+    return getDifficultyApplyToken(diff);
+}
+
 getBotDifficultyDvarTarget()
 {
     desired = getSelectedBotDifficulty();
     fallback = normalizeDifficultyFallbackName(botDifficultyFallback);
-    if (desired == "god")
+    if (desired == "god" || desired == "sbmm")
         return fallback;
     return desired;
 }
@@ -280,12 +362,20 @@ setBotDifficulty(difficulty)
         self.maxHealth = godMaxHealth;
         self.botAggression = godMaxAggression;
     }
+    else if (diff == "sbmm")
+    {
+        scale = getSbmmScale();
+        self.botAccuracy = lerpFloat(ultraBotAccuracy, godMaxAccuracy, scale);
+        self.reactionTime = lerpFloat(ultraReactionTime, godMinReactionTime, scale);
+        self.maxHealth = lerpInt(ultraMaxHealth, godMaxHealth, scale);
+        self.botAggression = lerpFloat(ultraBotAggression, godMaxAggression, scale);
+    }
     else
     {
-        self.botAccuracy = 2.75;
-        self.reactionTime = 0.01;
-        self.maxHealth = 650;
-        self.botAggression = 2.75;
+        self.botAccuracy = ultraBotAccuracy;
+        self.reactionTime = ultraReactionTime;
+        self.maxHealth = ultraMaxHealth;
+        self.botAggression = ultraBotAggression;
     }
 
     if (awHealthRegenOnSpawn) safeFullHeal(self);
@@ -407,6 +497,86 @@ countHumansOnTeam(teamName)
     return n;
 }
 
+getEntityKills(ent)
+{
+    if (!isDefined(ent)) return 0;
+    if (isDefined(ent.kills)) return int(ent.kills);
+    if (isDefined(ent.pers) && isDefined(ent.pers["kills"])) return int(ent.pers["kills"]);
+    return 0;
+}
+
+getEntityDeaths(ent)
+{
+    if (!isDefined(ent)) return 0;
+    if (isDefined(ent.deaths)) return int(ent.deaths);
+    if (isDefined(ent.pers) && isDefined(ent.pers["deaths"])) return int(ent.pers["deaths"]);
+    return 0;
+}
+
+getEntityScore(ent)
+{
+    if (!isDefined(ent)) return 0;
+    if (isDefined(ent.score)) return int(ent.score);
+    if (isDefined(ent.pers) && isDefined(ent.pers["score"])) return int(ent.pers["score"]);
+    return 0;
+}
+
+getHumanSbmmScale()
+{
+    baseScale = clampFloat(botSbmmMinimumScale, 0.0, 1.0);
+    if (!botSbmmEnable || !isDefined(level.players)) return baseScale;
+
+    humanCount = 0;
+    highestPressure = 0.0;
+
+    foreach (p in level.players)
+    {
+        if (!isDefined(p) || (p isBotEntity())) continue;
+        if (!isPlayerCountable(p)) continue;
+
+        humanCount++;
+        kills = getEntityKills(p);
+        deaths = getEntityDeaths(p);
+        score = getEntityScore(p);
+
+        deathsForKd = deaths;
+        if (deathsForKd < 1) deathsForKd = 1;
+
+        kd = (kills * 1.0) / (deathsForKd * 1.0);
+        spread = kills - deaths;
+        if (spread < 0) spread = 0;
+
+        kdPressure = getRangeFactor(kd, botSbmmKdFloor, botSbmmKdCeiling);
+        spreadPressure = getRangeFactor(spread * 1.0, botSbmmSpreadFloor, botSbmmSpreadCeiling);
+        scorePressure = getRangeFactor(score * 1.0, botSbmmScoreFloor, botSbmmScoreCeiling);
+
+        playerPressure = kdPressure;
+        if (spreadPressure > playerPressure) playerPressure = spreadPressure;
+        if (scorePressure > playerPressure) playerPressure = scorePressure;
+
+        if (playerPressure > highestPressure) highestPressure = playerPressure;
+    }
+
+    if (humanCount <= 0) return baseScale;
+    return clampFloat(baseScale + ((1.0 - baseScale) * highestPressure), 0.0, 1.0);
+}
+
+getSbmmLeadForScale(scale)
+{
+    return lerpInt(botSbmmMinWinBiasLead, botSbmmMaxWinBiasLead, scale);
+}
+
+refreshSbmmState()
+{
+    scale = clampFloat(botSbmmMinimumScale, 0.0, 1.0);
+    if (botSbmmEnable && getSelectedBotDifficulty() == "sbmm")
+        scale = getHumanSbmmScale();
+
+    level.autobotSbmmScale = scale;
+    level.autobotDynamicWinBiasLead = getSbmmLeadForScale(scale);
+    level.autobotActiveDifficultyLabel = getActiveDifficultyLabel();
+}
+
 setBotRankCompat(rankValue)
 {
     r = int(rankValue);
@@ -427,7 +597,7 @@ applyAutobotDifficulty(diff)
 {
     if (!isDefined(self.pers)) self.pers = [];
     selectedDifficulty = normalizeDifficultyName(diff);
-    self.pers["autobot_diff_applied"] = selectedDifficulty;
+    self.pers["autobot_diff_applied"] = getDifficultyApplyToken(selectedDifficulty);
     self setBotDifficulty(selectedDifficulty);
     applyOpLoadout(self);
 }
@@ -435,6 +605,7 @@ applyAutobotDifficulty(diff)
 applyDifficultyToAllBots(forceWritePers)
 {
     selectedDifficulty = getSelectedBotDifficulty();
+    selectedToken = getDifficultyApplyToken(selectedDifficulty);
     safeSetBotDifficultyDvar();
     if (!isDefined(level.players)) return;
 
@@ -443,7 +614,7 @@ applyDifficultyToAllBots(forceWritePers)
         if (!isDefined(p) || !(p isBotEntity())) continue;
 
         needsApply = true;
-        if (isDefined(p.pers) && isDefined(p.pers["autobot_diff_applied"]) && p.pers["autobot_diff_applied"] == selectedDifficulty && !forceWritePers)
+        if (isDefined(p.pers) && isDefined(p.pers["autobot_diff_applied"]) && p.pers["autobot_diff_applied"] == selectedToken && !forceWritePers)
             needsApply = false;
 
         if (needsApply)
@@ -453,7 +624,7 @@ applyDifficultyToAllBots(forceWritePers)
             p applyBotPrestigeSetting();
 
             if (!isDefined(p.pers)) p.pers = [];
-            p.pers["autobot_diff_applied"] = selectedDifficulty;
+            p.pers["autobot_diff_applied"] = selectedToken;
             if (awHealthRegenOnSpawn) safeFullHeal(p);
         }
     }
@@ -469,12 +640,14 @@ onPlayerConnect()
 
         if (player isBotEntity())
         {
-            player applyAutobotDifficulty(getSelectedBotDifficulty());
+            selectedDifficulty = getSelectedBotDifficulty();
+            selectedToken = getDifficultyApplyToken(selectedDifficulty);
+            player applyAutobotDifficulty(selectedDifficulty);
             player setBotRankCompat(defaultBotLevel);
             player applyBotPrestigeSetting();
 
             if (!isDefined(player.pers)) player.pers = [];
-            player.pers["autobot_diff_applied"] = getSelectedBotDifficulty();
+            player.pers["autobot_diff_applied"] = selectedToken;
 
             if (awHealthRegenOnSpawn) safeFullHeal(player);
         }
@@ -571,6 +744,24 @@ runSpawnBiasSanityCheck()
     if (getPreferredBotSpawnTeamByCounts(2, 1, 3, 2, 1) != "")
     {
         warnOnce("spawn_bias_team_cap", "spawn bias sanity failed for preferred spawn team lead cap");
+        failures++;
+    }
+
+    if (getDifficultyApplyToken("sbmm") == "sbmm")
+    {
+        warnOnce("sbmm_token", "sbmm apply token sanity failed");
+        failures++;
+    }
+
+    if (getSbmmLeadForScale(0.0) != botSbmmMinWinBiasLead)
+    {
+        warnOnce("sbmm_lead_min", "sbmm minimum lead sanity failed");
+        failures++;
+    }
+
+    if (getSbmmLeadForScale(1.0) != botSbmmMaxWinBiasLead)
+    {
+        warnOnce("sbmm_lead_max", "sbmm maximum lead sanity failed");
         failures++;
     }
 
@@ -674,6 +865,14 @@ isSpawnLeadAllowed(currentLead, maxLead)
     return currentLead < maxLead;
 }
 
+getActiveBotWinBiasLead()
+{
+    if (getSelectedBotDifficulty() != "sbmm") return botWinBiasLead;
+    if (!botSbmmEnable) return botWinBiasLead;
+    if (!isDefined(level.autobotDynamicWinBiasLead)) return getSbmmLeadForScale(getSbmmScale());
+    return level.autobotDynamicWinBiasLead;
+}
+
 getPreferredBotSpawnTeamByCounts(alliesHumans, axisHumans, alliesPlayers, axisPlayers, maxLead)
 {
     preferredTeam = pickPreferredBotWinTeamByCounts(alliesHumans, axisHumans);
@@ -697,13 +896,14 @@ getPreferredBotWinTeam()
 
 getPreferredBotSpawnTeam()
 {
-    if (!botWinBiasEnable || botWinBiasLead <= 0) return "";
+    activeLead = getActiveBotWinBiasLead();
+    if (!botWinBiasEnable || activeLead <= 0) return "";
     return getPreferredBotSpawnTeamByCounts(
         countHumansOnTeam("allies"),
         countHumansOnTeam("axis"),
         countPlayersOnTeam("allies"),
         countPlayersOnTeam("axis"),
-        botWinBiasLead
+        activeLead
     );
 }
 
@@ -721,9 +921,12 @@ botDifficultyEnforcer()
     level endon("game_ended");
     for (;;)
     {
+        refreshSbmmState();
         safeSetBotDifficultyDvar();
         applyDifficultyToAllBots(false);
-        wait botDifficultyEnforcerInterval;
+        waitInterval = botDifficultyEnforcerInterval;
+        if (botSbmmEnable && getSelectedBotDifficulty() == "sbmm") waitInterval = botSbmmUpdateInterval;
+        wait waitInterval;
     }
 }
 
@@ -740,8 +943,10 @@ liveDebugHeartbeat()
                 + " humans=" + countHumans()
                 + " bots=" + countBots()
                 + " target=" + target
-                + " diff=" + getSelectedBotDifficulty()
+                + " diff=" + getActiveDifficultyLabel()
                 + " dvar(bot_difficulty)=" + level.autobotDvarDifficulty
+                + " sbmmScale=" + getSbmmScale()
+                + " sbmmLead=" + getActiveBotWinBiasLead()
                 + " alliesBots=" + countAlliedBots()
                 + " axisBots=" + countAxisBots());
         }
@@ -754,7 +959,7 @@ run60SecondSanityTest()
     level endon("game_ended");
     if (!debugAutobots) return;
 
-    expectedApplied = getSelectedBotDifficulty();
+    expectedApplied = getDifficultyApplyToken(getSelectedBotDifficulty());
     expectedDvar = level.autobotDvarDifficulty;
     if (!isDefined(expectedDvar) || expectedDvar == "") expectedDvar = getBotDifficultyDvarTarget();
     startTime = 0;
@@ -797,7 +1002,18 @@ run60SecondSanityTest()
             foreach (p in level.players)
             {
                 if (!isDefined(p) || !(p isBotEntity())) continue;
-                if (!isDefined(p.pers) || !isDefined(p.pers["autobot_diff_applied"]) || p.pers["autobot_diff_applied"] != expectedApplied)
+                if (!isDefined(p.pers) || !isDefined(p.pers["autobot_diff_applied"]))
+                {
+                    badBotDiffSeen++;
+                    continue;
+                }
+
+                if (getSelectedBotDifficulty() == "sbmm")
+                {
+                    if (!isSubStr(p.pers["autobot_diff_applied"], "sbmm_"))
+                        badBotDiffSeen++;
+                }
+                else if (p.pers["autobot_diff_applied"] != expectedApplied)
                     badBotDiffSeen++;
             }
         }
