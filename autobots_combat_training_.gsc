@@ -104,7 +104,7 @@ init()
     if (!isDefined(level.autobotObservedBiasBotsAxis)) level.autobotObservedBiasBotsAxis = 0;
 
     botDifficultyMode = normalizeDifficultyName(botDifficultyMode);
-    botDifficultyFallback = normalizeDifficultyName(botDifficultyFallback);
+    botDifficultyFallback = normalizeDifficultyFallbackName(botDifficultyFallback);
     defaultBotDifficulty = botDifficultyMode;
     lockedBotDifficulty = botDifficultyMode;
 
@@ -239,6 +239,14 @@ normalizeDifficultyName(difficulty)
     return "ultra";
 }
 
+normalizeDifficultyFallbackName(difficulty)
+{
+    if (!isDefined(difficulty)) return "ultra";
+    difficulty = toLower(difficulty + "");
+    if (difficulty == "ultra") return "ultra";
+    return "ultra";
+}
+
 getSelectedBotDifficulty()
 {
     return normalizeDifficultyName(defaultBotDifficulty);
@@ -353,6 +361,23 @@ countTotalPlayersForCap()
 {
     if (!isDefined(level.players)) return 0;
     n = 0; foreach (p in level.players) if (isPlayerCountable(p)) n++;
+    return n;
+}
+
+countPlayersOnTeam(teamName)
+{
+    if (!isDefined(level.players)) return 0;
+
+    tl = normalizeTeamName(teamName);
+    n = 0;
+    foreach (p in level.players)
+    {
+        if (!isDefined(p)) continue;
+        if (!isPlayerCountable(p)) continue;
+        if (getEntityTeamName(p) != tl) continue;
+        n++;
+    }
+
     return n;
 }
 
@@ -474,17 +499,51 @@ normalizeSpawnTeam(preferredTeam)
 
 runSpawnBiasSanityCheck()
 {
+    failures = 0;
+
     if (normalizeSpawnTeam("allies") != "allies")
+    {
         warnOnce("spawn_bias_allies", "spawn bias sanity failed for allies");
+        failures++;
+    }
 
     if (normalizeSpawnTeam("axis") != "axis")
+    {
         warnOnce("spawn_bias_axis", "spawn bias sanity failed for axis");
+        failures++;
+    }
 
     if (normalizeSpawnTeam(undefined) != "autoassign")
+    {
         warnOnce("spawn_bias_undef", "spawn bias sanity failed for undefined");
+        failures++;
+    }
 
     if (normalizeSpawnTeam("bogus") != "autoassign")
+    {
         warnOnce("spawn_bias_invalid", "spawn bias sanity failed for invalid team");
+        failures++;
+    }
+
+    if (pickPreferredBotWinTeamByCounts(2, 1) != "axis")
+    {
+        warnOnce("spawn_bias_pref_axis", "spawn bias sanity failed for allies-heavy human teams");
+        failures++;
+    }
+
+    if (pickPreferredBotWinTeamByCounts(1, 2) != "allies")
+    {
+        warnOnce("spawn_bias_pref_allies", "spawn bias sanity failed for axis-heavy human teams");
+        failures++;
+    }
+
+    if (pickPreferredBotWinTeamByCounts(2, 2) != "")
+    {
+        warnOnce("spawn_bias_pref_tie", "spawn bias sanity failed for tied human teams");
+        failures++;
+    }
+
+    return failures;
 }
 
 spawnBotsSafe(amount, preferredTeam)
@@ -609,15 +668,19 @@ reconcilePendingSpawnBias()
     level.autobotObservedBiasBotsAxis = axisBots;
 }
 
-getPreferredBotWinTeam()
+pickPreferredBotWinTeamByCounts(alliesHumans, axisHumans)
 {
-    alliesHumans = countHumansOnTeam("allies");
-    axisHumans = countHumansOnTeam("axis");
-
     if (alliesHumans <= 0 && axisHumans <= 0) return "";
     if (alliesHumans > axisHumans) return "axis";
     if (axisHumans > alliesHumans) return "allies";
     return "";
+}
+
+getPreferredBotWinTeam()
+{
+    alliesHumans = countHumansOnTeam("allies");
+    axisHumans = countHumansOnTeam("axis");
+    return pickPreferredBotWinTeamByCounts(alliesHumans, axisHumans);
 }
 
 getPreferredBotSpawnTeam()
@@ -643,8 +706,8 @@ getPreferredBotSpawnTeam()
         queuedOther = level.autobotPendingSpawnAllies;
     }
 
-    botLead = (countBotsOnTeam(preferredTeam) + queuedPreferred) - (countBotsOnTeam(otherTeam) + queuedOther);
-    if (botLead < botWinBiasLead) return preferredTeam;
+    totalLead = (countPlayersOnTeam(preferredTeam) + queuedPreferred) - (countPlayersOnTeam(otherTeam) + queuedOther);
+    if (totalLead < botWinBiasLead) return preferredTeam;
 
     return "";
 }
@@ -709,6 +772,7 @@ run60SecondSanityTest()
     maxOvershoot = 0;
     spawnSuccessStreak = 0;
     spawnFailStreak = 0;
+    spawnBiasSanityFailures = 0;
 
     for (;;)
     {
@@ -725,6 +789,7 @@ run60SecondSanityTest()
 
         if (bots > 0) anyBotsSeen = true;
         if (dvarNow != expectedDvar) dvarFailures++;
+        spawnBiasSanityFailures += runSpawnBiasSanityCheck();
 
         overshoot = total - target;
         if (overshoot > maxOvershoot) maxOvershoot = overshoot;
@@ -752,6 +817,7 @@ run60SecondSanityTest()
         + " dvarFailures=" + dvarFailures
         + " anyBotsSeen=" + anyBotsSeen
         + " badBotDiffSeen=" + badBotDiffSeen
+        + " spawnBiasSanityFailures=" + spawnBiasSanityFailures
         + " maxOvershoot=" + maxOvershoot
         + " spawnSuccessStreak=" + spawnSuccessStreak
         + " spawnFailStreak=" + spawnFailStreak);
