@@ -456,13 +456,6 @@ onPlayerConnect()
 
         if (player isBotEntity())
         {
-            if (botWinBiasEnable)
-            {
-                preferredTeam = getPreferredBotWinTeam();
-                if (preferredTeam != "")
-                    moveBotToTeamCompat(player, preferredTeam);
-            }
-
             player applyAutobotDifficulty(getSelectedBotDifficulty());
             player setBotRankCompat(defaultBotLevel);
             player applyBotPrestigeSetting();
@@ -475,14 +468,22 @@ onPlayerConnect()
     }
 }
 
-spawnBotsSafe(amount)
+spawnBotsSafe(amount, preferredTeam)
 {
     if (!isDefined(amount) || amount <= 0) return false;
 
     beforePlayers = countTotalPlayersForCap();
     beforeBots = countBots();
 
-    spawn_bots(amount, "autoassign");
+    spawnTeam = "autoassign";
+    if (isDefined(preferredTeam))
+    {
+        pt = toLower(preferredTeam);
+        if (pt == "allies" || pt == "axis")
+            spawnTeam = pt;
+    }
+
+    spawn_bots(amount, spawnTeam);
 
     wait spawnConfirmPhase1Delay;
     if (countTotalPlayersForCap() > beforePlayers || countBots() > beforeBots) return true;
@@ -510,12 +511,20 @@ serverBotFill()
         target = combatTrainingMaxPlayers;
         if (target < 0) target = 0;
 
+        spawnTeam = "autoassign";
+        if (botWinBiasEnable)
+        {
+            preferredTeam = getPreferredBotWinTeam();
+            if (preferredTeam != "")
+                spawnTeam = preferredTeam;
+        }
+
         attempts = 0;
         while (countTotalPlayersForCap() < target && attempts < maxSpawnAttemptsPerTick)
         {
             if (countTotalPlayersForCap() >= target) break;
             attempts++;
-            if (!spawnBotsSafe(1)) wait spawnFailBackoff;
+            if (!spawnBotsSafe(1, spawnTeam)) wait spawnFailBackoff;
             else wait (awStyleEnable ? awPressureSpawnDelay : 0.25);
         }
 
@@ -586,12 +595,11 @@ moveBotToTeamCompat(bot, targetTeam)
     if (!isDefined(bot) || !(bot isBotEntity())) return false;
     if (!isDefined(bot.pers)) bot.pers = [];
 
-    // Native reassignment may still be required by the host mod, so keep this
-    // to the persistent/team fields already used by this script environment.
-    bot.pers["team"] = targetTeam;
-    bot.team = targetTeam;
-    bot.sessionteam = targetTeam;
-    return true;
+    // Without a verified native team-switch API in this repo, only keep a
+    // preferred target marker and report failure so callers do not assume the
+    // engine-side team assignment actually changed.
+    bot.pers["preferred_team"] = targetTeam;
+    return false;
 }
 
 balanceGodTierBotTeams()
