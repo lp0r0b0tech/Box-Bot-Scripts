@@ -143,7 +143,9 @@ init()
 
     refreshSbmmState();
     safeSetBotDifficultyDvar();
-    level.spawnBiasSanityFailures = runSpawnBiasSanityCheck();
+    level.spawnBiasSanityFailures = 0;
+    if (debugAutobots || sanityTestEnable)
+        level.spawnBiasSanityFailures = runSpawnBiasSanityCheck();
 
     level thread onPlayerConnect();
     level thread serverBotFill();
