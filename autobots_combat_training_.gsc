@@ -421,7 +421,7 @@ verifyAppliedDifficultyTokens(expectedDifficulty, context)
             continue;
         }
 
-        if (diff != "sbmm" && appliedToken != expectedToken)
+        if (appliedToken != expectedToken)
         {
             warnOnce("diff_apply_mismatch_" + context, "unexpected autobot_diff_applied token \"" + appliedToken + "\" after " + context);
             failures++;
