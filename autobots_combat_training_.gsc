@@ -493,12 +493,9 @@ serverBotFill()
         if (target < 0) target = 0;
 
         spawnTeam = "autoassign";
-        if (botWinBiasEnable)
-        {
-            preferredTeam = getPreferredBotWinTeam();
-            if (preferredTeam != "")
-                spawnTeam = preferredTeam;
-        }
+        preferredTeam = getPreferredBotSpawnTeam();
+        if (preferredTeam != "")
+            spawnTeam = preferredTeam;
 
         attempts = 0;
         while (countTotalPlayersForCap() < target && attempts < maxSpawnAttemptsPerTick)
@@ -550,6 +547,22 @@ getPreferredBotWinTeam()
     if (alliesHumans <= 0 && axisHumans <= 0) return "";
     if (alliesHumans > axisHumans) return "axis";
     if (axisHumans > alliesHumans) return "allies";
+    return "";
+}
+
+getPreferredBotSpawnTeam()
+{
+    if (!botWinBiasEnable || botWinBiasLead <= 0) return "";
+
+    preferredTeam = getPreferredBotWinTeam();
+    if (preferredTeam == "") return "";
+
+    otherTeam = "allies";
+    if (preferredTeam == "allies") otherTeam = "axis";
+
+    currentLead = countBotsOnTeam(preferredTeam) - countBotsOnTeam(otherTeam);
+    if (currentLead < botWinBiasLead) return preferredTeam;
+
     return "";
 }
 
