@@ -82,7 +82,7 @@ giveGunGameWeapon()
     self endon("disconnect");
     self endon("death");
 
-    self takeallweapons();
+    if (!isDefined(level.gg_weapons) || level.gg_weapons.size <= 0) return;
 
     if (!isDefined(self.gg_level)) self.gg_level = 0;
     if (self.gg_level < 0) self.gg_level = 0;
@@ -91,6 +91,7 @@ giveGunGameWeapon()
     currentWeapon = level.gg_weapons[self.gg_level];
     if (!isDefined(currentWeapon) || currentWeapon == "") return;
 
+    self takeallweapons();
     self giveweapon(currentWeapon);
     self switchtoweapon(currentWeapon);
     self givemaxammo(currentWeapon);
@@ -103,13 +104,23 @@ watchKill()
     for (;;)
     {
         self waittill("killed_enemy", victim, meansOfDeath, weapon);
+        if (!isDefined(level.gg_weapons) || level.gg_weapons.size <= 0) continue;
+        if (!isDefined(self.gg_level)) self.gg_level = 0;
+        if (self.gg_level < 0) self.gg_level = 0;
+        if (self.gg_level >= level.gg_weapons.size) self.gg_level = level.gg_weapons.size - 1;
+
+        currentWeapon = level.gg_weapons[self.gg_level];
+        finalTier = (self.gg_level >= (level.gg_weapons.size - 1));
+        validTierKill = (weapon == currentWeapon);
+        if (!validTierKill && finalTier && meansOfDeath == "MOD_MELEE")
+            validTierKill = true;
 
         if (meansOfDeath == "MOD_MELEE" || meansOfDeath == "MOD_CRUSH")
             victim thread demotePlayer();
 
-        if (weapon == level.gg_weapons[self.gg_level] || meansOfDeath == "MOD_MELEE")
+        if (validTierKill)
         {
-            if (self.gg_level >= (level.gg_weapons.size - 1))
+            if (finalTier)
             {
                 level thread maps\mp\gametypes\_gamelogic::endGame(self, "Gun Game Winner!");
                 return;

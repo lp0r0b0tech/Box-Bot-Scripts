@@ -1083,7 +1083,7 @@ run60SecondSanityTest()
             }
         }
 
-        samples++;
+        samples = samples + 1;
         wait sanityTestSampleInterval;
     }
 
