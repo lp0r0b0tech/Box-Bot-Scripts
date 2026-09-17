@@ -52,7 +52,7 @@ godTierTeamBalanceInterval = 0.25;
 botWinBiasEnable = true;
 botWinBiasLead = 6;
 spawnFailBackoff = 0.50;
-maxSpawnAttemptsPerTick = 8;
+maxSpawnAttemptsPerTick = 1;
 
 sanityTestEnable = true;
 sanityTestDuration = 60.0;
@@ -98,11 +98,6 @@ init()
     if (!isDefined(level.autobotsWarnOnce)) level.autobotsWarnOnce = [];
     if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
     if (!isDefined(level.autobotDvarDifficulty)) level.autobotDvarDifficulty = "";
-    if (!isDefined(level.autobotPendingSpawnAllies)) level.autobotPendingSpawnAllies = 0;
-    if (!isDefined(level.autobotPendingSpawnAxis)) level.autobotPendingSpawnAxis = 0;
-    if (!isDefined(level.autobotObservedBiasBotsAllies)) level.autobotObservedBiasBotsAllies = 0;
-    if (!isDefined(level.autobotObservedBiasBotsAxis)) level.autobotObservedBiasBotsAxis = 0;
-
     botDifficultyMode = normalizeDifficultyName(botDifficultyMode);
     botDifficultyFallback = normalizeDifficultyFallbackName(botDifficultyFallback);
     defaultBotDifficulty = botDifficultyMode;
@@ -364,23 +359,6 @@ countTotalPlayersForCap()
     return n;
 }
 
-countPlayersOnTeam(teamName)
-{
-    if (!isDefined(level.players)) return 0;
-
-    tl = normalizeTeamName(teamName);
-    n = 0;
-    foreach (p in level.players)
-    {
-        if (!isDefined(p)) continue;
-        if (!isPlayerCountable(p)) continue;
-        if (getEntityTeamName(p) != tl) continue;
-        n++;
-    }
-
-    return n;
-}
-
 countBots()
 {
     if (!isDefined(level.players)) return 0;
@@ -587,26 +565,16 @@ serverBotFill()
         {
             if (countTotalPlayersForCap() >= target) break;
             attempts++;
-            reconcilePendingSpawnBias();
-
             spawnTeam = "autoassign";
             preferredTeam = getPreferredBotSpawnTeam();
             if (preferredTeam != "")
                 spawnTeam = preferredTeam;
 
-            if (spawnTeam == "allies") level.autobotPendingSpawnAllies++;
-            else if (spawnTeam == "axis") level.autobotPendingSpawnAxis++;
-
             if (!spawnBotsSafe(1, spawnTeam))
-            {
-                if (spawnTeam == "allies" && level.autobotPendingSpawnAllies > 0) level.autobotPendingSpawnAllies--;
-                else if (spawnTeam == "axis" && level.autobotPendingSpawnAxis > 0) level.autobotPendingSpawnAxis--;
                 wait spawnFailBackoff;
-            }
             else wait (awStyleEnable ? awPressureSpawnDelay : 0.25);
         }
 
-        reconcilePendingSpawnBias();
         level.autobotAdjusting = false;
         wait (awStyleEnable ? 0.15 : 0.25);
     }
@@ -640,34 +608,6 @@ countBotsOnTeam(teamName)
 countAlliedBots() { return countBotsOnTeam("allies"); }
 countAxisBots()   { return countBotsOnTeam("axis"); }
 
-reconcilePendingSpawnBias()
-{
-    alliesBots = countBotsOnTeam("allies");
-    axisBots = countBotsOnTeam("axis");
-
-    if (!isDefined(level.autobotObservedBiasBotsAllies)) level.autobotObservedBiasBotsAllies = alliesBots;
-    if (!isDefined(level.autobotObservedBiasBotsAxis)) level.autobotObservedBiasBotsAxis = axisBots;
-    if (!isDefined(level.autobotPendingSpawnAllies)) level.autobotPendingSpawnAllies = 0;
-    if (!isDefined(level.autobotPendingSpawnAxis)) level.autobotPendingSpawnAxis = 0;
-
-    newAlliesBots = alliesBots - level.autobotObservedBiasBotsAllies;
-    if (newAlliesBots > 0 && level.autobotPendingSpawnAllies > 0)
-    {
-        level.autobotPendingSpawnAllies -= newAlliesBots;
-        if (level.autobotPendingSpawnAllies < 0) level.autobotPendingSpawnAllies = 0;
-    }
-
-    newAxisBots = axisBots - level.autobotObservedBiasBotsAxis;
-    if (newAxisBots > 0 && level.autobotPendingSpawnAxis > 0)
-    {
-        level.autobotPendingSpawnAxis -= newAxisBots;
-        if (level.autobotPendingSpawnAxis < 0) level.autobotPendingSpawnAxis = 0;
-    }
-
-    level.autobotObservedBiasBotsAllies = alliesBots;
-    level.autobotObservedBiasBotsAxis = axisBots;
-}
-
 pickPreferredBotWinTeamByCounts(alliesHumans, axisHumans)
 {
     if (alliesHumans <= 0 && axisHumans <= 0) return "";
@@ -693,20 +633,7 @@ getPreferredBotSpawnTeam()
     otherTeam = "allies";
     if (preferredTeam == "allies") otherTeam = "axis";
 
-    queuedPreferred = 0;
-    queuedOther = 0;
-    if (preferredTeam == "allies")
-    {
-        queuedPreferred = level.autobotPendingSpawnAllies;
-        queuedOther = level.autobotPendingSpawnAxis;
-    }
-    else
-    {
-        queuedPreferred = level.autobotPendingSpawnAxis;
-        queuedOther = level.autobotPendingSpawnAllies;
-    }
-
-    botLead = (countBotsOnTeam(preferredTeam) + queuedPreferred) - (countBotsOnTeam(otherTeam) + queuedOther);
+    botLead = countBotsOnTeam(preferredTeam) - countBotsOnTeam(otherTeam);
     if (botLead < botWinBiasLead) return preferredTeam;
 
     return "";
