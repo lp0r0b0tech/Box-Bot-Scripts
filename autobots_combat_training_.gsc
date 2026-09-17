@@ -104,6 +104,7 @@ init()
     lockedBotDifficulty = botDifficultyMode;
 
     safeSetBotDifficultyDvar();
+    runSpawnBiasSanityCheck();
 
     level thread onPlayerConnect();
     level thread serverBotFill();
@@ -160,6 +161,12 @@ detectCombatTraining()
     if (isSubStr(mn, "combat") || isSubStr(mn, "training")) return true;
 
     return false;
+}
+
+normalizeTeamName(value)
+{
+    if (!isDefined(value)) return "";
+    return toLower(value + "");
 }
 
 dbg(msg)
@@ -344,6 +351,23 @@ countTotalPlayersForCap()
     return n;
 }
 
+countPlayersOnTeam(teamName)
+{
+    if (!isDefined(level.players)) return 0;
+
+    tl = normalizeTeamName(teamName);
+    n = 0;
+    foreach (p in level.players)
+    {
+        if (!isDefined(p)) continue;
+        if (!isPlayerCountable(p)) continue;
+        if (getEntityTeamName(p) != tl) continue;
+        n++;
+    }
+
+    return n;
+}
+
 countBots()
 {
     if (!isDefined(level.players)) return 0;
@@ -362,7 +386,7 @@ countHumansOnTeam(teamName)
 {
     if (!isDefined(level.players)) return 0;
 
-    tl = toLower(teamName);
+    tl = normalizeTeamName(teamName);
     n = 0;
     foreach (p in level.players)
     {
@@ -449,6 +473,32 @@ onPlayerConnect()
     }
 }
 
+normalizeSpawnTeam(preferredTeam)
+{
+    if (!isDefined(preferredTeam)) return "autoassign";
+
+    pt = normalizeTeamName(preferredTeam);
+    if (pt == "allies" || pt == "axis")
+        return pt;
+
+    return "autoassign";
+}
+
+runSpawnBiasSanityCheck()
+{
+    if (normalizeSpawnTeam("allies") != "allies")
+        warnOnce("spawn_bias_allies", "spawn bias sanity failed for allies");
+
+    if (normalizeSpawnTeam("axis") != "axis")
+        warnOnce("spawn_bias_axis", "spawn bias sanity failed for axis");
+
+    if (normalizeSpawnTeam(undefined) != "autoassign")
+        warnOnce("spawn_bias_undef", "spawn bias sanity failed for undefined");
+
+    if (normalizeSpawnTeam("bogus") != "autoassign")
+        warnOnce("spawn_bias_invalid", "spawn bias sanity failed for invalid team");
+}
+
 spawnBotsSafe(amount, preferredTeam)
 {
     if (!isDefined(amount) || amount <= 0) return false;
@@ -456,14 +506,7 @@ spawnBotsSafe(amount, preferredTeam)
     beforePlayers = countTotalPlayersForCap();
     beforeBots = countBots();
 
-    spawnTeam = "autoassign";
-    if (isDefined(preferredTeam))
-    {
-        pt = toLower(preferredTeam);
-        if (pt == "allies" || pt == "axis")
-            spawnTeam = pt;
-    }
-
+    spawnTeam = normalizeSpawnTeam(preferredTeam);
     spawn_bots(amount, spawnTeam);
 
     wait spawnConfirmPhase1Delay;
@@ -514,9 +557,9 @@ serverBotFill()
 getEntityTeamName(ent)
 {
     if (!isDefined(ent)) return "";
-    if (isDefined(ent.team)) return toLower(ent.team);
-    if (isDefined(ent.sessionteam)) return toLower(ent.sessionteam);
-    if (isDefined(ent.pers) && isDefined(ent.pers["team"])) return toLower(ent.pers["team"]);
+    if (isDefined(ent.team)) return normalizeTeamName(ent.team);
+    if (isDefined(ent.sessionteam)) return normalizeTeamName(ent.sessionteam);
+    if (isDefined(ent.pers) && isDefined(ent.pers["team"])) return normalizeTeamName(ent.pers["team"]);
     return "";
 }
 
@@ -524,7 +567,7 @@ countBotsOnTeam(teamName)
 {
     if (!isDefined(level.players)) return 0;
 
-    tl = toLower(teamName);
+    tl = normalizeTeamName(teamName);
     n = 0;
     foreach (p in level.players)
     {
@@ -560,7 +603,7 @@ getPreferredBotSpawnTeam()
     otherTeam = "allies";
     if (preferredTeam == "allies") otherTeam = "axis";
 
-    currentLead = countBotsOnTeam(preferredTeam) - countBotsOnTeam(otherTeam);
+    currentLead = countPlayersOnTeam(preferredTeam) - countPlayersOnTeam(otherTeam);
     if (currentLead < botWinBiasLead) return preferredTeam;
 
     return "";
