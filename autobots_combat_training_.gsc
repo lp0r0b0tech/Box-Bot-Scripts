@@ -604,9 +604,7 @@ getPreferredBotSpawnTeam()
     otherTeam = "allies";
     if (preferredTeam == "allies") otherTeam = "axis";
 
-    humanLead = countHumansOnTeam(preferredTeam) - countHumansOnTeam(otherTeam);
-    totalLead = countPlayersOnTeam(preferredTeam) - countPlayersOnTeam(otherTeam);
-    botLead = totalLead - humanLead;
+    botLead = countBotsOnTeam(preferredTeam) - countBotsOnTeam(otherTeam);
     if (botLead < botWinBiasLead) return preferredTeam;
 
     return "";
