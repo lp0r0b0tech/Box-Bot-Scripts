@@ -45,7 +45,7 @@ debugVerbose = false;
 debugHeartbeatInterval = 5.0;
 
 botDifficultyEnforcerInterval = 2.0;
-godTierTeamBalanceEnable = true;
+godTierTeamBalanceEnable = false;
 godTierTeamBalanceDelta = 1;
 godTierTeamBalanceInterval = 0.25;
 botWinBiasEnable = true;
@@ -110,7 +110,6 @@ init()
     level thread liveDebugHeartbeat();
     level thread delayedBotDifficultyApply();
     level thread botDifficultyEnforcer();
-    if (godTierTeamBalanceEnable) level thread godTierTeamBalanceLoop();
 
     dbg("init(): Combat Training only active | diff=" + defaultBotDifficulty + " | dvar=" + level.autobotDvarDifficulty);
     if (sanityTestEnable) level thread run60SecondSanityTest();
