@@ -60,6 +60,7 @@ spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 1;
 botSbmmEnable = true;
 botSbmmUpdateInterval = 3.0;
+botSbmmStartScale = 0.45;
 botSbmmMinimumScale = 0.35;
 botSbmmKdFloor = 1.00;
 botSbmmKdCeiling = 2.25;
@@ -67,6 +68,10 @@ botSbmmSpreadFloor = 0.0;
 botSbmmSpreadCeiling = 12.0;
 botSbmmScoreFloor = 0.0;
 botSbmmScoreCeiling = 3000.0;
+botSbmmTopPlayerWeight = 0.70;
+botSbmmLobbyAverageWeight = 0.30;
+botSbmmRiseSpeed = 0.45;
+botSbmmFallSpeed = 0.20;
 botSbmmMinWinBiasLead = 2;
 botSbmmMaxWinBiasLead = 6;
 
@@ -103,11 +108,20 @@ init()
     if (godTierTeamBalanceDelta < 0) godTierTeamBalanceDelta = 0;
     if (botWinBiasLead < 0) botWinBiasLead = 0;
     if (botSbmmUpdateInterval < 1.0) botSbmmUpdateInterval = 1.0;
+    if (botSbmmStartScale < 0.0) botSbmmStartScale = 0.0;
+    if (botSbmmStartScale > 1.0) botSbmmStartScale = 1.0;
     if (botSbmmMinimumScale < 0.0) botSbmmMinimumScale = 0.0;
     if (botSbmmMinimumScale > 1.0) botSbmmMinimumScale = 1.0;
     if (botSbmmKdCeiling < botSbmmKdFloor) botSbmmKdCeiling = botSbmmKdFloor;
     if (botSbmmSpreadCeiling < botSbmmSpreadFloor) botSbmmSpreadCeiling = botSbmmSpreadFloor;
     if (botSbmmScoreCeiling < botSbmmScoreFloor) botSbmmScoreCeiling = botSbmmScoreFloor;
+    if (botSbmmTopPlayerWeight < 0.0) botSbmmTopPlayerWeight = 0.0;
+    if (botSbmmLobbyAverageWeight < 0.0) botSbmmLobbyAverageWeight = 0.0;
+    if (botSbmmTopPlayerWeight <= 0.0 && botSbmmLobbyAverageWeight <= 0.0) botSbmmTopPlayerWeight = 1.0;
+    if (botSbmmRiseSpeed < 0.01) botSbmmRiseSpeed = 0.01;
+    if (botSbmmRiseSpeed > 1.0) botSbmmRiseSpeed = 1.0;
+    if (botSbmmFallSpeed < 0.01) botSbmmFallSpeed = 0.01;
+    if (botSbmmFallSpeed > 1.0) botSbmmFallSpeed = 1.0;
     if (botSbmmMinWinBiasLead < 0) botSbmmMinWinBiasLead = 0;
     if (botSbmmMaxWinBiasLead < botSbmmMinWinBiasLead) botSbmmMaxWinBiasLead = botSbmmMinWinBiasLead;
     if (spawnFailBackoff < 0.10) spawnFailBackoff = 0.10;
@@ -521,12 +535,39 @@ getEntityScore(ent)
     return 0;
 }
 
-getHumanSbmmScale()
+getPlayerSbmmPressure(ent)
+{
+    if (!isDefined(ent)) return 0.0;
+
+    kills = getEntityKills(ent);
+    deaths = getEntityDeaths(ent);
+    score = getEntityScore(ent);
+
+    deathsForKd = deaths;
+    if (deathsForKd < 1) deathsForKd = 1;
+
+    kd = (kills * 1.0) / (deathsForKd * 1.0);
+    spread = kills - deaths;
+    if (spread < 0) spread = 0;
+
+    kdPressure = getRangeFactor(kd, botSbmmKdFloor, botSbmmKdCeiling);
+    spreadPressure = getRangeFactor(spread * 1.0, botSbmmSpreadFloor, botSbmmSpreadCeiling);
+    scorePressure = getRangeFactor(score * 1.0, botSbmmScoreFloor, botSbmmScoreCeiling);
+
+    playerPressure = kdPressure;
+    if (spreadPressure > playerPressure) playerPressure = spreadPressure;
+    if (scorePressure > playerPressure) playerPressure = scorePressure;
+
+    return clampFloat(playerPressure, 0.0, 1.0);
+}
+
+getHumanSbmmTargetScale()
 {
     baseScale = clampFloat(botSbmmMinimumScale, 0.0, 1.0);
     if (!botSbmmEnable || !isDefined(level.players)) return baseScale;
 
     humanCount = 0;
+    pressureTotal = 0.0;
     highestPressure = 0.0;
 
     foreach (p in level.players)
@@ -535,30 +576,31 @@ getHumanSbmmScale()
         if (!isPlayerCountable(p)) continue;
 
         humanCount++;
-        kills = getEntityKills(p);
-        deaths = getEntityDeaths(p);
-        score = getEntityScore(p);
-
-        deathsForKd = deaths;
-        if (deathsForKd < 1) deathsForKd = 1;
-
-        kd = (kills * 1.0) / (deathsForKd * 1.0);
-        spread = kills - deaths;
-        if (spread < 0) spread = 0;
-
-        kdPressure = getRangeFactor(kd, botSbmmKdFloor, botSbmmKdCeiling);
-        spreadPressure = getRangeFactor(spread * 1.0, botSbmmSpreadFloor, botSbmmSpreadCeiling);
-        scorePressure = getRangeFactor(score * 1.0, botSbmmScoreFloor, botSbmmScoreCeiling);
-
-        playerPressure = kdPressure;
-        if (spreadPressure > playerPressure) playerPressure = spreadPressure;
-        if (scorePressure > playerPressure) playerPressure = scorePressure;
+        playerPressure = getPlayerSbmmPressure(p);
+        pressureTotal += playerPressure;
 
         if (playerPressure > highestPressure) highestPressure = playerPressure;
     }
 
     if (humanCount <= 0) return baseScale;
-    return clampFloat(baseScale + ((1.0 - baseScale) * highestPressure), 0.0, 1.0);
+
+    averagePressure = pressureTotal / (humanCount * 1.0);
+    weightTotal = botSbmmTopPlayerWeight + botSbmmLobbyAverageWeight;
+    if (weightTotal <= 0.0) return baseScale;
+
+    blendedPressure = ((highestPressure * botSbmmTopPlayerWeight) + (averagePressure * botSbmmLobbyAverageWeight)) / weightTotal;
+    return clampFloat(baseScale + ((1.0 - baseScale) * blendedPressure), 0.0, 1.0);
+}
+
+smoothSbmmScale(currentScale, targetScale)
+{
+    currentScale = clampFloat(currentScale, 0.0, 1.0);
+    targetScale = clampFloat(targetScale, 0.0, 1.0);
+
+    speed = botSbmmFallSpeed;
+    if (targetScale > currentScale) speed = botSbmmRiseSpeed;
+
+    return clampFloat(currentScale + ((targetScale - currentScale) * speed), 0.0, 1.0);
 }
 
 getSbmmLeadForScale(scale)
@@ -568,10 +610,19 @@ getSbmmLeadForScale(scale)
 
 refreshSbmmState()
 {
-    scale = clampFloat(botSbmmMinimumScale, 0.0, 1.0);
-    if (botSbmmEnable && getSelectedBotDifficulty() == "sbmm")
-        scale = getHumanSbmmScale();
+    startScale = clampFloat(botSbmmStartScale, 0.0, 1.0);
+    if (startScale < botSbmmMinimumScale) startScale = botSbmmMinimumScale;
 
+    currentScale = startScale;
+    if (isDefined(level.autobotSbmmScale)) currentScale = clampFloat(level.autobotSbmmScale, 0.0, 1.0);
+
+    targetScale = startScale;
+    if (botSbmmEnable && getSelectedBotDifficulty() == "sbmm")
+        targetScale = getHumanSbmmTargetScale();
+
+    scale = smoothSbmmScale(currentScale, targetScale);
+
+    level.autobotSbmmTargetScale = targetScale;
     level.autobotSbmmScale = scale;
     level.autobotDynamicWinBiasLead = getSbmmLeadForScale(scale);
     level.autobotActiveDifficultyLabel = getActiveDifficultyLabel();
@@ -765,6 +816,18 @@ runSpawnBiasSanityCheck()
         failures++;
     }
 
+    if (smoothSbmmScale(0.50, 1.0) <= 0.50)
+    {
+        warnOnce("sbmm_rise", "sbmm rise smoothing sanity failed");
+        failures++;
+    }
+
+    if (smoothSbmmScale(0.50, 0.0) >= 0.50)
+    {
+        warnOnce("sbmm_fall", "sbmm fall smoothing sanity failed");
+        failures++;
+    }
+
     return failures;
 }
 
@@ -946,6 +1009,7 @@ liveDebugHeartbeat()
                 + " diff=" + getActiveDifficultyLabel()
                 + " dvar(bot_difficulty)=" + level.autobotDvarDifficulty
                 + " sbmmScale=" + getSbmmScale()
+                + " sbmmTarget=" + (isDefined(level.autobotSbmmTargetScale) ? level.autobotSbmmTargetScale : getSbmmScale())
                 + " sbmmLead=" + getActiveBotWinBiasLead()
                 + " alliesBots=" + countAlliedBots()
                 + " axisBots=" + countAxisBots());
