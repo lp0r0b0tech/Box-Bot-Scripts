@@ -75,7 +75,7 @@ botSbmmFallSpeed = 0.20;
 botSbmmMinWinBiasLead = 2;
 botSbmmMaxWinBiasLead = 6;
 
-sanityTestEnable = true;
+sanityTestEnable = false;
 sanityTestDuration = 60.0;
 sanityTestSampleInterval = 5.0;
 
@@ -144,7 +144,7 @@ init()
     refreshSbmmState();
     safeSetBotDifficultyDvar();
     level.spawnBiasSanityFailures = 0;
-    if (debugAutobots || sanityTestEnable)
+    if (sanityTestEnable)
         level.spawnBiasSanityFailures = runSpawnBiasSanityCheck();
 
     level thread onPlayerConnect();
