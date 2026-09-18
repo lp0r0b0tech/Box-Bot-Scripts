@@ -135,7 +135,7 @@ onPlayerConnect()
 {
     for (;;)
     {
-        level waittill("connecting", player);
+        level waittill("connected", player);
         if (!isDefined(player)) continue;
         initializeGunGamePlayer(player);
     }
@@ -198,20 +198,14 @@ watchKill()
             if (finalTier)
             {
                 self iprintlnbold("^2Gun Game Winner!");
-                winnerToken = getGunGameWinnerToken(self);
-                if (winnerToken == "none")
+                winner = getGunGameEndGameWinner(self);
+                if (!isDefined(winner))
                 {
-                    if (isGunGameFreeForAllMode())
-                    {
-                        maps\mp\gametypes\_gamelogic::endGame(self, "scorelimit");
-                        return;
-                    }
-
                     self iprintlnbold("^1Gun Game could not resolve a winning team token.");
                     return;
                 }
 
-                maps\mp\gametypes\_gamelogic::endGame(winnerToken, "scorelimit");
+                maps\mp\gametypes\_gamelogic::endGame(winner, "scorelimit");
                 return;
             }
 
@@ -253,6 +247,14 @@ getGunGameWinnerToken(player)
     if (teamToken == "allies" || teamToken == "axis") return teamToken;
 
     return "none";
+}
+
+getGunGameEndGameWinner(player)
+{
+    winnerToken = getGunGameWinnerToken(player);
+    if (winnerToken != "none") return winnerToken;
+    if (isGunGameFreeForAllMode()) return player;
+    return undefined;
 }
 
 shouldAwardFinalTierGunGameKill(validTierKill, finalTier, meansOfDeath)
