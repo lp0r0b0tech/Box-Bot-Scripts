@@ -1172,6 +1172,9 @@ run60SecondSanityTest()
     maxOvershoot = 0;
     spawnSuccessStreak = 0;
     spawnFailStreak = 0;
+    expectedApplied = getActiveDifficultyLabel();
+    expectedDvar = getBotDifficultyDvarTarget();
+
     for (;;)
     {
         elapsed = 0.0;
