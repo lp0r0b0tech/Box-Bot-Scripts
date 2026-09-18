@@ -1262,8 +1262,6 @@ run60SecondSanityTest()
         if (isDefined(level.time)) elapsed = (level.time - startTime) / 1000.0;
         if (elapsed >= sanityTestDuration) break;
 
-        refreshSbmmState();
-        safeSetBotDifficultyDvar();
         total = countTotalPlayersForCap();
         bots = countBots();
         target = combatTrainingMaxPlayers;

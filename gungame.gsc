@@ -242,7 +242,7 @@ watchKill()
 
             self.gg_level++;
             if (self.gg_level >= level.gg_weapons.size) self.gg_level = level.gg_weapons.size - 1;
-            self thread giveGunGameWeapon();
+            self scheduleGunGameWeaponGrant();
             self playlocalsound("mp_war_objective_taken");
         }
     }
@@ -260,7 +260,7 @@ demotePlayer()
         self playlocalsound("mp_war_objective_lost");
 
         if (isalive(self))
-            self thread giveGunGameWeapon();
+            self scheduleGunGameWeaponGrant();
     }
 }
 
