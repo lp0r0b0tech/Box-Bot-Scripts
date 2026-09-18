@@ -5,7 +5,6 @@
 isGunGameMode()
 {
     if (isDefined(level.forceGunGameInCombatTraining) && level.forceGunGameInCombatTraining) return true;
-    if (isDefined(level.autobotsForceGunGameInCombatTraining) && level.autobotsForceGunGameInCombatTraining) return true;
 
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
@@ -213,12 +212,6 @@ watchKill()
             {
                 self iprintlnbold("^2Gun Game Winner!");
                 winner = getGunGameEndGameWinner(self);
-                if (!isDefined(winner))
-                {
-                    self iprintlnbold("^1Gun Game could not resolve a winning team token.");
-                    return;
-                }
-
                 maps\mp\gametypes\_gamelogic::endGame(winner, "scorelimit");
                 return;
             }
@@ -274,7 +267,7 @@ getGunGameEndGameWinnerForMode(player, freeForAllMode)
 
     winnerToken = getGunGameWinnerToken(player);
     if (winnerToken != "none") return winnerToken;
-    return undefined;
+    return player;
 }
 
 shouldAwardFinalTierGunGameKill(validTierKill, finalTier, meansOfDeath)

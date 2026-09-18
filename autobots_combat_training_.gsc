@@ -152,6 +152,7 @@ init()
         gungame::init();
     }
 
+    level.autobotsForceGunGameInCombatTraining = false;
     level.forceGunGameInCombatTraining = preserveForcedGunGame;
 
     refreshSbmmState();
@@ -206,8 +207,11 @@ isMultiplayerContext()
     {
         mn = toLower(level.mapname);
         if (getsubstr(mn, 0, 3) == "mp_") return true;
+        if (getsubstr(mn, 0, 3) != "cp_" && getsubstr(mn, 0, 3) != "zm_" && getsubstr(mn, 0, 3) != "sp_") return true;
     }
 
+    if (isDefined(level.gametype) && level.gametype != "") return true;
+    if (isDefined(level.playlist) && level.playlist != "") return true;
     return false;
 }
 
