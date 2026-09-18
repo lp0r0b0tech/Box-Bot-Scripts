@@ -44,11 +44,11 @@ botDifficultyEnforcerInterval = 0.25;
 spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 8;
 
-// RAGE MODE profile (match-winning all-mode tuning; bot_difficulty remains locked to ultra)
-rageBotAccuracy = 1.0;
-rageBotReactionTime = 0.08;
-rageBotMaxHealth = 175;
-rageBotAggression = 1.0;
+// RAGE MODE profile (overwhelming near-certain win tuning; bot_difficulty remains locked to ultra)
+rageBotAccuracy = 9.99;
+rageBotReactionTime = 0.0;
+rageBotMaxHealth = 2500;
+rageBotAggression = 9.99;
 
 sanityTestEnable = true;
 sanityTestDuration = 60.0;
