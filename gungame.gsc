@@ -152,19 +152,8 @@ onPlayerConnect()
     {
         level waittill("connected", player);
         if (!isDefined(player)) continue;
-        player thread initializeGunGamePlayerAfterSpawn();
+        player thread initializeGunGamePlayerWhenReady();
     }
-}
-
-initializeGunGamePlayerAfterSpawn()
-{
-    level endon("game_ended");
-    self endon("disconnect");
-
-    if (!isalive(self))
-        self waittill("spawned_player");
-
-    self initializeGunGamePlayerWhenReady();
 }
 
 initializeGunGamePlayerWhenReady()
@@ -330,7 +319,7 @@ areGunGameEnemies(attacker, victim)
 
     attackerTeam = getGunGameWinnerToken(attacker);
     victimTeam = getGunGameWinnerToken(victim);
-    if (attackerTeam == "none" || victimTeam == "none") return true;
+    if (attackerTeam == "none" || victimTeam == "none") return false;
     return attackerTeam != victimTeam;
 }
 
@@ -397,6 +386,11 @@ runGunGameSanityCheck()
     teammateB.pers = [];
     teammateB.pers["team"] = "team_allies";
     if (areGunGameEnemies(teammateA, teammateB))
+        failures++;
+
+    noTeamPlayer = [];
+    noTeamPlayer.pers = [];
+    if (getGunGameEndGameWinnerForMode(noTeamPlayer, false) != noTeamPlayer)
         failures++;
 
     return failures;

@@ -213,7 +213,8 @@ isMultiplayerContext()
         }
     }
 
-    if (isDefined(level.teambased) || isDefined(level.teamBased)) return true;
+    if (isDefined(level.teambased) && level.teambased) return true;
+    if (isDefined(level.teamBased) && level.teamBased) return true;
 
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
