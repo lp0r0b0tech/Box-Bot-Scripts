@@ -13,6 +13,7 @@
 combatTrainingMaxPlayers = 18;
 
 botDifficultyMode = "sbmm";
+// S1X keeps the engine dvar on stock-compatible values, so ultra is the only fallback profile.
 botDifficultyFallback = "ultra";
 
 // These compatibility aliases are forced to the selected profile during init().
@@ -237,13 +238,23 @@ isMultiplayerContext()
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
     if (isCombatTrainingIdentifier(gt)) return true;
-    if (gt != "") return true;
+    if (isKnownMultiplayerIdentifier(gt)) return true;
 
     pl = "";
     if (isDefined(level.playlist)) pl = toLower(level.playlist);
     if (isCombatTrainingIdentifier(pl)) return true;
-    if (pl != "") return true;
+    if (isKnownMultiplayerIdentifier(pl)) return true;
 
+    return false;
+}
+
+isKnownMultiplayerIdentifier(value)
+{
+    if (!isDefined(value) || value == "") return false;
+    if (value == "dm" || value == "war" || value == "dom" || value == "conf") return true;
+    if (value == "sd" || value == "ctf" || value == "hp" || value == "koth") return true;
+    if (value == "sab" || value == "sr" || value == "gun" || value == "gungame") return true;
+    if (value == "gun_game" || value == "gun-game" || value == "arena") return true;
     return false;
 }
 
@@ -288,6 +299,7 @@ initializeOptionalGunGameState()
 {
     if (!isDefined(level.autobotsGunGameMode)) level.autobotsGunGameMode = false;
     if (!isDefined(level.forceGunGameInCombatTraining)) level.forceGunGameInCombatTraining = false;
+    if (!isDefined(level.autobotDifficultyApplying)) level.autobotDifficultyApplying = false;
 }
 
 isGunGameActive()
@@ -295,6 +307,19 @@ isGunGameActive()
     if (isDefined(level.gungameInitialized) && level.gungameInitialized) return true;
     if (isDefined(level.autobotsGunGameMode) && level.autobotsGunGameMode) return true;
     return false;
+}
+
+beginDifficultyApply()
+{
+    if (!isDefined(level.autobotDifficultyApplying)) level.autobotDifficultyApplying = false;
+    while (level.autobotDifficultyApplying) wait 0.05;
+    level.autobotDifficultyApplying = true;
+}
+
+endDifficultyApply()
+{
+    if (!isDefined(level.autobotDifficultyApplying)) return;
+    level.autobotDifficultyApplying = false;
 }
 
 isCombatTrainingIdentifier(value)
@@ -796,35 +821,13 @@ getEntityScore(ent)
     return 0;
 }
 
-getPlayerSbmmPressure(ent)
+getPlayerSbmmMetrics(ent)
 {
-    if (!isDefined(ent)) return 0.0;
+    metrics = [];
+    metrics["positive"] = 0.0;
+    metrics["negative"] = 0.0;
 
-    kills = getEntityKills(ent);
-    deaths = getEntityDeaths(ent);
-    score = getEntityScore(ent);
-
-    deathsForKd = deaths;
-    if (deathsForKd < 1) deathsForKd = 1;
-
-    kd = (kills * 1.0) / (deathsForKd * 1.0);
-    spread = kills - deaths;
-    if (spread < 0) spread = 0;
-
-    kdPressure = getRangeFactor(kd, botSbmmKdFloor, botSbmmKdCeiling);
-    spreadPressure = getRangeFactor(spread * 1.0, botSbmmSpreadFloor, botSbmmSpreadCeiling);
-    scorePressure = getRangeFactor(score * 1.0, botSbmmScoreFloor, botSbmmScoreCeiling);
-
-    playerPressure = kdPressure;
-    if (spreadPressure > playerPressure) playerPressure = spreadPressure;
-    if (scorePressure > playerPressure) playerPressure = scorePressure;
-
-    return clampFloat(playerPressure, 0.0, 1.0);
-}
-
-getPlayerSbmmSignedPressure(ent)
-{
-    if (!isDefined(ent)) return 0.0;
+    if (!isDefined(ent)) return metrics;
 
     kills = getEntityKills(ent);
     deaths = getEntityDeaths(ent);
@@ -855,10 +858,23 @@ getPlayerSbmmSignedPressure(ent)
     negativePressure = kdPressureDown;
     if (spreadPressureDown > negativePressure) negativePressure = spreadPressureDown;
 
-    if (negativePressure > positivePressure)
-        return 0.0 - negativePressure;
+    metrics["positive"] = clampFloat(positivePressure, 0.0, 1.0);
+    metrics["negative"] = clampFloat(negativePressure, 0.0, 1.0);
+    return metrics;
+}
 
-    return positivePressure;
+getPlayerSbmmPressure(ent)
+{
+    metrics = getPlayerSbmmMetrics(ent);
+    return metrics["positive"];
+}
+
+getPlayerSbmmSignedPressure(ent)
+{
+    metrics = getPlayerSbmmMetrics(ent);
+    if (metrics["negative"] > metrics["positive"])
+        return 0.0 - metrics["negative"];
+    return metrics["positive"];
 }
 
 getHumanSbmmTargetScale()
@@ -1062,7 +1078,11 @@ onPlayerConnect()
             previousScale = getEffectiveSbmmScale();
             refreshSbmmState();
             if (previousToken != getDifficultyApplyToken(getSelectedBotDifficulty()) || !floatNear(previousScale, getEffectiveSbmmScale(), 0.01))
+            {
+                beginDifficultyApply();
                 applyDifficultyToAllBots(false);
+                endDifficultyApply();
+            }
             trimBotsToTarget();
         }
     }
@@ -1229,10 +1249,12 @@ delayedBotDifficultyApply()
     hadLock = level.autobotAdjusting;
     if (!hadLock) level.autobotAdjusting = true;
 
+    beginDifficultyApply();
     refreshSbmmState();
     safeSetBotDifficultyDvar();
     applyDifficultyToAllBots(true);
     level.delayedDifficultyApplyFailures = verifyAppliedDifficultyTokens(getSelectedBotDifficulty(), "delayed_apply");
+    endDifficultyApply();
 
     if (!hadLock) level.autobotAdjusting = false;
 }
@@ -1242,8 +1264,10 @@ botDifficultyEnforcer()
     level endon("game_ended");
     for (;;)
     {
+        beginDifficultyApply();
         safeSetBotDifficultyDvar();
         applyDifficultyToAllBots(false);
+        endDifficultyApply();
         wait botDifficultyEnforcerInterval;
     }
 }
@@ -1265,11 +1289,9 @@ liveSbmmUpdater()
         {
             if (currentToken != previousToken || !floatNear(currentScale, previousScale, 0.01))
             {
-                if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
-                hadLock = level.autobotAdjusting;
-                if (!hadLock) level.autobotAdjusting = true;
+                beginDifficultyApply();
                 applyDifficultyToAllBots(false);
-                if (!hadLock) level.autobotAdjusting = false;
+                endDifficultyApply();
             }
         }
 
@@ -1284,12 +1306,16 @@ liveDebugHeartbeat()
     {
         if (debugAutobots && debugVerbose)
         {
+            totalCap = countTotalPlayersForCap();
+            totalRaw = (isDefined(level.players) ? level.players.size : 0);
+            humans = countHumans();
+            bots = countBots();
             preferredSpawnTeam = "";
             if (debugLogPreferredSpawnTeam) preferredSpawnTeam = getPreferredBotSpawnTeam();
-            dbg("heartbeat totalCap=" + countTotalPlayersForCap()
-                + " totalRaw=" + (isDefined(level.players) ? level.players.size : 0)
-                + " humans=" + countHumans()
-                + " bots=" + countBots()
+            dbg("heartbeat totalCap=" + totalCap
+                + " totalRaw=" + totalRaw
+                + " humans=" + humans
+                + " bots=" + bots
                 + " target=" + getBotTargetPlayerCount()
                 + " ct=" + level.combatTraining
                 + " diff=" + getActiveDifficultyLabel()
