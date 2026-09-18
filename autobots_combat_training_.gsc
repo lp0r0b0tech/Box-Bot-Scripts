@@ -1108,7 +1108,7 @@ isTeamBasedBotMode()
 {
     if (isDefined(level.teambased)) return level.teambased;
     if (isDefined(level.teamBased)) return level.teamBased;
-    return true;
+    return false;
 }
 
 countBotsOnTeam(teamName)

@@ -119,7 +119,7 @@ initializeGunGamePlayer(player)
     }
 
     if (isalive(player))
-        player giveGunGameWeapon();
+        player scheduleGunGameWeaponGrant();
 }
 
 initializeExistingGunGamePlayers()
@@ -161,28 +161,52 @@ onPlayerSpawned()
     for (;;)
     {
         self waittill("spawned_player");
-        self thread giveGunGameWeapon();
+        self scheduleGunGameWeaponGrant();
     }
+}
+
+scheduleGunGameWeaponGrant()
+{
+    if (!isDefined(self.pers)) self.pers = [];
+    if (isDefined(self.pers["gg_weapon_grant_pending"]) && self.pers["gg_weapon_grant_pending"]) return;
+
+    self.pers["gg_weapon_grant_pending"] = true;
+    self thread giveGunGameWeapon();
 }
 
 giveGunGameWeapon()
 {
     self endon("disconnect");
-    self endon("death");
+    if (!isDefined(self.pers)) self.pers = [];
 
-    if (!isDefined(level.gg_weapons) || level.gg_weapons.size <= 0) return;
+    if (!isalive(self))
+    {
+        self.pers["gg_weapon_grant_pending"] = false;
+        return;
+    }
+
+    if (!isDefined(level.gg_weapons) || level.gg_weapons.size <= 0)
+    {
+        self.pers["gg_weapon_grant_pending"] = false;
+        return;
+    }
 
     if (!isDefined(self.gg_level)) self.gg_level = 0;
     if (self.gg_level < 0) self.gg_level = 0;
     if (self.gg_level >= level.gg_weapons.size) self.gg_level = level.gg_weapons.size - 1;
 
     currentWeapon = level.gg_weapons[self.gg_level];
-    if (!isDefined(currentWeapon) || currentWeapon == "") return;
+    if (!isDefined(currentWeapon) || currentWeapon == "")
+    {
+        self.pers["gg_weapon_grant_pending"] = false;
+        return;
+    }
 
     self takeallweapons();
     self giveweapon(currentWeapon);
     self switchtoweapon(currentWeapon);
     self givemaxammo(currentWeapon);
+    self.pers["gg_weapon_grant_pending"] = false;
 }
 
 watchKill()
@@ -264,6 +288,8 @@ getGunGameEndGameWinner(player)
 getGunGameEndGameWinnerForMode(player, freeForAllMode)
 {
     if (freeForAllMode) return player;
+    if (isDefined(level.teambased) && !level.teambased) return player;
+    if (isDefined(level.teamBased) && !level.teamBased) return player;
     if (!isDefined(level.teambased) && !isDefined(level.teamBased)) return player;
 
     winnerToken = getGunGameWinnerToken(player);
