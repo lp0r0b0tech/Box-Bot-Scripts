@@ -388,7 +388,7 @@ watchKill()
             if (finalTier)
             {
                 self iprintlnbold("^2Gun Game Winner!");
-                winner = getGunGameEndGameWinner(self);
+                winner = getGunGameEndGameWinnerToken(self);
                 if (winner == "none")
                     return;
                 maps\mp\gametypes\_gamelogic::endGame(winner, "scorelimit");
@@ -446,15 +446,19 @@ areGunGameEnemies(attacker, victim)
 
 getGunGameEndGameWinner(player)
 {
-    return getGunGameEndGameWinnerForMode(player, isGunGameFreeForAllMode());
+    return getGunGameEndGameWinnerToken(player);
 }
 
-getGunGameEndGameWinnerForMode(player, freeForAllMode)
+getGunGameEndGameWinnerToken(player)
 {
-    if (freeForAllMode) return player;
+    return getGunGameEndGameWinnerTokenForMode(player, isGunGameFreeForAllMode());
+}
 
+getGunGameEndGameWinnerTokenForMode(player, freeForAllMode)
+{
     winnerToken = getGunGameWinnerToken(player);
     if (winnerToken != "none") return winnerToken;
+    if (freeForAllMode) return "allies";
     return "none";
 }
 
@@ -497,7 +501,7 @@ runGunGameSanityCheck()
     testPlayer = [];
     testPlayer.pers = [];
     testPlayer.pers["team"] = "allies";
-    if (getGunGameEndGameWinnerForMode(testPlayer, true) != testPlayer)
+    if (getGunGameEndGameWinnerToken(testPlayer) != "allies")
         failures++;
 
     teammateA = [];
@@ -511,7 +515,10 @@ runGunGameSanityCheck()
 
     noTeamPlayer = [];
     noTeamPlayer.pers = [];
-    if (getGunGameEndGameWinnerForMode(noTeamPlayer, false) != "none")
+    if (getGunGameEndGameWinnerTokenForMode(noTeamPlayer, true) != "allies")
+        failures++;
+
+    if (getGunGameEndGameWinnerTokenForMode(noTeamPlayer, false) != "none")
         failures++;
 
     return failures;
