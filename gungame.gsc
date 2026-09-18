@@ -2,6 +2,9 @@
 #include maps\mp\gametypes\_hud_util;
 #include maps\mp\gametypes\_gamelogic;
 
+ggWeaponPrefix = "iw6_";
+ggWeaponSuffix = "_mp";
+
 isSubStr(hay, needle)
 {
     if (!isDefined(hay) || !isDefined(needle)) return false;
@@ -116,48 +119,79 @@ initGunGameState()
 
     level.gg_weapons = [];
 
-    // Base rotation
-    addGunGameWeapon("iw5_bal27_mp");          // Bal-27
-    addGunGameWeapon("iw5_ak12_mp");           // AK12
-    addGunGameWeapon("iw5_asm1_mp");           // ASM1
-    addGunGameWeapon("iw5_kf5_mp");            // KF5
-    addGunGameWeapon("iw5_sn6_mp");            // SN6
-    addGunGameWeapon("iw5_hbra3_mp");          // HBRa3
-    addGunGameWeapon("iw5_arx160_mp");         // ARX-160
-    addGunGameWeapon("iw5_himar_mp");          // IMR
-    addGunGameWeapon("iw5_sac3_mp");           // SAC3
-    addGunGameWeapon("iw5_mp11_mp");           // MP11
-    addGunGameWeapon("iw5_asaw_mp");           // Ameli
-    addGunGameWeapon("iw5_lsat_mp");           // Pytaek
-    addGunGameWeapon("iw5_mors_mp");           // MORS
-    addGunGameWeapon("iw5_uts19_mp");          // Tac-19
-    addGunGameWeapon("iw5_rw1_mp");            // RW1
-    addGunGameWeapon("iw5_titan45_mp");        // Atlas 45
-    addGunGameWeapon("iw5_mahem_mp");          // MAHEM
-    addGunGameWeapon("iw5_exocrossbow_mp");    // Crossbow
+    // Base and DLC rotation (best-effort AW aliases)
+    addGunGameWeaponAlias("bal27");            // Bal-27
+    addGunGameWeaponAlias("ak12");             // AK12
+    addGunGameWeaponAlias("arx160");           // ARX-160
+    addGunGameWeaponAlias("hbra3");            // HBRa3
+    addGunGameWeaponAlias("imr");              // IMR
+    addGunGameWeaponAlias("mk14");             // MK14
+    addGunGameWeaponAlias("ae4");              // AE4
+    addGunGameWeaponAlias("stg44");            // STG44
+    addGunGameWeaponAlias("ak47");             // AK-47
 
-    // DLC and loot-box-only weapons
-    addGunGameWeapon("iw5_dlcgun1_mp");        // AE4
-    addGunGameWeapon("iw5_dlcgun2_mp");        // Ohm
-    addGunGameWeapon("iw5_dlcgun6_mp");        // STG44
-    addGunGameWeapon("iw5_dlcgun7_mp");        // SVO
-    addGunGameWeapon("iw5_dlcgun8loot0_mp");   // CEL-3 Cauterizer
-    addGunGameWeapon("iw5_dlcgun7loot0_mp");   // AK-47
-    addGunGameWeapon("iw5_dlcgun8_mp");        // M16
-    addGunGameWeapon("iw5_dlcgun38_mp");       // Repulsor
-    addGunGameWeapon("iw5_dlcgun13_mp");       // 1911
-    addGunGameWeapon("iw5_dlcgun18_mp");       // MP40
-    addGunGameWeapon("iw5_dlcgun23_mp");       // M1 Garand
-    addGunGameWeapon("iw5_dlcgun28_mp");       // Sten
-    addGunGameWeapon("iw5_dlcgun33_mp");       // Lever Action
-    addGunGameWeapon("iw5_dlcgun3_mp");        // M1 Irons
-    addGunGameWeapon("iw5_dlcgun4_mp");        // Blunderbuss
+    addGunGameWeaponAlias("kf5");              // KF5
+    addGunGameWeaponAlias("mp11");             // MP11
+    addGunGameWeaponAlias("asm1");             // ASM1
+    addGunGameWeaponAlias("sn6");              // SN6
+    addGunGameWeaponAlias("sac3");             // SAC3
+    addGunGameWeaponAlias("amr9");             // AMR9
+    addGunGameWeaponAlias("mp40");             // MP40
+    addGunGameWeaponAlias("sten");             // Sten
 
-    addGunGameWeapon("iw5_combatknife_mp");    // Final weapon
+    addGunGameWeaponAlias("lynx");             // Lynx
+    addGunGameWeaponAlias("mors");             // MORS
+    addGunGameWeaponAlias("na45");             // NA-45
+    addGunGameWeaponAlias("atlas20mm");        // Atlas 20mm
+    addGunGameWeaponAlias("svo");              // SVO
+
+    addGunGameWeaponAlias("tac19");            // Tac-19
+    addGunGameWeaponAlias("s12");              // S-12
+    addGunGameWeaponAlias("bulldog");          // Bulldog
+    addGunGameWeaponAlias("blunderbuss");      // Blunderbuss
+    addGunGameWeaponAlias("cel3cauterizer");   // CEL-3 Cauterizer
+
+    addGunGameWeaponAlias("em1");              // EM1
+    addGunGameWeaponAlias("pytaek");           // Pytaek
+    addGunGameWeaponAlias("xmg");              // XMG
+    addGunGameWeaponAlias("epm3");             // EPM3
+    addGunGameWeaponAlias("ameli");            // Ameli
+    addGunGameWeaponAlias("ohm");              // Ohm
+
+    addGunGameWeaponAlias("atlas45");          // Atlas 45
+    addGunGameWeaponAlias("rw1");              // RW1
+    addGunGameWeaponAlias("mp443grach");       // MP443 Grach
+    addGunGameWeaponAlias("pdw");              // PDW
+    addGunGameWeaponAlias("m1irons");          // M1 Irons
+    addGunGameWeaponAlias("m1911");            // 1911
+
+    addGunGameWeaponAlias("stingerm7");        // Stinger M7
+    addGunGameWeaponAlias("maaws");            // MAAWS
+    addGunGameWeaponAlias("mahem");            // MAHEM
+    addGunGameWeaponAlias("rpg7");             // RPG-7
+    addGunGameWeaponAlias("mdl");              // MDL
+    addGunGameWeaponAlias("crossbow");         // Crossbow
+    addGunGameWeaponAlias("repulsor");         // Repulsor
+    addGunGameWeaponAlias("m1garand");         // M1 Garand
+    addGunGameWeaponAlias("leveraction");      // Lever Action
+    addGunGameWeaponAlias("m16");              // M16
+
+    addGunGameWeaponAlias("combatknife");      // Final weapon
 
     level.gungameSanityFailures = runGunGameSanityCheck();
     initializeExistingGunGamePlayers();
     level thread onPlayerConnect();
+}
+
+buildGunGameWeaponAlias(baseAlias)
+{
+    return ggWeaponPrefix + baseAlias + ggWeaponSuffix;
+}
+
+addGunGameWeaponAlias(baseAlias)
+{
+    if (!isDefined(baseAlias) || baseAlias == "") return;
+    addGunGameWeapon(buildGunGameWeaponAlias(baseAlias));
 }
 
 addGunGameWeapon(weaponName)
