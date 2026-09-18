@@ -113,8 +113,8 @@ isGunGameParticipant(player)
 initializeGunGamePlayer(player)
 {
     if (!isDefined(player)) return;
+    if (!isDefined(player.pers)) return;
 
-    if (!isDefined(player.pers)) player.pers = [];
     if (!isDefined(player.pers["gg_initialized"]) || !player.pers["gg_initialized"])
     {
         player.pers["gg_initialized"] = true;
@@ -137,7 +137,13 @@ initializeExistingGunGamePlayers()
     if (!isDefined(level.players)) return;
 
     foreach (player in level.players)
-        initializeGunGamePlayer(player);
+    {
+        if (!isDefined(player)) continue;
+        if (isDefined(player.pers))
+            initializeGunGamePlayer(player);
+        else
+            player thread initializeGunGamePlayerWhenReady();
+    }
 }
 
 onPlayerConnect()
@@ -182,7 +188,7 @@ onPlayerSpawned()
 
 scheduleGunGameWeaponGrant()
 {
-    if (!isDefined(self.pers)) self.pers = [];
+    if (!isDefined(self.pers)) return;
     self.pers["gg_weapon_grant_requested"] = true;
     if (isDefined(self.pers["gg_weapon_grant_running"]) && self.pers["gg_weapon_grant_running"]) return;
 
@@ -193,7 +199,7 @@ scheduleGunGameWeaponGrant()
 giveGunGameWeapon()
 {
     self endon("disconnect");
-    if (!isDefined(self.pers)) self.pers = [];
+    if (!isDefined(self.pers)) return;
 
     for (;;)
     {

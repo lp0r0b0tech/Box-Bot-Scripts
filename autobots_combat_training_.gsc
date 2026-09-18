@@ -144,7 +144,7 @@ init()
     lockedBotDifficulty = botDifficultyMode;
     if (isDefined(level.forceGunGameInCombatTraining) && level.forceGunGameInCombatTraining)
         gungame::init();
-    else if (forceGunGameInCombatTraining)
+    if (forceGunGameInCombatTraining)
         gungame::initForced();
 
     refreshSbmmState();
@@ -768,7 +768,7 @@ refreshSbmmState()
             }
         }
         else if (!isDefined(level.autobotSbmmScale))
-            scale = startScale;
+            scale = smoothSbmmScale(startScale, targetScale);
         else
         {
             currentScale = clampFloat(level.autobotSbmmScale, 0.0, 1.0);
