@@ -732,11 +732,14 @@ refreshSbmmState()
     }
     else
     {
-        currentScale = startScale;
-        if (isDefined(level.autobotSbmmScale)) currentScale = clampFloat(level.autobotSbmmScale, 0.0, 1.0);
-
         targetScale = getHumanSbmmTargetScale();
-        scale = smoothSbmmScale(currentScale, targetScale);
+        if (!isDefined(level.autobotSbmmScale))
+            scale = startScale;
+        else
+        {
+            currentScale = clampFloat(level.autobotSbmmScale, 0.0, 1.0);
+            scale = smoothSbmmScale(currentScale, targetScale);
+        }
     }
 
     level.autobotSbmmTargetScale = targetScale;
@@ -916,18 +919,21 @@ runSpawnBiasSanityCheck()
         failures++;
     }
 
-    expectedSbmmToken = level.autobotActiveDifficultyLabel;
-    if (!isDefined(expectedSbmmToken) || expectedSbmmToken == "") expectedSbmmToken = getActiveDifficultyLabel();
-    actualSbmmToken = getDifficultyApplyToken("sbmm");
-    if (!isValidDifficultyApplyToken("sbmm", actualSbmmToken))
+    if (getSelectedBotDifficulty() == "sbmm")
     {
-        warnOnce("sbmm_token", "sbmm apply token sanity failed");
-        failures++;
-    }
-    else if (actualSbmmToken != expectedSbmmToken)
-    {
-        warnOnce("sbmm_token_bucket", "sbmm startup token bucket sanity failed");
-        failures++;
+        expectedSbmmToken = level.autobotActiveDifficultyLabel;
+        if (!isDefined(expectedSbmmToken) || expectedSbmmToken == "") expectedSbmmToken = getActiveDifficultyLabel();
+        actualSbmmToken = getDifficultyApplyToken("sbmm");
+        if (!isValidDifficultyApplyToken("sbmm", actualSbmmToken))
+        {
+            warnOnce("sbmm_token", "sbmm apply token sanity failed");
+            failures++;
+        }
+        else if (actualSbmmToken != expectedSbmmToken)
+        {
+            warnOnce("sbmm_token_bucket", "sbmm startup token bucket sanity failed");
+            failures++;
+        }
     }
 
     if (getSbmmLeadForScale(0.0) != botSbmmMinWinBiasLead)
