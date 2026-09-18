@@ -2,6 +2,21 @@
 #include maps\mp\gametypes\_hud_util;
 #include maps\mp\gametypes\_gamelogic;
 
+isGunGameMode()
+{
+    gt = "";
+    if (isDefined(level.gametype)) gt = toLower(level.gametype);
+    if (gt == "gun" || gt == "gungame" || gt == "gun_game" || gt == "gun-game") return true;
+    if (issubstr(gt, "gungame") || issubstr(gt, "gun game") || issubstr(gt, "gun_game") || issubstr(gt, "gun-game")) return true;
+
+    pl = "";
+    if (isDefined(level.playlist)) pl = toLower(level.playlist);
+    if (pl == "gun" || pl == "gungame" || pl == "gun_game" || pl == "gun-game") return true;
+    if (issubstr(pl, "gungame") || issubstr(pl, "gun game") || issubstr(pl, "gun_game") || issubstr(pl, "gun-game")) return true;
+
+    return false;
+}
+
 init()
 {
     if (isDefined(level.gungameInitialized) && level.gungameInitialized) return;
@@ -151,7 +166,7 @@ watchKill()
             if (finalTier)
             {
                 self iprintlnbold("^2Gun Game Winner!");
-                maps\mp\gametypes\_gamelogic::endGame(self, "scorelimit");
+                maps\mp\gametypes\_gamelogic::endGame(getGunGameWinnerToken(self), "scorelimit");
                 return;
             }
 
@@ -177,4 +192,13 @@ demotePlayer()
         if (isalive(self))
             self thread giveGunGameWeapon();
     }
+}
+
+getGunGameWinnerToken(player)
+{
+    if (!isDefined(player)) return player;
+    if (isDefined(player.pers) && isDefined(player.pers["team"])) return player.pers["team"];
+    if (isDefined(player.sessionteam)) return player.sessionteam;
+    if (isDefined(player.team)) return player.team;
+    return player;
 }

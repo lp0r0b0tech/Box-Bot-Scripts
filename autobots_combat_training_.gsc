@@ -168,17 +168,7 @@ init()
 
 shouldRunGunGameHere()
 {
-    gt = "";
-    if (isDefined(level.gametype)) gt = toLower(level.gametype);
-    if (gt == "gun" || gt == "gungame" || gt == "gun_game" || gt == "gun-game") return true;
-    if (isSubStr(gt, "gungame") || isSubStr(gt, "gun game") || isSubStr(gt, "gun_game") || isSubStr(gt, "gun-game")) return true;
-
-    pl = "";
-    if (isDefined(level.playlist)) pl = toLower(level.playlist);
-    if (pl == "gun" || pl == "gungame" || pl == "gun_game" || pl == "gun-game") return true;
-    if (isSubStr(pl, "gungame") || isSubStr(pl, "gun game") || isSubStr(pl, "gun_game") || isSubStr(pl, "gun-game")) return true;
-
-    return false;
+    return gungame::isGunGameMode();
 }
 
 initExternalGunGame()
@@ -346,7 +336,7 @@ validateInitConfigNormalization()
     if (botSbmmMinWinBiasLead < 0) { warnOnce("init_norm_sbmm_min_lead", "botSbmmMinWinBiasLead normalization failed"); failures++; }
     if (botSbmmMaxWinBiasLead < botSbmmMinWinBiasLead) { warnOnce("init_norm_sbmm_max_lead", "botSbmmMaxWinBiasLead normalization failed"); failures++; }
     if (spawnFailBackoff < 0.10) { warnOnce("init_norm_spawn_backoff", "spawnFailBackoff normalization failed"); failures++; }
-    if (maxSpawnAttemptsPerTick < 1) { warnOnce("init_norm_spawn_attempts", "maxSpawnAttemptsPerTick normalization failed"); failures++; }
+    if (maxSpawnAttemptsPerTick < 2) { warnOnce("init_norm_spawn_attempts", "maxSpawnAttemptsPerTick normalization failed"); failures++; }
     if (sanityTestDuration < 5.0) { warnOnce("init_norm_sanity_duration", "sanityTestDuration normalization failed"); failures++; }
     if (sanityTestSampleInterval < 1.0) { warnOnce("init_norm_sanity_interval", "sanityTestSampleInterval normalization failed"); failures++; }
     if (defaultBotPrestige < 0) { warnOnce("init_norm_prestige", "defaultBotPrestige normalization failed"); failures++; }
