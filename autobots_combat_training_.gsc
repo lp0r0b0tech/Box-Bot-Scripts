@@ -180,6 +180,7 @@ init()
     level thread onPlayerConnect();
     level thread serverBotFill();
     level thread liveDebugHeartbeat();
+    level thread difficultyApplyWorker();
     level thread delayedBotDifficultyApply();
     level thread botDifficultyEnforcer();
     level thread liveSbmmUpdater();
@@ -246,6 +247,7 @@ isMultiplayerContext()
     if (isCombatTrainingIdentifier(pl)) return true;
     if (isKnownMultiplayerIdentifier(pl)) return true;
 
+    if (s1xCompatibilityMode && isDefined(level.mapname) && level.mapname != "" && !nonMpMap) return true;
     if (nonMpMap) return false;
     return false;
 }
@@ -301,6 +303,9 @@ initializeOptionalGunGameState()
 {
     if (!isDefined(level.autobotsGunGameMode)) level.autobotsGunGameMode = false;
     if (!isDefined(level.forceGunGameInCombatTraining)) level.forceGunGameInCombatTraining = false;
+    if (!isDefined(level.autobotDifficultyPending)) level.autobotDifficultyPending = false;
+    if (!isDefined(level.autobotDifficultyForceWrite)) level.autobotDifficultyForceWrite = false;
+    if (!isDefined(level.autobotDifficultyVerifyContext)) level.autobotDifficultyVerifyContext = "";
 }
 
 isGunGameActive()
@@ -310,17 +315,47 @@ isGunGameActive()
     return false;
 }
 
-beginDifficultyApply()
+requestDifficultyApply(forceWrite, verifyContext)
 {
-    if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
-    while (level.autobotAdjusting) wait 0.05;
-    level.autobotAdjusting = true;
+    if (!isDefined(level.autobotDifficultyPending)) level.autobotDifficultyPending = false;
+    if (!isDefined(level.autobotDifficultyForceWrite)) level.autobotDifficultyForceWrite = false;
+    if (!isDefined(level.autobotDifficultyVerifyContext)) level.autobotDifficultyVerifyContext = "";
+
+    if (forceWrite) level.autobotDifficultyForceWrite = true;
+    if (isDefined(verifyContext) && verifyContext != "") level.autobotDifficultyVerifyContext = verifyContext;
+    level.autobotDifficultyPending = true;
 }
 
-endDifficultyApply()
+difficultyApplyWorker()
 {
-    if (!isDefined(level.autobotAdjusting)) return;
-    level.autobotAdjusting = false;
+    level endon("game_ended");
+    for (;;)
+    {
+        if (!isDefined(level.autobotDifficultyPending)) level.autobotDifficultyPending = false;
+        if (!isDefined(level.autobotDifficultyForceWrite)) level.autobotDifficultyForceWrite = false;
+        if (!isDefined(level.autobotDifficultyVerifyContext)) level.autobotDifficultyVerifyContext = "";
+        if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
+
+        if (!level.autobotDifficultyPending) { wait 0.05; continue; }
+        if (level.autobotAdjusting) { wait 0.05; continue; }
+
+        level.autobotAdjusting = true;
+
+        forceWrite = level.autobotDifficultyForceWrite;
+        verifyContext = level.autobotDifficultyVerifyContext;
+        level.autobotDifficultyPending = false;
+        level.autobotDifficultyForceWrite = false;
+        level.autobotDifficultyVerifyContext = "";
+
+        refreshSbmmState();
+        safeSetBotDifficultyDvar();
+        applyDifficultyToAllBots(forceWrite);
+
+        if (verifyContext == "delayed_apply")
+            level.delayedDifficultyApplyFailures = verifyAppliedDifficultyTokens(getSelectedBotDifficulty(), verifyContext);
+
+        level.autobotAdjusting = false;
+    }
 }
 
 isCombatTrainingIdentifier(value)
@@ -1099,11 +1134,7 @@ onPlayerConnect()
             previousScale = getEffectiveSbmmScale();
             refreshSbmmState();
             if (previousToken != getDifficultyApplyToken(getSelectedBotDifficulty()) || !floatNear(previousScale, getEffectiveSbmmScale(), 0.01))
-            {
-                beginDifficultyApply();
-                applyDifficultyToAllBots(false);
-                endDifficultyApply();
-            }
+                requestDifficultyApply(false, "");
             trimBotsToTarget();
         }
     }
@@ -1265,13 +1296,7 @@ delayedBotDifficultyApply()
 {
     level endon("game_ended");
     wait 0.5;
-
-    beginDifficultyApply();
-    refreshSbmmState();
-    safeSetBotDifficultyDvar();
-    applyDifficultyToAllBots(true);
-    level.delayedDifficultyApplyFailures = verifyAppliedDifficultyTokens(getSelectedBotDifficulty(), "delayed_apply");
-    endDifficultyApply();
+    requestDifficultyApply(true, "delayed_apply");
 }
 
 botDifficultyEnforcer()
@@ -1279,10 +1304,7 @@ botDifficultyEnforcer()
     level endon("game_ended");
     for (;;)
     {
-        beginDifficultyApply();
-        safeSetBotDifficultyDvar();
-        applyDifficultyToAllBots(false);
-        endDifficultyApply();
+        requestDifficultyApply(false, "");
         wait botDifficultyEnforcerInterval;
     }
 }
@@ -1303,11 +1325,7 @@ liveSbmmUpdater()
         if (getSelectedBotDifficulty() == "sbmm")
         {
             if (currentToken != previousToken || !floatNear(currentScale, previousScale, 0.01))
-            {
-                beginDifficultyApply();
-                applyDifficultyToAllBots(false);
-                endDifficultyApply();
-            }
+                requestDifficultyApply(false, "");
         }
 
         wait botSbmmUpdateInterval;
