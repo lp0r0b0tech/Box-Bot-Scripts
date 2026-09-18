@@ -167,7 +167,11 @@ initializeGunGamePlayerWhenReady()
         if (isDefined(self.pers))
             break;
         if (timeoutAt <= 0.0)
-            return;
+        {
+            wait 1.0;
+            timeoutAt = 10.0;
+            continue;
+        }
         wait 0.05;
         timeoutAt = timeoutAt - 0.05;
     }
@@ -342,8 +346,7 @@ shouldDemoteGunGameVictim(validTierKill, finalTier, meansOfDeath, victimParticip
 {
     if (!victimParticipant) return false;
     if (meansOfDeath != "MOD_MELEE" && meansOfDeath != "MOD_CRUSH") return false;
-    if (validTierKill && finalTier) return false;
-    return true;
+    return validTierKill && finalTier;
 }
 
 runGunGameSanityCheck()
@@ -356,13 +359,16 @@ runGunGameSanityCheck()
     if (!shouldAwardFinalTierGunGameKill(false, true, "MOD_CRUSH"))
         failures++;
 
-    if (shouldDemoteGunGameVictim(true, true, "MOD_MELEE", true))
+    if (!shouldDemoteGunGameVictim(true, true, "MOD_MELEE", true))
         failures++;
 
     if (shouldDemoteGunGameVictim(false, false, "MOD_MELEE", false))
         failures++;
 
-    if (!shouldDemoteGunGameVictim(false, false, "MOD_CRUSH", true))
+    if (shouldDemoteGunGameVictim(false, false, "MOD_CRUSH", true))
+        failures++;
+
+    if (!shouldDemoteGunGameVictim(true, true, "MOD_CRUSH", true))
         failures++;
 
     testPlayer = [];

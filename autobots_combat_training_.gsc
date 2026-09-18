@@ -155,6 +155,7 @@ init()
     level.initNormalizationFailures = validateInitConfigNormalization();
     level.spawnBiasSanityFailures = 0;
     level.delayedDifficultyApplyFailures = 0;
+    level.lastAppliedDifficultyToken = "";
 
     level thread onPlayerConnect();
     level thread serverBotFill();
@@ -692,9 +693,50 @@ getPlayerSbmmPressure(ent)
     return clampFloat(playerPressure, 0.0, 1.0);
 }
 
+getPlayerSbmmSignedPressure(ent)
+{
+    if (!isDefined(ent)) return 0.0;
+
+    kills = getEntityKills(ent);
+    deaths = getEntityDeaths(ent);
+    score = getEntityScore(ent);
+
+    deathsForKd = deaths;
+    if (deathsForKd < 1) deathsForKd = 1;
+
+    kd = (kills * 1.0) / (deathsForKd * 1.0);
+    spread = kills - deaths;
+
+    kdPressureUp = getRangeFactor(kd, botSbmmKdFloor, botSbmmKdCeiling);
+    kdPressureDown = 0.0;
+    if (kd < botSbmmKdFloor && botSbmmKdFloor > 0.0)
+        kdPressureDown = clampFloat((botSbmmKdFloor - kd) / botSbmmKdFloor, 0.0, 1.0);
+
+    spreadPressureUp = getRangeFactor(spread * 1.0, botSbmmSpreadFloor, botSbmmSpreadCeiling);
+    spreadPressureDown = 0.0;
+    if (spread < 0)
+        spreadPressureDown = getRangeFactor((0.0 - (spread * 1.0)), 0.0, botSbmmSpreadCeiling);
+
+    scorePressureUp = getRangeFactor(score * 1.0, botSbmmScoreFloor, botSbmmScoreCeiling);
+
+    positivePressure = kdPressureUp;
+    if (spreadPressureUp > positivePressure) positivePressure = spreadPressureUp;
+    if (scorePressureUp > positivePressure) positivePressure = scorePressureUp;
+
+    negativePressure = kdPressureDown;
+    if (spreadPressureDown > negativePressure) negativePressure = spreadPressureDown;
+
+    if (negativePressure > positivePressure)
+        return 0.0 - negativePressure;
+
+    return positivePressure;
+}
+
 getHumanSbmmTargetScale()
 {
     baseScale = clampFloat(botSbmmMinimumScale, 0.0, 1.0);
+    startScale = clampFloat(botSbmmStartScale, 0.0, 1.0);
+    if (startScale < baseScale) startScale = baseScale;
     if (!botSbmmEnable || !isDefined(level.players)) return baseScale;
 
     humanCount = 0;
@@ -707,7 +749,7 @@ getHumanSbmmTargetScale()
         if (!isPlayerCountable(p)) continue;
 
         humanCount++;
-        playerPressure = getPlayerSbmmPressure(p);
+        playerPressure = getPlayerSbmmSignedPressure(p);
         pressureTotal += playerPressure;
 
         if (playerPressure > highestPressure) highestPressure = playerPressure;
@@ -720,7 +762,10 @@ getHumanSbmmTargetScale()
     if (weightTotal <= 0.0) return baseScale;
 
     blendedPressure = ((highestPressure * botSbmmTopPlayerWeight) + (averagePressure * botSbmmLobbyAverageWeight)) / weightTotal;
-    return clampFloat(baseScale + ((1.0 - baseScale) * blendedPressure), 0.0, 1.0);
+    if (blendedPressure >= 0.0)
+        return clampFloat(startScale + ((1.0 - startScale) * blendedPressure), baseScale, 1.0);
+
+    return clampFloat(startScale + ((startScale - baseScale) * blendedPressure), baseScale, 1.0);
 }
 
 smoothSbmmScale(currentScale, targetScale)
@@ -1190,6 +1235,7 @@ delayedBotDifficultyApply()
     wait 0.5;
     safeSetBotDifficultyDvar();
     applyDifficultyToAllBots(true);
+    level.lastAppliedDifficultyToken = getDifficultyApplyToken(getSelectedBotDifficulty());
     level.delayedDifficultyApplyFailures = verifyAppliedDifficultyTokens(getSelectedBotDifficulty(), "delayed_apply");
 }
 
@@ -1203,7 +1249,13 @@ botDifficultyEnforcer()
         if (timeSinceEnforce >= botDifficultyEnforcerInterval)
         {
             safeSetBotDifficultyDvar();
-            applyDifficultyToAllBots(false);
+            selectedDifficulty = getSelectedBotDifficulty();
+            selectedToken = getDifficultyApplyToken(selectedDifficulty);
+            if (!isDefined(level.lastAppliedDifficultyToken) || selectedToken != level.lastAppliedDifficultyToken)
+            {
+                applyDifficultyToAllBots(false);
+                level.lastAppliedDifficultyToken = selectedToken;
+            }
             timeSinceEnforce = 0.0;
         }
 
