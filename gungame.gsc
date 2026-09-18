@@ -270,9 +270,10 @@ getGunGameEndGameWinner(player)
 
 getGunGameEndGameWinnerForMode(player, freeForAllMode)
 {
+    if (freeForAllMode) return player;
+
     winnerToken = getGunGameWinnerToken(player);
     if (winnerToken != "none") return winnerToken;
-    if (freeForAllMode) return player;
     return undefined;
 }
 

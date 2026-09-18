@@ -193,6 +193,7 @@ shouldRunAutobotsHere()
     {
         pl = toLower(level.playlist);
         if (isSubStr(pl, "survival") || isSubStr(pl, "zombie")) return false;
+        if (isSubStr(pl, "exo")) return false;
         if (isSubStr(pl, "exo survival") || isSubStr(pl, "exo zombies")) return false;
     }
 
@@ -455,6 +456,8 @@ verifyAppliedDifficultyTokens(expectedDifficulty, context)
             failures++;
             continue;
         }
+
+        if (diff == "sbmm") continue;
 
         if (appliedToken != expectedToken)
         {
