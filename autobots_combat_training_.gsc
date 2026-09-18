@@ -156,6 +156,7 @@ init()
     level.spawnBiasSanityFailures = 0;
     level.delayedDifficultyApplyFailures = 0;
     level.lastAppliedDifficultyToken = "";
+    level.lastAppliedSbmmScale = -1.0;
 
     level thread onPlayerConnect();
     level thread serverBotFill();
@@ -218,16 +219,26 @@ detectCombatTraining()
 {
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
-    if (isSubStr(gt, "combat") || isSubStr(gt, "training")) return true;
+    if (isCombatTrainingIdentifier(gt)) return true;
 
     pl = "";
     if (isDefined(level.playlist)) pl = toLower(level.playlist);
-    if (isSubStr(pl, "combat") || isSubStr(pl, "training") || isSubStr(pl, "readiness")) return true;
+    if (isCombatTrainingIdentifier(pl)) return true;
 
     mn = "";
     if (isDefined(level.mapname)) mn = toLower(level.mapname);
-    if (isSubStr(mn, "combat") || isSubStr(mn, "training")) return true;
+    if (isCombatTrainingIdentifier(mn)) return true;
 
+    return false;
+}
+
+isCombatTrainingIdentifier(value)
+{
+    if (!isDefined(value) || value == "") return false;
+    if (value == "training" || value == "combattraining" || value == "combat_training" || value == "combat-training" || value == "combat training") return true;
+    if (value == "readiness" || value == "combat_readiness" || value == "combat-readiness" || value == "combat readiness") return true;
+    if (isSubStr(value, "combat training") || isSubStr(value, "combat_training") || isSubStr(value, "combat-training")) return true;
+    if (isSubStr(value, "combat readiness") || isSubStr(value, "combat_readiness") || isSubStr(value, "combat-readiness")) return true;
     return false;
 }
 
@@ -794,7 +805,8 @@ getSbmmLeadForScale(scale)
 refreshSbmmState()
 {
     baseScale = clampFloat(botSbmmMinimumScale, 0.0, 1.0);
-    startScale = clampFloat(botSbmmStartScale, 0.0, 1.0);
+    rawStartScale = clampFloat(botSbmmStartScale, 0.0, 1.0);
+    startScale = rawStartScale;
     if (startScale < baseScale) startScale = baseScale;
 
     if (!botSbmmEnable || getSelectedBotDifficulty() != "sbmm")
@@ -808,7 +820,7 @@ refreshSbmmState()
         if (targetScale <= baseScale)
         {
             if (!isDefined(level.autobotSbmmScale))
-                scale = baseScale;
+                scale = smoothSbmmScale(rawStartScale, baseScale);
             else
             {
                 currentScale = clampFloat(level.autobotSbmmScale, 0.0, 1.0);
@@ -816,7 +828,7 @@ refreshSbmmState()
             }
         }
         else if (!isDefined(level.autobotSbmmScale))
-            scale = smoothSbmmScale(startScale, targetScale);
+            scale = smoothSbmmScale(rawStartScale, targetScale);
         else
         {
             currentScale = clampFloat(level.autobotSbmmScale, 0.0, 1.0);
@@ -1236,6 +1248,7 @@ delayedBotDifficultyApply()
     safeSetBotDifficultyDvar();
     applyDifficultyToAllBots(true);
     level.lastAppliedDifficultyToken = getDifficultyApplyToken(getSelectedBotDifficulty());
+    level.lastAppliedSbmmScale = getSbmmScale();
     level.delayedDifficultyApplyFailures = verifyAppliedDifficultyTokens(getSelectedBotDifficulty(), "delayed_apply");
 }
 
@@ -1251,10 +1264,19 @@ botDifficultyEnforcer()
             safeSetBotDifficultyDvar();
             selectedDifficulty = getSelectedBotDifficulty();
             selectedToken = getDifficultyApplyToken(selectedDifficulty);
-            if (!isDefined(level.lastAppliedDifficultyToken) || selectedToken != level.lastAppliedDifficultyToken)
+            selectedScale = getSbmmScale();
+            needsApply = !isDefined(level.lastAppliedDifficultyToken) || selectedToken != level.lastAppliedDifficultyToken;
+            if (!needsApply && selectedDifficulty == "sbmm")
+            {
+                if (!isDefined(level.lastAppliedSbmmScale) || !floatNear(level.lastAppliedSbmmScale, selectedScale, 0.0001))
+                    needsApply = true;
+            }
+
+            if (needsApply)
             {
                 applyDifficultyToAllBots(false);
                 level.lastAppliedDifficultyToken = selectedToken;
+                level.lastAppliedSbmmScale = selectedScale;
             }
             timeSinceEnforce = 0.0;
         }

@@ -150,7 +150,7 @@ onPlayerConnect()
 {
     for (;;)
     {
-        level waittill("connected", player);
+        level waittill("connecting", player);
         if (!isDefined(player)) continue;
         player thread initializeGunGamePlayerWhenReady();
     }
