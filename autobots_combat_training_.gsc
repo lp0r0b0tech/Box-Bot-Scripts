@@ -231,7 +231,6 @@ isMultiplayerContext()
             if (prefix == "mp_") return true;
             if (prefix == "cp_" || prefix == "zm_" || prefix == "sp_") return false;
         }
-        if (mn != "" && !isCombatTrainingIdentifier(mn)) return false;
     }
 
     gt = "";
@@ -1075,14 +1074,13 @@ confirmBotSpawn(beforePlayers, beforeBots)
     return false;
 }
 
-spawnBotsSafe(amount, teamName)
+spawnBotsSafe(amount)
 {
     if (!isDefined(amount) || amount <= 0) return false;
 
     beforePlayers = countTotalPlayersForCap();
     beforeBots = countBots();
-    desiredTeam = "autoassign";
-    if (isDefined(teamName) && teamName != "") desiredTeam = normalizeTeamName(teamName);
+    desiredTeam = getPreferredBotSpawnTeam();
     if (desiredTeam == "") desiredTeam = "autoassign";
 
     spawn_bots(amount, desiredTeam);
@@ -1197,7 +1195,7 @@ serverBotFill()
         {
             if (countTotalPlayersForCap() >= target) break;
             attempts++;
-            if (!spawnBotsSafe(1, getPreferredBotSpawnTeam())) wait spawnFailBackoff;
+            if (!spawnBotsSafe(1)) wait spawnFailBackoff;
             else wait (awStyleEnable ? awPressureSpawnDelay : 0.25);
         }
 
