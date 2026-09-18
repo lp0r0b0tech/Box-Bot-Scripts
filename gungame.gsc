@@ -67,6 +67,7 @@ init()
 
     addGunGameWeapon("iw5_combatknife_mp");    // Final weapon
 
+    initializeExistingGunGamePlayers();
     level thread onPlayerConnect();
 }
 
@@ -98,20 +99,43 @@ isGunGameParticipant(player)
     return player.pers["gg_initialized"];
 }
 
+initializeGunGamePlayer(player)
+{
+    if (!isDefined(player)) return;
+
+    if (!isDefined(player.pers)) player.pers = [];
+    if (!isDefined(player.pers["gg_initialized"]) || !player.pers["gg_initialized"])
+    {
+        player.pers["gg_initialized"] = true;
+        player.gg_level = 0;
+    }
+
+    if (!isDefined(player.pers["gg_watchers_started"]) || !player.pers["gg_watchers_started"])
+    {
+        player.pers["gg_watchers_started"] = true;
+        player thread onPlayerSpawned();
+        player thread watchKill();
+    }
+
+    if (isalive(player))
+        player thread giveGunGameWeapon();
+}
+
+initializeExistingGunGamePlayers()
+{
+    if (!isDefined(level.players)) return;
+
+    foreach (player in level.players)
+        initializeGunGamePlayer(player);
+}
+
 onPlayerConnect()
 {
     for (;;)
     {
         level waittill("connected", player);
         if (!isDefined(player)) continue;
-
-        if (!isDefined(player.pers)) player.pers = [];
-        player.pers["gg_initialized"] = true;
-        player.gg_level = 0;
-        if (isDefined(player.pers["gg_watchers_started"]) && player.pers["gg_watchers_started"]) continue;
-        player.pers["gg_watchers_started"] = true;
-        player thread onPlayerSpawned();
-        player thread watchKill();
+        initializeGunGamePlayer(player);
     }
 }
 

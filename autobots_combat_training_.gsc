@@ -142,10 +142,10 @@ init()
     botDifficultyFallback = normalizeDifficultyFallbackName(botDifficultyFallback);
     defaultBotDifficulty = botDifficultyMode;
     lockedBotDifficulty = botDifficultyMode;
+    level.forceGunGameInCombatTraining = forceGunGameInCombatTraining;
 
     if (forceGunGameInCombatTraining)
     {
-        level.forceGunGameInCombatTraining = true;
         gungame::init();
     }
 
