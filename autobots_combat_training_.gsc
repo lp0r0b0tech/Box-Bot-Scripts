@@ -1145,12 +1145,17 @@ getPreferredBotSpawnTeam()
 
         if (leadTarget > 0)
         {
-            alliesScore = getTeamScore("allies");
-            axisScore = getTeamScore("axis");
-            scoreDelta = alliesScore - axisScore;
+            balanceDelta = allies - axis;
+            if (balanceDelta < 0) balanceDelta = 0 - balanceDelta;
+            if (balanceDelta <= godTierTeamBalanceDelta)
+            {
+                alliesScore = getTeamScore("allies");
+                axisScore = getTeamScore("axis");
+                scoreDelta = alliesScore - axisScore;
 
-            if (scoreDelta > 0 && scoreDelta >= leadTarget) return "axis";
-            if (scoreDelta < 0 && (0 - scoreDelta) >= leadTarget) return "allies";
+                if (scoreDelta > 0 && scoreDelta >= leadTarget) return "axis";
+                if (scoreDelta < 0 && (0 - scoreDelta) >= leadTarget) return "allies";
+            }
         }
     }
 
@@ -1282,8 +1287,6 @@ run60SecondSanityTest()
     level endon("game_ended");
     if (!debugAutobots) return;
 
-    expectedDiff = getSelectedBotDifficulty();
-    expectedDvar = getBotDifficultyDvarTarget();
     startTime = 0;
     if (isDefined(level.time)) startTime = level.time;
 
@@ -1304,6 +1307,8 @@ run60SecondSanityTest()
         if (elapsed >= sanityTestDuration) break;
 
         refreshSbmmState();
+        expectedDiff = getSelectedBotDifficulty();
+        expectedDvar = getBotDifficultyDvarTarget();
         total = countTotalPlayersForCap();
         bots = countBots();
         target = getBotTargetPlayerCount();
