@@ -995,6 +995,7 @@ serverBotFill()
         if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
         if (level.autobotAdjusting) { wait 0.10; continue; }
         level.autobotAdjusting = true;
+        spawnFailed = false;
 
         target = combatTrainingMaxPlayers;
         if (target < 0) target = 0;
@@ -1010,11 +1011,20 @@ serverBotFill()
                 spawnTeam = preferredTeam;
 
             if (!spawnBotsSafe(1, spawnTeam))
-                wait spawnFailBackoff;
-            else wait (awStyleEnable ? awPressureSpawnDelay : 0.25);
+            {
+                spawnFailed = true;
+                break;
+            }
+
+            wait (awStyleEnable ? awPressureSpawnDelay : 0.25);
         }
 
         level.autobotAdjusting = false;
+        if (spawnFailed)
+        {
+            wait spawnFailBackoff;
+            continue;
+        }
         wait (awStyleEnable ? 0.15 : 0.25);
     }
 }
@@ -1207,7 +1217,7 @@ run60SecondSanityTest()
 
                 if (getSelectedBotDifficulty() == "sbmm")
                 {
-                    if (!isSubStr(p.pers["autobot_diff_applied"], "sbmm_"))
+                    if (p.pers["autobot_diff_applied"] != expectedApplied)
                         badBotDiffSeen++;
                 }
                 else if (p.pers["autobot_diff_applied"] != expectedApplied)

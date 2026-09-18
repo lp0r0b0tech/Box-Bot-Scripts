@@ -64,7 +64,8 @@ weaponMatchesTierWeapon(killWeapon, expectedWeapon)
     expectedWeaponCompare = toLower(expectedWeapon + "");
 
     if (killWeaponCompare == expectedWeaponCompare) return true;
-    if (issubstr(killWeaponCompare, expectedWeaponCompare)) return true;
+    if (issubstr(killWeaponCompare, expectedWeaponCompare + "_")) return true;
+    if (issubstr(killWeaponCompare, expectedWeaponCompare + "+")) return true;
 
     return false;
 }
@@ -138,7 +139,8 @@ watchKill()
         {
             if (finalTier)
             {
-                level thread maps\mp\gametypes\_gamelogic::endGame(self, "Gun Game Winner!");
+                self iprintlnbold("^2Gun Game Winner!");
+                level thread maps\mp\gametypes\_gamelogic::endGame(self, "scorelimit");
                 return;
             }
 
