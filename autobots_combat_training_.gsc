@@ -236,12 +236,13 @@ isMultiplayerContext()
 
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
-    if (gt == "dm" || gt == "war" || gt == "dom" || gt == "conf" || gt == "sd" || gt == "ctf" || gt == "hp" || gt == "gun" || gt == "gungame" || gt == "gun_game" || gt == "gun-game") return true;
     if (isCombatTrainingIdentifier(gt)) return true;
+    if (gt != "") return true;
 
     pl = "";
     if (isDefined(level.playlist)) pl = toLower(level.playlist);
     if (isCombatTrainingIdentifier(pl)) return true;
+    if (pl != "") return true;
 
     return false;
 }
@@ -254,7 +255,7 @@ isSubStr(hay, needle)
 
 detectCombatTraining()
 {
-    if (isDefined(level.autobotsS1xFallbackMode)) level.autobotsS1xFallbackMode = false;
+    level.autobotsS1xFallbackMode = false;
 
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
@@ -287,6 +288,13 @@ initializeOptionalGunGameState()
 {
     if (!isDefined(level.autobotsGunGameMode)) level.autobotsGunGameMode = false;
     if (!isDefined(level.forceGunGameInCombatTraining)) level.forceGunGameInCombatTraining = false;
+}
+
+isGunGameActive()
+{
+    if (isDefined(level.gungameInitialized) && level.gungameInitialized) return true;
+    if (isDefined(level.autobotsGunGameMode) && level.autobotsGunGameMode) return true;
+    return false;
 }
 
 isCombatTrainingIdentifier(value)
@@ -627,8 +635,7 @@ setBotDifficulty(difficulty)
 applyOpLoadout(ent)
 {
     if (!opWeaponsEnable || !isDefined(ent)) return;
-    if (isDefined(level.gungameInitialized) && level.gungameInitialized) return;
-    if (isDefined(level.autobotsGunGameMode) && level.autobotsGunGameMode) return;
+    if (isGunGameActive()) return;
     if (!isDefined(ent.pers)) ent.pers = [];
 
     desiredSig = opPrimaryWeapon + "|" + opPrimaryAttachment + "|" + opSecondaryWeapon + "|" + opLethal + "|" + opTactical;
@@ -1257,7 +1264,13 @@ liveSbmmUpdater()
         if (getSelectedBotDifficulty() == "sbmm")
         {
             if (currentToken != previousToken || !floatNear(currentScale, previousScale, 0.01))
+            {
+                if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
+                hadLock = level.autobotAdjusting;
+                if (!hadLock) level.autobotAdjusting = true;
                 applyDifficultyToAllBots(false);
+                if (!hadLock) level.autobotAdjusting = false;
+            }
         }
 
         wait botSbmmUpdateInterval;
@@ -1323,6 +1336,8 @@ run60SecondSanityTest()
         bots = countBots();
         target = getBotTargetPlayerCount();
         dvarNow = getdvar("bot_difficulty");
+        if (isDefined(dvarNow)) dvarNow = toLower(dvarNow);
+        else dvarNow = "";
 
         if (bots > 0) anyBotsSeen = true;
         if (dvarNow != expectedDvar) dvarFailures++;
