@@ -113,8 +113,12 @@ watchKill()
         if (self.gg_level >= level.gg_weapons.size) self.gg_level = level.gg_weapons.size - 1;
 
         currentWeapon = level.gg_weapons[self.gg_level];
+        currentWeaponCompare = "";
+        killWeaponCompare = "";
+        if (isDefined(currentWeapon)) currentWeaponCompare = toLower(currentWeapon + "");
+        if (isDefined(weapon)) killWeaponCompare = toLower(weapon + "");
         finalTier = (self.gg_level >= (level.gg_weapons.size - 1));
-        validTierKill = (weapon == currentWeapon);
+        validTierKill = (killWeaponCompare == currentWeaponCompare);
         if (!validTierKill && finalTier && meansOfDeath == "MOD_MELEE")
             validTierKill = true;
 

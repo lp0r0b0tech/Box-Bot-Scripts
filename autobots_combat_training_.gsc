@@ -518,7 +518,7 @@ setBotDifficulty(difficulty)
 applyOpLoadout(ent)
 {
     if (!opWeaponsEnable || !isDefined(ent)) return;
-    if (shouldRunGunGameHere()) return;
+    if (isDefined(level.autobotsGunGameDelegated) && level.autobotsGunGameDelegated) return;
     if (!isDefined(ent.pers)) ent.pers = [];
 
     desiredSig = opPrimaryWeapon + "|" + opPrimaryAttachment + "|" + opSecondaryWeapon + "|" + opLethal + "|" + opTactical;
@@ -1155,7 +1155,6 @@ run60SecondSanityTest()
     level endon("game_ended");
     if (!debugAutobots) return;
 
-    expectedApplied = getDifficultyApplyToken(getSelectedBotDifficulty());
     expectedDvar = level.autobotDvarDifficulty;
     if (!isDefined(expectedDvar) || expectedDvar == "") expectedDvar = getBotDifficultyDvarTarget();
     startTime = 0;
@@ -1180,6 +1179,7 @@ run60SecondSanityTest()
         total = countTotalPlayersForCap();
         bots = countBots();
         target = combatTrainingMaxPlayers;
+        expectedApplied = getDifficultyApplyToken(getSelectedBotDifficulty());
         dvarNow = getdvar("bot_difficulty");
         if (!isDefined(dvarNow)) dvarNow = "";
         dvarNow = toLower(dvarNow);
