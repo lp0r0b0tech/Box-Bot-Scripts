@@ -44,11 +44,11 @@ botDifficultyEnforcerInterval = 0.25;
 spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 8;
 
-// RAGE MODE profile (bot_difficulty remains locked to ultra)
-rageBotAccuracy = 9.99;
-rageBotReactionTime = 0.0;
-rageBotMaxHealth = 2500;
-rageBotAggression = 9.99;
+// RAGE MODE profile (using private match veteran values; bot_difficulty remains locked to ultra)
+rageBotAccuracy = 1.0;
+rageBotReactionTime = 0.10;
+rageBotMaxHealth = 100;
+rageBotAggression = 1.0;
 
 sanityTestEnable = true;
 sanityTestDuration = 60.0;
