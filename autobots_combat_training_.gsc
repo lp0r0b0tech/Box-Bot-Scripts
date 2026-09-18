@@ -1148,12 +1148,15 @@ getPreferredBotSpawnTeam()
         if (isDefined(level.autobotWinBiasLead)) leadTarget = level.autobotWinBiasLead;
         if (leadTarget < 0) leadTarget = 0;
 
-        alliesScore = getTeamScore("allies");
-        axisScore = getTeamScore("axis");
-        scoreDelta = alliesScore - axisScore;
+        if (leadTarget > 0)
+        {
+            alliesScore = getTeamScore("allies");
+            axisScore = getTeamScore("axis");
+            scoreDelta = alliesScore - axisScore;
 
-        if (scoreDelta > 0 && scoreDelta >= leadTarget) return "axis";
-        if (scoreDelta < 0 && (0 - scoreDelta) >= leadTarget) return "allies";
+            if (scoreDelta > 0 && scoreDelta >= leadTarget) return "axis";
+            if (scoreDelta < 0 && (0 - scoreDelta) >= leadTarget) return "allies";
+        }
     }
 
     if (godTierTeamBalanceEnable && getSelectedBotDifficulty() == "god")
@@ -1322,7 +1325,7 @@ run60SecondSanityTest()
         if (total >= target) spawnSuccessStreak++; else spawnSuccessStreak = 0;
 
         badBotDiffSeen += verifyAppliedDifficultyTokens(expectedDiff, "sanity_test");
-        if (expectedDiff == "sbmm" && isDefined(level.lastAppliedSbmmScale) && !floatNear(level.lastAppliedSbmmScale, getSbmmScale(), 0.10))
+        if (expectedDiff == "sbmm" && isDefined(level.lastAppliedSbmmScale) && !floatNear(level.lastAppliedSbmmScale, getEffectiveSbmmScale(), 0.10))
             scaleDriftFailures++;
 
         samples++;
