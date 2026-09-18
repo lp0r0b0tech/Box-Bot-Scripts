@@ -766,7 +766,15 @@ refreshSbmmState()
     {
         targetScale = getHumanSbmmTargetScale();
         if (targetScale <= baseScale)
-            scale = baseScale;
+        {
+            if (!isDefined(level.autobotSbmmScale))
+                scale = baseScale;
+            else
+            {
+                currentScale = clampFloat(level.autobotSbmmScale, 0.0, 1.0);
+                scale = smoothSbmmScale(currentScale, baseScale);
+            }
+        }
         else if (!isDefined(level.autobotSbmmScale))
             scale = startScale;
         else
