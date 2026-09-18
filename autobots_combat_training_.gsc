@@ -1081,6 +1081,13 @@ getEntityTeamName(ent)
     return "";
 }
 
+isTeamBasedBotMode()
+{
+    if (isDefined(level.teambased)) return level.teambased;
+    if (isDefined(level.teamBased)) return level.teamBased;
+    return true;
+}
+
 countBotsOnTeam(teamName)
 {
     if (!isDefined(level.players)) return 0;
@@ -1140,6 +1147,7 @@ getPreferredBotSpawnTeam()
 {
     activeLead = getActiveBotWinBiasLead();
     if (!botWinBiasEnable || activeLead <= 0) return "";
+    if (!isTeamBasedBotMode()) return "";
     return getPreferredBotSpawnTeamByCounts(
         countHumansOnTeam("allies"),
         countHumansOnTeam("axis"),

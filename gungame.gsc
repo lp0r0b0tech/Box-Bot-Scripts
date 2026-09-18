@@ -68,6 +68,7 @@ init()
 
     addGunGameWeapon("iw5_combatknife_mp");    // Final weapon
 
+    level.gungameSanityFailures = runGunGameSanityCheck();
     initializeExistingGunGamePlayers();
     level thread onPlayerConnect();
 }
@@ -134,7 +135,7 @@ onPlayerConnect()
 {
     for (;;)
     {
-        level waittill("connected", player);
+        level waittill("connecting", player);
         if (!isDefined(player)) continue;
         initializeGunGamePlayer(player);
     }
@@ -187,12 +188,9 @@ watchKill()
         currentWeapon = level.gg_weapons[self.gg_level];
         finalTier = (self.gg_level >= (level.gg_weapons.size - 1));
         validTierKill = weaponMatchesTierWeapon(weapon, currentWeapon);
-        if (!validTierKill && finalTier && meansOfDeath == "MOD_MELEE")
-            validTierKill = true;
+        validTierKill = shouldAwardFinalTierGunGameKill(validTierKill, finalTier, meansOfDeath);
 
-        if ((meansOfDeath == "MOD_MELEE" || meansOfDeath == "MOD_CRUSH")
-            && isGunGameParticipant(victim)
-            && !(validTierKill && finalTier))
+        if (shouldDemoteGunGameVictim(validTierKill, finalTier, meansOfDeath, isGunGameParticipant(victim)))
             victim thread demotePlayer();
 
         if (validTierKill)
@@ -255,6 +253,40 @@ getGunGameWinnerToken(player)
     if (teamToken == "allies" || teamToken == "axis") return teamToken;
 
     return "none";
+}
+
+shouldAwardFinalTierGunGameKill(validTierKill, finalTier, meansOfDeath)
+{
+    if (validTierKill) return true;
+    if (!finalTier) return false;
+    return meansOfDeath == "MOD_MELEE";
+}
+
+shouldDemoteGunGameVictim(validTierKill, finalTier, meansOfDeath, victimParticipant)
+{
+    if (!victimParticipant) return false;
+    if (meansOfDeath != "MOD_MELEE" && meansOfDeath != "MOD_CRUSH") return false;
+    if (validTierKill && finalTier) return false;
+    return true;
+}
+
+runGunGameSanityCheck()
+{
+    failures = 0;
+
+    if (!shouldAwardFinalTierGunGameKill(false, true, "MOD_MELEE"))
+        failures++;
+
+    if (shouldDemoteGunGameVictim(true, true, "MOD_MELEE", true))
+        failures++;
+
+    if (shouldDemoteGunGameVictim(false, false, "MOD_MELEE", false))
+        failures++;
+
+    if (!shouldDemoteGunGameVictim(false, false, "MOD_CRUSH", true))
+        failures++;
+
+    return failures;
 }
 
 isGunGameFreeForAllMode()
