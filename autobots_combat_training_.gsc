@@ -207,12 +207,9 @@ isMultiplayerContext()
     {
         mn = toLower(level.mapname);
         if (getsubstr(mn, 0, 3) == "mp_") return true;
-        if (getsubstr(mn, 0, 3) != "cp_" && getsubstr(mn, 0, 3) != "zm_" && getsubstr(mn, 0, 3) != "sp_") return true;
     }
 
-    if (isDefined(level.gametype) && level.gametype != "") return true;
-    if (isDefined(level.playlist) && level.playlist != "") return true;
-    return false;
+    return detectCombatTraining();
 }
 
 isSubStr(hay, needle)
@@ -873,6 +870,14 @@ normalizeSpawnTeam(preferredTeam)
     return "";
 }
 
+getSpawnBotsTeamToken(preferredTeam)
+{
+    pt = normalizeSpawnTeam(preferredTeam);
+    if (pt == "allies") return "team_allies";
+    if (pt == "axis") return "team_axis";
+    return "autoassign";
+}
+
 runSpawnBiasSanityCheck()
 {
     failures = 0;
@@ -1031,8 +1036,7 @@ spawnBotsSafe(amount, preferredTeam)
     beforePlayers = countTotalPlayersForCap();
     beforeBots = countBots();
 
-    spawnTeam = normalizeSpawnTeam(preferredTeam);
-    if (spawnTeam == "") spawnTeam = "autoassign";
+    spawnTeam = getSpawnBotsTeamToken(preferredTeam);
     spawn_bots(amount, spawnTeam);
 
     wait spawnConfirmPhase1Delay;

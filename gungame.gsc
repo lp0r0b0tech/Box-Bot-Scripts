@@ -264,6 +264,7 @@ getGunGameEndGameWinner(player)
 getGunGameEndGameWinnerForMode(player, freeForAllMode)
 {
     if (freeForAllMode) return player;
+    if (!isDefined(level.teambased) && !isDefined(level.teamBased)) return player;
 
     winnerToken = getGunGameWinnerToken(player);
     if (winnerToken != "none") return winnerToken;
