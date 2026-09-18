@@ -95,12 +95,14 @@ spawnConfirmPhase3Delay = 0.20;
 // --------------------------
 init()
 {
-    if (shouldRunGunGameHere())
+    gunGameMode = shouldRunGunGameHere();
+    if (gunGameMode)
         initExternalGunGame();
 
     if (!shouldRunAutobotsHere())
     {
-        dbg("init(): disabled outside Combat Training / Gun Game multiplayer");
+        if (!gunGameMode)
+            dbg("init(): disabled outside Combat Training multiplayer");
         return;
     }
 
@@ -156,7 +158,10 @@ init()
     level thread delayedBotDifficultyApply();
     level thread botDifficultyEnforcer();
 
-    dbg("init(): Combat Training / Gun Game active | diff=" + getActiveDifficultyLabel() + " | dvar=" + level.autobotDvarDifficulty);
+    dbg("init(): Combat Training active"
+        + (gunGameMode ? " with Gun Game coexistence" : "")
+        + " | diff=" + getActiveDifficultyLabel()
+        + " | dvar=" + level.autobotDvarDifficulty);
     if (sanityTestEnable) level thread run60SecondSanityTest();
 }
 
@@ -204,8 +209,7 @@ shouldRunAutobotsHere()
         if (isSubStr(pl, "exo survival") || isSubStr(pl, "exo zombies")) return false;
     }
 
-    if (detectCombatTraining()) return true;
-    return shouldRunGunGameHere();
+    return detectCombatTraining();
 }
 
 isSubStr(hay, needle)
@@ -921,9 +925,8 @@ runSpawnBiasSanityCheck()
         failures++;
     }
 
-    testSbmmScale = clampFloat(botSbmmStartScale, 0.0, 1.0);
-    if (testSbmmScale < botSbmmMinimumScale) testSbmmScale = botSbmmMinimumScale;
-    expectedSbmmToken = "sbmm_" + getSbmmDifficultyBucket(testSbmmScale);
+    expectedSbmmToken = level.autobotActiveDifficultyLabel;
+    if (!isDefined(expectedSbmmToken) || expectedSbmmToken == "") expectedSbmmToken = getActiveDifficultyLabel();
     actualSbmmToken = getDifficultyApplyToken("sbmm");
     if (!isValidDifficultyApplyToken("sbmm", actualSbmmToken))
     {

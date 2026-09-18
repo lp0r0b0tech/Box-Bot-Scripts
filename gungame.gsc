@@ -132,7 +132,7 @@ watchKill()
         if (!validTierKill && finalTier && meansOfDeath == "MOD_MELEE")
             validTierKill = true;
 
-        if ((meansOfDeath == "MOD_MELEE" || meansOfDeath == "MOD_CRUSH") && !(validTierKill && finalTier))
+        if ((meansOfDeath == "MOD_MELEE" || meansOfDeath == "MOD_CRUSH") && isDefined(victim) && isDefined(victim.gg_level) && !(validTierKill && finalTier))
             victim thread demotePlayer();
 
         if (validTierKill)
