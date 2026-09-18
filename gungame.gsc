@@ -4,6 +4,8 @@
 
 isGunGameMode()
 {
+    if (isDefined(level.forceGunGameInCombatTraining) && level.forceGunGameInCombatTraining) return true;
+
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
     if (gt == "gun" || gt == "gungame" || gt == "gun_game" || gt == "gun-game") return true;

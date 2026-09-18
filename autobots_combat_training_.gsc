@@ -5,6 +5,7 @@
 // - Fixes persistence by normalizing + enforcing dvar + per-bot state
 // ============================================================
 #include scripts/mp/_bots;
+#include gungame;
 
 // --------------------------
 // Config
@@ -34,6 +35,7 @@ defaultBotPrestige = 23;
 awStyleEnable = true;
 awPressureSpawnDelay = 0.15;
 awHealthRegenOnSpawn = true;
+forceGunGameInCombatTraining = true;
 
 opWeaponsEnable = true;
 opPrimaryWeapon = "iw5_m4_mp";
@@ -140,6 +142,12 @@ init()
     botDifficultyFallback = normalizeDifficultyFallbackName(botDifficultyFallback);
     defaultBotDifficulty = botDifficultyMode;
     lockedBotDifficulty = botDifficultyMode;
+
+    if (forceGunGameInCombatTraining)
+    {
+        level.forceGunGameInCombatTraining = true;
+        gungame::init();
+    }
 
     refreshSbmmState();
     safeSetBotDifficultyDvar();
