@@ -1284,7 +1284,7 @@ run60SecondSanityTest()
 
                 if (getSelectedBotDifficulty() == "sbmm")
                 {
-                    if (p.pers["autobot_diff_applied"] != expectedApplied)
+                    if (!isValidDifficultyApplyToken("sbmm", p.pers["autobot_diff_applied"]))
                         badBotDiffSeen++;
                 }
                 else if (p.pers["autobot_diff_applied"] != expectedApplied)

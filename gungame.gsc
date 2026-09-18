@@ -147,7 +147,7 @@ initializeGunGamePlayerWhenReady()
 
     for (;;)
     {
-        if (isDefined(self.pers) || isDefined(self.sessionteam) || isDefined(self.team) || isalive(self))
+        if (isDefined(self.pers))
             break;
         wait 0.05;
     }
