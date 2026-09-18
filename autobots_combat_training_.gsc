@@ -142,9 +142,10 @@ init()
     botDifficultyFallback = normalizeDifficultyFallbackName(botDifficultyFallback);
     defaultBotDifficulty = botDifficultyMode;
     lockedBotDifficulty = botDifficultyMode;
-    if (isDefined(level.forceGunGameInCombatTraining) && level.forceGunGameInCombatTraining)
-        gungame::init();
-    if (forceGunGameInCombatTraining)
+    forceGunGameActive = false;
+    if (isDefined(level.forceGunGameInCombatTraining) && level.forceGunGameInCombatTraining) forceGunGameActive = true;
+    if (forceGunGameInCombatTraining) forceGunGameActive = true;
+    if (forceGunGameActive)
         gungame::initForced();
 
     refreshSbmmState();
