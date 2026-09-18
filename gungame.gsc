@@ -151,7 +151,7 @@ watchKill()
             if (finalTier)
             {
                 self iprintlnbold("^2Gun Game Winner!");
-                level thread maps\mp\gametypes\_gamelogic::endGame(self, "scorelimit");
+                maps\mp\gametypes\_gamelogic::endGame(self, "scorelimit");
                 return;
             }
 

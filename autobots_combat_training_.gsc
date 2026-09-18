@@ -96,6 +96,7 @@ spawnConfirmPhase3Delay = 0.20;
 init()
 {
     gunGameMode = shouldRunGunGameHere();
+    level.autobotsGunGameMode = gunGameMode;
     if (gunGameMode)
         initExternalGunGame();
 
@@ -523,7 +524,7 @@ setBotDifficulty(difficulty)
 applyOpLoadout(ent)
 {
     if (!opWeaponsEnable || !isDefined(ent)) return;
-    if (shouldRunGunGameHere()) return;
+    if (isDefined(level.autobotsGunGameMode) && level.autobotsGunGameMode) return;
     if (!isDefined(ent.pers)) ent.pers = [];
 
     desiredSig = opPrimaryWeapon + "|" + opPrimaryAttachment + "|" + opSecondaryWeapon + "|" + opLethal + "|" + opTactical;
