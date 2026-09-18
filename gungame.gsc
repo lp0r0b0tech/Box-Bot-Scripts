@@ -280,7 +280,7 @@ shouldAwardFinalTierGunGameKill(validTierKill, finalTier, meansOfDeath)
 {
     if (validTierKill) return true;
     if (!finalTier) return false;
-    return meansOfDeath == "MOD_MELEE";
+    return meansOfDeath == "MOD_MELEE" || meansOfDeath == "MOD_CRUSH";
 }
 
 shouldDemoteGunGameVictim(validTierKill, finalTier, meansOfDeath, victimParticipant)

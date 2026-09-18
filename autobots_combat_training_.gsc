@@ -1182,14 +1182,21 @@ delayedBotDifficultyApply()
 botDifficultyEnforcer()
 {
     level endon("game_ended");
+    timeSinceEnforce = botDifficultyEnforcerInterval;
     for (;;)
     {
         refreshSbmmState();
-        safeSetBotDifficultyDvar();
-        applyDifficultyToAllBots(false);
+        if (timeSinceEnforce >= botDifficultyEnforcerInterval)
+        {
+            safeSetBotDifficultyDvar();
+            applyDifficultyToAllBots(false);
+            timeSinceEnforce = 0.0;
+        }
+
         waitInterval = botDifficultyEnforcerInterval;
-        if (botSbmmEnable && getSelectedBotDifficulty() == "sbmm" && botSbmmUpdateInterval > waitInterval) waitInterval = botSbmmUpdateInterval;
+        if (botSbmmEnable && getSelectedBotDifficulty() == "sbmm" && botSbmmUpdateInterval < waitInterval) waitInterval = botSbmmUpdateInterval;
         wait waitInterval;
+        timeSinceEnforce = timeSinceEnforce + waitInterval;
     }
 }
 
