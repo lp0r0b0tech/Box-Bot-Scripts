@@ -163,9 +163,13 @@ init()
     if (sbmmTierProtectedMax < 0.0) sbmmTierProtectedMax = 0.0;
     if (sbmmTierProtectedMax > 1.0) sbmmTierProtectedMax = 1.0;
     if (sbmmTierChallengingMin <= sbmmTierProtectedMax) sbmmTierChallengingMin = sbmmTierProtectedMax + 0.10;
-    if (sbmmTierChallengingMin > 1.0) sbmmTierChallengingMin = 1.0;
+    if (sbmmTierChallengingMin > 0.90) sbmmTierChallengingMin = 0.90;
     if (sbmmTierEliteMin <= sbmmTierChallengingMin) sbmmTierEliteMin = sbmmTierChallengingMin + 0.10;
-    if (sbmmTierEliteMin > 1.0) sbmmTierEliteMin = 1.0;
+    if (sbmmTierEliteMin > 1.0)
+    {
+        sbmmTierEliteMin = 1.0;
+        if (sbmmTierChallengingMin >= sbmmTierEliteMin) sbmmTierChallengingMin = sbmmTierEliteMin - 0.10;
+    }
     if (sbmmTierHysteresis < 0.0) sbmmTierHysteresis = 0.0;
     if (sbmmTierHysteresis > 0.20) sbmmTierHysteresis = 0.20;
     if (sbmmLowReactionTime < 0.005) sbmmLowReactionTime = 0.005;
