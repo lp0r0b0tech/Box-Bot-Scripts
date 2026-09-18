@@ -149,8 +149,6 @@ init()
     safeSetBotDifficultyDvar();
     level.initNormalizationFailures = validateInitConfigNormalization();
     level.spawnBiasSanityFailures = 0;
-    if (sanityTestEnable)
-        level.spawnBiasSanityFailures = runSpawnBiasSanityCheck();
 
     level thread onPlayerConnect();
     level thread serverBotFill();
@@ -166,11 +164,13 @@ shouldRunGunGameHere()
 {
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
-    if (gt == "gun" || gt == "gungame" || isSubStr(gt, "gun game")) return true;
+    if (gt == "gun" || gt == "gungame" || gt == "gun_game" || gt == "gun-game") return true;
+    if (isSubStr(gt, "gun game") || isSubStr(gt, "gun_game") || isSubStr(gt, "gun-game")) return true;
 
     pl = "";
     if (isDefined(level.playlist)) pl = toLower(level.playlist);
-    if (pl == "gun" || pl == "gungame" || isSubStr(pl, "gun game")) return true;
+    if (pl == "gun" || pl == "gungame" || pl == "gun_game" || pl == "gun-game") return true;
+    if (isSubStr(pl, "gun game") || isSubStr(pl, "gun_game") || isSubStr(pl, "gun-game")) return true;
 
     return false;
 }
@@ -1156,6 +1156,8 @@ run60SecondSanityTest()
     level endon("game_ended");
     if (!debugAutobots) return;
 
+    spawnBiasSanityFailures = runSpawnBiasSanityCheck();
+    level.spawnBiasSanityFailures = spawnBiasSanityFailures;
     startTime = 0;
     if (isDefined(level.time)) startTime = level.time;
 
@@ -1166,9 +1168,6 @@ run60SecondSanityTest()
     maxOvershoot = 0;
     spawnSuccessStreak = 0;
     spawnFailStreak = 0;
-    spawnBiasSanityFailures = 0;
-    if (isDefined(level.spawnBiasSanityFailures)) spawnBiasSanityFailures = level.spawnBiasSanityFailures;
-
     for (;;)
     {
         elapsed = 0.0;

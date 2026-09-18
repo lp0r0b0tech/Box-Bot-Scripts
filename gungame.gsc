@@ -56,6 +56,19 @@ addGunGameWeapon(weaponName)
     level.gg_weapons[level.gg_weapons.size] = weaponName;
 }
 
+weaponMatchesTierWeapon(killWeapon, expectedWeapon)
+{
+    if (!isDefined(killWeapon) || !isDefined(expectedWeapon)) return false;
+
+    killWeaponCompare = toLower(killWeapon + "");
+    expectedWeaponCompare = toLower(expectedWeapon + "");
+
+    if (killWeaponCompare == expectedWeaponCompare) return true;
+    if (issubstr(killWeaponCompare, expectedWeaponCompare)) return true;
+
+    return false;
+}
+
 onPlayerConnect()
 {
     for (;;)
@@ -113,12 +126,8 @@ watchKill()
         if (self.gg_level >= level.gg_weapons.size) self.gg_level = level.gg_weapons.size - 1;
 
         currentWeapon = level.gg_weapons[self.gg_level];
-        currentWeaponCompare = "";
-        killWeaponCompare = "";
-        if (isDefined(currentWeapon)) currentWeaponCompare = toLower(currentWeapon + "");
-        if (isDefined(weapon)) killWeaponCompare = toLower(weapon + "");
         finalTier = (self.gg_level >= (level.gg_weapons.size - 1));
-        validTierKill = (killWeaponCompare == currentWeaponCompare);
+        validTierKill = weaponMatchesTierWeapon(weapon, currentWeapon);
         if (!validTierKill && finalTier && meansOfDeath == "MOD_MELEE")
             validTierKill = true;
 
