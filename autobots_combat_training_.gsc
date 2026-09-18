@@ -40,9 +40,15 @@ debugAutobots = true;
 debugVerbose = false;
 debugHeartbeatInterval = 5.0;
 
-botDifficultyEnforcerInterval = 2.0;
+botDifficultyEnforcerInterval = 0.25;
 spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 8;
+
+// RAGE MODE profile (bot_difficulty remains locked to ultra)
+rageBotAccuracy = 9.99;
+rageBotReactionTime = 0.0;
+rageBotMaxHealth = 2500;
+rageBotAggression = 9.99;
 
 sanityTestEnable = true;
 sanityTestDuration = 60.0;
@@ -76,7 +82,7 @@ init()
     if (awPressureSpawnDelay < 0.05) awPressureSpawnDelay = 0.05;
     if (awTrimDelay < 0.01) awTrimDelay = 0.01;
     if (debugHeartbeatInterval < 0.2) debugHeartbeatInterval = 0.2;
-    if (botDifficultyEnforcerInterval < 1.0) botDifficultyEnforcerInterval = 1.0;
+    if (botDifficultyEnforcerInterval < 0.10) botDifficultyEnforcerInterval = 0.10;
     if (spawnFailBackoff < 0.10) spawnFailBackoff = 0.10;
     if (maxSpawnAttemptsPerTick < 1) maxSpawnAttemptsPerTick = 1;
     if (sanityTestDuration < 5.0) sanityTestDuration = 5.0;
@@ -206,10 +212,10 @@ safeFullHeal(ent)
 
 setBotDifficulty(difficulty)
 {
-    self.botAccuracy = 2.75;
-    self.reactionTime = 0.01;
-    self.maxHealth = 650;
-    self.botAggression = 2.75;
+    self.botAccuracy = rageBotAccuracy;
+    self.reactionTime = rageBotReactionTime;
+    self.maxHealth = rageBotMaxHealth;
+    self.botAggression = rageBotAggression;
     if (awHealthRegenOnSpawn) safeFullHeal(self);
 }
 
@@ -327,6 +333,8 @@ applyDifficultyToAllBots(forceWritePers)
     foreach (p in level.players)
     {
         if (!isDefined(p) || !(p isBotEntity())) continue;
+
+        p setBotDifficulty("ultra");
 
         needsApply = true;
         if (isDefined(p.pers) && isDefined(p.pers["autobot_diff_applied"]) && p.pers["autobot_diff_applied"] == "ultra" && !forceWritePers)
