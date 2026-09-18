@@ -227,9 +227,11 @@ isMultiplayerContext()
         mn = toLower(level.mapname);
         if (length(mn) >= 3)
         {
-            if (getsubstr(mn, 0, 3) == "mp_") return true;
-            if (getsubstr(mn, 0, 3) == "cp_" || getsubstr(mn, 0, 3) == "zm_" || getsubstr(mn, 0, 3) == "sp_") return false;
+            prefix = getsubstr(mn, 0, 3);
+            if (prefix == "mp_") return true;
+            if (prefix == "cp_" || prefix == "zm_" || prefix == "sp_") return false;
         }
+        if (mn != "" && !isCombatTrainingIdentifier(mn)) return false;
     }
 
     gt = "";
@@ -1084,15 +1086,7 @@ spawnBotsSafe(amount, teamName)
     if (desiredTeam == "") desiredTeam = "autoassign";
 
     spawn_bots(amount, desiredTeam);
-    if (confirmBotSpawn(beforePlayers, beforeBots)) return true;
-
-    if (desiredTeam != "autoassign")
-    {
-        spawn_bots(amount, "autoassign");
-        if (confirmBotSpawn(beforePlayers, beforeBots)) return true;
-    }
-
-    return false;
+    return confirmBotSpawn(beforePlayers, beforeBots);
 }
 
 pickBotForDrop()
