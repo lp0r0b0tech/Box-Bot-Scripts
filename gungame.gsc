@@ -238,6 +238,7 @@ watchKill()
     {
         self waittill("killed_enemy", victim, meansOfDeath, weapon);
         if (!isGunGameParticipant(self)) continue;
+        if (!areGunGameEnemies(self, victim)) continue;
         if (!isDefined(level.gg_weapons) || level.gg_weapons.size <= 0) continue;
         if (!isDefined(self.gg_level)) self.gg_level = 0;
         if (self.gg_level < 0) self.gg_level = 0;
@@ -301,6 +302,18 @@ getGunGameWinnerToken(player)
     return "none";
 }
 
+areGunGameEnemies(attacker, victim)
+{
+    if (!isDefined(attacker) || !isDefined(victim)) return false;
+    if (attacker == victim) return false;
+    if (isGunGameFreeForAllMode()) return true;
+
+    attackerTeam = getGunGameWinnerToken(attacker);
+    victimTeam = getGunGameWinnerToken(victim);
+    if (attackerTeam == "none" || victimTeam == "none") return true;
+    return attackerTeam != victimTeam;
+}
+
 getGunGameEndGameWinner(player)
 {
     return getGunGameEndGameWinnerForMode(player, isGunGameFreeForAllMode());
@@ -356,6 +369,15 @@ runGunGameSanityCheck()
     testPlayer.pers = [];
     testPlayer.pers["team"] = "allies";
     if (getGunGameEndGameWinnerForMode(testPlayer, true) != testPlayer)
+        failures++;
+
+    teammateA = [];
+    teammateA.pers = [];
+    teammateA.pers["team"] = "allies";
+    teammateB = [];
+    teammateB.pers = [];
+    teammateB.pers["team"] = "team_allies";
+    if (areGunGameEnemies(teammateA, teammateB))
         failures++;
 
     return failures;
