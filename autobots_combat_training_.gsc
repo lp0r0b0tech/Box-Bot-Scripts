@@ -1049,8 +1049,11 @@ onPlayerConnect()
         }
         else
         {
+            previousToken = getDifficultyApplyToken(getSelectedBotDifficulty());
+            previousScale = getEffectiveSbmmScale();
             refreshSbmmState();
-            applyDifficultyToAllBots(false);
+            if (previousToken != getDifficultyApplyToken(getSelectedBotDifficulty()) || !floatNear(previousScale, getEffectiveSbmmScale(), 0.01))
+                applyDifficultyToAllBots(false);
             trimBotsToTarget();
         }
     }
