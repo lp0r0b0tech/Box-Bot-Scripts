@@ -142,7 +142,10 @@ init()
     botDifficultyFallback = normalizeDifficultyFallbackName(botDifficultyFallback);
     defaultBotDifficulty = botDifficultyMode;
     lockedBotDifficulty = botDifficultyMode;
-    level.forceGunGameInCombatTraining = forceGunGameInCombatTraining;
+    preserveForcedGunGame = false;
+    if (isDefined(level.forceGunGameInCombatTraining) && level.forceGunGameInCombatTraining) preserveForcedGunGame = true;
+    if (forceGunGameInCombatTraining) preserveForcedGunGame = true;
+    level.forceGunGameInCombatTraining = preserveForcedGunGame;
 
     if (forceGunGameInCombatTraining)
     {
@@ -713,11 +716,16 @@ getHumanSbmmTargetScale()
 
 smoothSbmmScale(currentScale, targetScale)
 {
+    return smoothSbmmScaleWithSpeeds(currentScale, targetScale, botSbmmRiseSpeed, botSbmmFallSpeed);
+}
+
+smoothSbmmScaleWithSpeeds(currentScale, targetScale, riseSpeed, fallSpeed)
+{
     currentScale = clampFloat(currentScale, 0.0, 1.0);
     targetScale = clampFloat(targetScale, 0.0, 1.0);
 
-    speed = botSbmmFallSpeed;
-    if (targetScale > currentScale) speed = botSbmmRiseSpeed;
+    speed = fallSpeed;
+    if (targetScale > currentScale) speed = riseSpeed;
 
     return clampFloat(currentScale + ((targetScale - currentScale) * speed), 0.0, 1.0);
 }
@@ -958,13 +966,13 @@ runSpawnBiasSanityCheck()
         failures++;
     }
 
-    if (smoothSbmmScale(0.50, 1.0) <= 0.50)
+    if (smoothSbmmScaleWithSpeeds(0.50, 1.0, 0.45, 0.20) <= 0.50)
     {
         warnOnce("sbmm_rise", "sbmm rise smoothing sanity failed");
         failures++;
     }
 
-    if (smoothSbmmScale(0.50, 0.0) >= 0.50)
+    if (smoothSbmmScaleWithSpeeds(0.50, 0.0, 0.45, 0.20) >= 0.50)
     {
         warnOnce("sbmm_fall", "sbmm fall smoothing sanity failed");
         failures++;

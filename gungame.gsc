@@ -177,7 +177,7 @@ watchKill()
     for (;;)
     {
         self waittill("killed_enemy", victim, meansOfDeath, weapon);
-        if (!isGunGameParticipant(self) || !isGunGameParticipant(victim)) continue;
+        if (!isGunGameParticipant(self)) continue;
         if (!isDefined(level.gg_weapons) || level.gg_weapons.size <= 0) continue;
         if (!isDefined(self.gg_level)) self.gg_level = 0;
         if (self.gg_level < 0) self.gg_level = 0;
