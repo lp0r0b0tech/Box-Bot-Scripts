@@ -733,7 +733,9 @@ refreshSbmmState()
     else
     {
         targetScale = getHumanSbmmTargetScale();
-        if (!isDefined(level.autobotSbmmScale))
+        if (targetScale <= baseScale)
+            scale = baseScale;
+        else if (!isDefined(level.autobotSbmmScale))
             scale = startScale;
         else
         {
