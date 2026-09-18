@@ -58,7 +58,7 @@ godTierTeamBalanceInterval = 0.25;
 botWinBiasEnable = true;
 botWinBiasLead = 6;
 spawnFailBackoff = 0.50;
-maxSpawnAttemptsPerTick = 1;
+maxSpawnAttemptsPerTick = 2;
 botSbmmEnable = true;
 botSbmmUpdateInterval = 3.0;
 botSbmmStartScale = 0.45;
@@ -132,7 +132,7 @@ init()
     if (botSbmmMinWinBiasLead < 0) botSbmmMinWinBiasLead = 0;
     if (botSbmmMaxWinBiasLead < botSbmmMinWinBiasLead) botSbmmMaxWinBiasLead = botSbmmMinWinBiasLead;
     if (spawnFailBackoff < 0.10) spawnFailBackoff = 0.10;
-    if (maxSpawnAttemptsPerTick < 1) maxSpawnAttemptsPerTick = 1;
+    if (maxSpawnAttemptsPerTick < 2) maxSpawnAttemptsPerTick = 2;
     if (sanityTestDuration < 5.0) sanityTestDuration = 5.0;
     if (sanityTestSampleInterval < 1.0) sanityTestSampleInterval = 1.0;
     if (defaultBotPrestige < 0) defaultBotPrestige = 0;
@@ -191,6 +191,8 @@ initExternalGunGame()
 
 shouldRunAutobotsHere()
 {
+    if (!isMultiplayerContext()) return false;
+
     if (isDefined(level.mapname))
     {
         mn = toLower(level.mapname);
@@ -211,6 +213,17 @@ shouldRunAutobotsHere()
     }
 
     return detectCombatTraining();
+}
+
+isMultiplayerContext()
+{
+    if (isDefined(level.mapname))
+    {
+        mn = toLower(level.mapname);
+        if (isSubStr(mn, "mp_")) return true;
+    }
+
+    return false;
 }
 
 isSubStr(hay, needle)
@@ -1057,6 +1070,7 @@ countBotsOnTeam(teamName)
     foreach (p in level.players)
     {
         if (!isDefined(p) || !(p isBotEntity())) continue;
+        if (!isPlayerCountable(p)) continue;
         if (getEntityTeamName(p) != tl) continue;
         n++;
     }
