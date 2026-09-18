@@ -147,7 +147,7 @@ init()
     if (forceGunGameInCombatTraining) preserveForcedGunGame = true;
     level.forceGunGameInCombatTraining = preserveForcedGunGame;
 
-    if (forceGunGameInCombatTraining)
+    if (level.forceGunGameInCombatTraining)
     {
         gungame::init();
     }
@@ -300,6 +300,13 @@ clampFloat(value, minValue, maxValue)
     if (value < minValue) return minValue;
     if (value > maxValue) return maxValue;
     return value;
+}
+
+floatNear(value, expected, tolerance)
+{
+    difference = value - expected;
+    if (difference < 0.0) difference = 0.0 - difference;
+    return difference <= tolerance;
 }
 
 validateInitConfigNormalization()
@@ -966,15 +973,27 @@ runSpawnBiasSanityCheck()
         failures++;
     }
 
-    if (smoothSbmmScaleWithSpeeds(0.50, 1.0, 0.45, 0.20) <= 0.50)
+    riseScale = smoothSbmmScaleWithSpeeds(0.50, 1.0, 0.45, 0.20);
+    if (riseScale <= 0.50)
     {
         warnOnce("sbmm_rise", "sbmm rise smoothing sanity failed");
         failures++;
     }
+    else if (!floatNear(riseScale, 0.725, 0.001))
+    {
+        warnOnce("sbmm_rise_exact", "sbmm rise smoothing exact-step sanity failed");
+        failures++;
+    }
 
-    if (smoothSbmmScaleWithSpeeds(0.50, 0.0, 0.45, 0.20) >= 0.50)
+    fallScale = smoothSbmmScaleWithSpeeds(0.50, 0.0, 0.45, 0.20);
+    if (fallScale >= 0.50)
     {
         warnOnce("sbmm_fall", "sbmm fall smoothing sanity failed");
+        failures++;
+    }
+    else if (!floatNear(fallScale, 0.40, 0.001))
+    {
+        warnOnce("sbmm_fall_exact", "sbmm fall smoothing exact-step sanity failed");
         failures++;
     }
 
