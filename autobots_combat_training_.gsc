@@ -301,7 +301,6 @@ initializeOptionalGunGameState()
 {
     if (!isDefined(level.autobotsGunGameMode)) level.autobotsGunGameMode = false;
     if (!isDefined(level.forceGunGameInCombatTraining)) level.forceGunGameInCombatTraining = false;
-    if (!isDefined(level.autobotDifficultyApplying)) level.autobotDifficultyApplying = false;
 }
 
 isGunGameActive()
@@ -313,15 +312,15 @@ isGunGameActive()
 
 beginDifficultyApply()
 {
-    if (!isDefined(level.autobotDifficultyApplying)) level.autobotDifficultyApplying = false;
-    while (level.autobotDifficultyApplying) wait 0.05;
-    level.autobotDifficultyApplying = true;
+    if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
+    while (level.autobotAdjusting) wait 0.05;
+    level.autobotAdjusting = true;
 }
 
 endDifficultyApply()
 {
-    if (!isDefined(level.autobotDifficultyApplying)) return;
-    level.autobotDifficultyApplying = false;
+    if (!isDefined(level.autobotAdjusting)) return;
+    level.autobotAdjusting = false;
 }
 
 isCombatTrainingIdentifier(value)
@@ -1049,6 +1048,7 @@ applyDifficultyToAllBots(forceWritePers)
 
     expectedDiff = getSelectedBotDifficulty();
     expectedToken = getDifficultyApplyToken(expectedDiff);
+    expectedScale = getEffectiveSbmmScale();
 
     foreach (p in level.players)
     {
@@ -1266,18 +1266,12 @@ delayedBotDifficultyApply()
     level endon("game_ended");
     wait 0.5;
 
-    if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
-    hadLock = level.autobotAdjusting;
-    if (!hadLock) level.autobotAdjusting = true;
-
     beginDifficultyApply();
     refreshSbmmState();
     safeSetBotDifficultyDvar();
     applyDifficultyToAllBots(true);
     level.delayedDifficultyApplyFailures = verifyAppliedDifficultyTokens(getSelectedBotDifficulty(), "delayed_apply");
     endDifficultyApply();
-
-    if (!hadLock) level.autobotAdjusting = false;
 }
 
 botDifficultyEnforcer()
