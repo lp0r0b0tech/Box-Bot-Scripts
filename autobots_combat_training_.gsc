@@ -1255,7 +1255,7 @@ delayedBotDifficultyApply()
 botDifficultyEnforcer()
 {
     level endon("game_ended");
-    timeSinceEnforce = botDifficultyEnforcerInterval;
+    timeSinceEnforce = 0.0;
     for (;;)
     {
         refreshSbmmState();
