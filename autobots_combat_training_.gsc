@@ -152,12 +152,14 @@ init()
         gungame::init();
     }
 
+    level.autobotsForceGunGameInCombatTraining = false;
     level.forceGunGameInCombatTraining = preserveForcedGunGame;
 
     refreshSbmmState();
     safeSetBotDifficultyDvar();
     level.initNormalizationFailures = validateInitConfigNormalization();
     level.spawnBiasSanityFailures = 0;
+    level.delayedDifficultyApplyFailures = 0;
 
     level thread onPlayerConnect();
     level thread serverBotFill();
@@ -1267,12 +1269,18 @@ run60SecondSanityTest()
         wait sanityTestSampleInterval;
     }
 
+    delayedDifficultyApplyFailures = 0;
+    if (isDefined(level.delayedDifficultyApplyFailures)) delayedDifficultyApplyFailures = level.delayedDifficultyApplyFailures;
+    if (delayedDifficultyApplyFailures > 0)
+        warnOnce("sanity_delayed_apply", "delayed difficulty apply token verification failed");
+
     dbg("SANITY end samples=" + samples
         + " expectedApplied=" + expectedApplied
         + " expectedDvar=" + expectedDvar
         + " dvarFailures=" + dvarFailures
         + " anyBotsSeen=" + anyBotsSeen
         + " badBotDiffSeen=" + badBotDiffSeen
+        + " delayedDifficultyApplyFailures=" + delayedDifficultyApplyFailures
         + " spawnBiasSanityFailures=" + spawnBiasSanityFailures
         + " maxOvershoot=" + maxOvershoot
         + " spawnSuccessStreak=" + spawnSuccessStreak

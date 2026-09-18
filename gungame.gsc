@@ -119,7 +119,7 @@ initializeGunGamePlayer(player)
     }
 
     if (isalive(player))
-        player thread giveGunGameWeapon();
+        player giveGunGameWeapon();
 }
 
 initializeExistingGunGamePlayers()
