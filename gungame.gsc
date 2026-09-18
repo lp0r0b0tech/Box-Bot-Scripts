@@ -2,26 +2,104 @@
 #include maps\mp\gametypes\_hud_util;
 #include maps\mp\gametypes\_gamelogic;
 
-isGunGameMode()
+isSubStr(hay, needle)
+{
+    if (!isDefined(hay) || !isDefined(needle)) return false;
+    return issubstr(hay, needle);
+}
+
+isCombatTrainingIdentifier(value)
+{
+    if (!isDefined(value) || value == "") return false;
+    if (value == "training" || value == "combattraining" || value == "combat_training" || value == "combat-training" || value == "combat training") return true;
+    if (value == "readiness" || value == "combat_readiness" || value == "combat-readiness" || value == "combat readiness") return true;
+    if (isSubStr(value, "combat training") || isSubStr(value, "combat_training") || isSubStr(value, "combat-training")) return true;
+    if (isSubStr(value, "combat readiness") || isSubStr(value, "combat_readiness") || isSubStr(value, "combat-readiness")) return true;
+    return false;
+}
+
+isMultiplayerContext()
+{
+    if (isDefined(level.mapname))
+    {
+        mn = toLower(level.mapname);
+        if (length(mn) >= 3)
+        {
+            if (getsubstr(mn, 0, 3) == "mp_") return true;
+            if (getsubstr(mn, 0, 3) == "cp_" || getsubstr(mn, 0, 3) == "zm_" || getsubstr(mn, 0, 3) == "sp_") return false;
+        }
+    }
+
+    gt = "";
+    if (isDefined(level.gametype)) gt = toLower(level.gametype);
+    if (gt == "dm" || gt == "war" || gt == "dom" || gt == "conf" || gt == "sd" || gt == "ctf" || gt == "hp" || gt == "gun" || gt == "gungame" || gt == "gun_game" || gt == "gun-game") return true;
+    if (isCombatTrainingIdentifier(gt)) return true;
+
+    pl = "";
+    if (isDefined(level.playlist)) pl = toLower(level.playlist);
+    if (isCombatTrainingIdentifier(pl)) return true;
+
+    return false;
+}
+
+detectCombatTraining()
+{
+    gt = "";
+    if (isDefined(level.gametype)) gt = toLower(level.gametype);
+    if (isCombatTrainingIdentifier(gt)) return true;
+
+    pl = "";
+    if (isDefined(level.playlist)) pl = toLower(level.playlist);
+    if (isCombatTrainingIdentifier(pl)) return true;
+
+    mn = "";
+    if (isDefined(level.mapname)) mn = toLower(level.mapname);
+    if (isCombatTrainingIdentifier(mn)) return true;
+
+    return false;
+}
+
+shouldRunGunGameHere()
 {
     if (isDefined(level.forceGunGameInCombatTraining) && level.forceGunGameInCombatTraining) return true;
 
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
     if (gt == "gun" || gt == "gungame" || gt == "gun_game" || gt == "gun-game") return true;
-    if (issubstr(gt, "gungame") || issubstr(gt, "gun game") || issubstr(gt, "gun_game") || issubstr(gt, "gun-game")) return true;
+    if (isSubStr(gt, "gungame") || isSubStr(gt, "gun game") || isSubStr(gt, "gun_game") || isSubStr(gt, "gun-game")) return true;
 
     pl = "";
     if (isDefined(level.playlist)) pl = toLower(level.playlist);
     if (pl == "gun" || pl == "gungame" || pl == "gun_game" || pl == "gun-game") return true;
-    if (issubstr(pl, "gungame") || issubstr(pl, "gun game") || issubstr(pl, "gun_game") || issubstr(pl, "gun-game")) return true;
+    if (isSubStr(pl, "gungame") || isSubStr(pl, "gun game") || isSubStr(pl, "gun_game") || isSubStr(pl, "gun-game")) return true;
 
-    return false;
+    if (!isMultiplayerContext()) return false;
+
+    if (isDefined(level.mapname))
+    {
+        mn = toLower(level.mapname);
+        if (isSubStr(mn, "exo survival") || isSubStr(mn, "exo zombies")) return false;
+        if (isSubStr(mn, "cp_") || isSubStr(mn, "survival")) return false;
+        if (isSubStr(mn, "zm_") || isSubStr(mn, "zombies")) return false;
+    }
+
+    if (isSubStr(gt, "survival") || isSubStr(gt, "zombie") || isSubStr(gt, "infect")) return false;
+
+    if (isDefined(level.playlist))
+    {
+        if (isSubStr(pl, "survival") || isSubStr(pl, "zombie")) return false;
+        if (isSubStr(pl, "exo")) return false;
+        if (isSubStr(pl, "exo survival") || isSubStr(pl, "exo zombies")) return false;
+    }
+
+    return detectCombatTraining();
 }
 
 init()
 {
-    if (!isGunGameMode()) return;
+    if (!shouldRunGunGameHere()) return;
+    if (!isDefined(level.forceGunGameInCombatTraining))
+        level.forceGunGameInCombatTraining = detectCombatTraining();
     initGunGameState();
 }
 
