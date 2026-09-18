@@ -75,6 +75,7 @@ sbmmEvaluationInterval = 10.0;
 
 sbmmNewPlayerKd = 1.0;
 sbmmNewPlayerScorePerMinute = 150.0;
+sbmmMinimumTrackedMinutes = 0.25;
 sbmmKdWeight = 0.70;
 sbmmScoreWeight = 0.30;
 sbmmKdFloor = 1.0;
@@ -146,6 +147,7 @@ init()
     if (sbmmEvaluationInterval < 2.0) sbmmEvaluationInterval = 2.0;
     if (sbmmNewPlayerKd < 0.1) sbmmNewPlayerKd = 0.1;
     if (sbmmNewPlayerScorePerMinute < 0.0) sbmmNewPlayerScorePerMinute = 0.0;
+    if (sbmmMinimumTrackedMinutes < 0.05) sbmmMinimumTrackedMinutes = 0.05;
     if (sbmmKdWeight < 0.0) sbmmKdWeight = 0.0;
     if (sbmmScoreWeight < 0.0) sbmmScoreWeight = 0.0;
     if ((sbmmKdWeight + sbmmScoreWeight) <= 0.0)
@@ -669,8 +671,11 @@ getSbmmTrackedMinutes(ent)
 
     joinTime = ent.pers["sbmm_join_time"];
     elapsedMs = now - joinTime;
-    if (elapsedMs < 60000) return 1.0;
-    return elapsedMs / 60000.0;
+    if (elapsedMs <= 0) return sbmmMinimumTrackedMinutes;
+
+    minutes = elapsedMs / 60000.0;
+    if (minutes < sbmmMinimumTrackedMinutes) return sbmmMinimumTrackedMinutes;
+    return minutes;
 }
 
 normalizeSbmmValue(value, lowValue, highValue)
@@ -685,8 +690,6 @@ getSbmmPlayerRating(ent)
     deaths = getSbmmTrackedDeaths(ent);
     score = getSbmmTrackedScore(ent);
     minutes = getSbmmTrackedMinutes(ent);
-
-    if (minutes < 1.0) minutes = 1.0;
 
     activity = kills + deaths;
     if (activity <= 0 && score <= 0)
