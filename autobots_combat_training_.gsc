@@ -224,6 +224,7 @@ shouldRunAutobotsHere()
 
 isMultiplayerContext()
 {
+    nonMpMap = false;
     if (isDefined(level.mapname))
     {
         mn = toLower(level.mapname);
@@ -231,7 +232,7 @@ isMultiplayerContext()
         {
             prefix = getsubstr(mn, 0, 3);
             if (prefix == "mp_") return true;
-            if (prefix == "cp_" || prefix == "zm_" || prefix == "sp_") return false;
+            if (prefix == "cp_" || prefix == "zm_" || prefix == "sp_") nonMpMap = true;
         }
     }
 
@@ -245,6 +246,7 @@ isMultiplayerContext()
     if (isCombatTrainingIdentifier(pl)) return true;
     if (isKnownMultiplayerIdentifier(pl)) return true;
 
+    if (nonMpMap) return false;
     return false;
 }
 
@@ -552,8 +554,28 @@ isValidDifficultyApplyToken(difficulty, token)
     diff = normalizeDifficultyName(difficulty);
     if (!isDefined(token) || token == "") return false;
     if (diff != "sbmm") return token == diff;
-    if (!isSubStr(token, "sbmm_")) return false;
-    if (token == "sbmm" || token == "sbmm_") return false;
+    if (length(token) < 6) return false;
+    if (getsubstr(token, 0, 5) != "sbmm_") return false;
+    suffix = getsubstr(token, 5, length(token) - 5);
+    if (!isNumericString(suffix)) return false;
+    bucket = int(suffix);
+    return bucket >= 0 && bucket <= 10;
+}
+
+isNumericString(value)
+{
+    if (!isDefined(value) || value == "") return false;
+
+    i = 0;
+    while (i < length(value))
+    {
+        ch = getsubstr(value, i, i + 1);
+        if (ch != "0" && ch != "1" && ch != "2" && ch != "3" && ch != "4"
+            && ch != "5" && ch != "6" && ch != "7" && ch != "8" && ch != "9")
+            return false;
+        i++;
+    }
+
     return true;
 }
 
@@ -1027,7 +1049,6 @@ applyDifficultyToAllBots(forceWritePers)
 
     expectedDiff = getSelectedBotDifficulty();
     expectedToken = getDifficultyApplyToken(expectedDiff);
-    expectedScale = getEffectiveSbmmScale();
 
     foreach (p in level.players)
     {
@@ -1040,7 +1061,7 @@ applyDifficultyToAllBots(forceWritePers)
                 needsApply = true;
             else if (p.pers["autobot_diff_applied"] != expectedToken)
                 needsApply = true;
-            else if (expectedDiff == "sbmm" && (!isDefined(p.pers["autobot_sbmm_scale"]) || !floatNear(p.pers["autobot_sbmm_scale"], expectedScale, 0.01)))
+            else if (expectedDiff == "sbmm" && !isDefined(p.pers["autobot_sbmm_scale"]))
                 needsApply = true;
         }
 
