@@ -213,9 +213,6 @@ isMultiplayerContext()
         }
     }
 
-    if (isDefined(level.teambased) && level.teambased) return true;
-    if (isDefined(level.teamBased) && level.teamBased) return true;
-
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
     if (gt == "dm" || gt == "war" || gt == "dom" || gt == "conf" || gt == "sd" || gt == "ctf" || gt == "hp" || gt == "gun" || gt == "gungame" || gt == "gun_game" || gt == "gun-game") return true;
@@ -512,12 +509,14 @@ safeSetBotDifficultyDvar()
     desired = getSelectedBotDifficulty();
     target = getBotDifficultyDvarTarget();
     setdvar("bot_difficulty", target);
-    level.autobotDvarDifficulty = target;
+    observed = getdvar("bot_difficulty");
+    if (!isDefined(observed)) observed = "";
+    level.autobotDvarDifficulty = toLower(observed);
 
     if (target != desired)
         warnOnce("bot_diff_dvar_" + desired, "using bot_difficulty dvar fallback \"" + target + "\" while keeping script profile \"" + desired + "\"");
 
-    return target;
+    return level.autobotDvarDifficulty;
 }
 
 setBotDifficulty(difficulty)

@@ -267,6 +267,8 @@ watchKill()
             {
                 self iprintlnbold("^2Gun Game Winner!");
                 winner = getGunGameEndGameWinner(self);
+                if (winner == "none")
+                    return;
                 maps\mp\gametypes\_gamelogic::endGame(winner, "scorelimit");
                 return;
             }
@@ -334,7 +336,7 @@ getGunGameEndGameWinnerForMode(player, freeForAllMode)
 
     winnerToken = getGunGameWinnerToken(player);
     if (winnerToken != "none") return winnerToken;
-    return player;
+    return "none";
 }
 
 shouldAwardFinalTierGunGameKill(validTierKill, finalTier, meansOfDeath)
@@ -390,7 +392,7 @@ runGunGameSanityCheck()
 
     noTeamPlayer = [];
     noTeamPlayer.pers = [];
-    if (getGunGameEndGameWinnerForMode(noTeamPlayer, false) != noTeamPlayer)
+    if (getGunGameEndGameWinnerForMode(noTeamPlayer, false) != "none")
         failures++;
 
     return failures;
