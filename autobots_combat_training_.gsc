@@ -45,10 +45,10 @@ spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 8;
 
 // RAGE MODE profile (overwhelming near-certain win tuning; bot_difficulty remains locked to ultra)
-rageBotAccuracy = 9.99;
+rageBotAccuracy = 2.75;
 rageBotReactionTime = 0.0;
 rageBotMaxHealth = 2500;
-rageBotAggression = 9.99;
+rageBotAggression = 2.75;
 
 sanityTestEnable = true;
 sanityTestDuration = 60.0;
@@ -83,6 +83,10 @@ init()
     if (awTrimDelay < 0.01) awTrimDelay = 0.01;
     if (debugHeartbeatInterval < 0.2) debugHeartbeatInterval = 0.2;
     if (botDifficultyEnforcerInterval < 0.10) botDifficultyEnforcerInterval = 0.10;
+    if (rageBotAccuracy > 2.75) rageBotAccuracy = 2.75;
+    if (rageBotReactionTime < 0.0) rageBotReactionTime = 0.0;
+    if (rageBotMaxHealth < 100) rageBotMaxHealth = 100;
+    if (rageBotAggression > 2.75) rageBotAggression = 2.75;
     if (spawnFailBackoff < 0.10) spawnFailBackoff = 0.10;
     if (maxSpawnAttemptsPerTick < 1) maxSpawnAttemptsPerTick = 1;
     if (sanityTestDuration < 5.0) sanityTestDuration = 5.0;
