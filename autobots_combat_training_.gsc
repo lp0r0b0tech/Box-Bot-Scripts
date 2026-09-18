@@ -204,9 +204,16 @@ isMultiplayerContext()
     {
         mn = toLower(level.mapname);
         if (getsubstr(mn, 0, 3) == "mp_") return true;
+        if (getsubstr(mn, 0, 3) == "cp_" || getsubstr(mn, 0, 3) == "zm_" || getsubstr(mn, 0, 3) == "sp_") return false;
     }
 
-    return detectCombatTraining();
+    if (isDefined(level.teambased) || isDefined(level.teamBased)) return true;
+
+    gt = "";
+    if (isDefined(level.gametype)) gt = toLower(level.gametype);
+    if (gt == "dm" || gt == "war" || gt == "dom" || gt == "conf" || gt == "sd" || gt == "ctf" || gt == "hp" || gt == "gun" || gt == "gungame") return true;
+
+    return false;
 }
 
 isSubStr(hay, needle)
