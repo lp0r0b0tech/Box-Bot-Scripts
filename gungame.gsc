@@ -19,8 +19,10 @@ isGunGameMode()
 
 init()
 {
+    if (!isGunGameMode()) return;
     if (isDefined(level.gungameInitialized) && level.gungameInitialized) return;
     level.gungameInitialized = true;
+    level.autobotsGunGameMode = true;
 
     level.gg_weapons = [];
 
@@ -166,7 +168,11 @@ watchKill()
             if (finalTier)
             {
                 self iprintlnbold("^2Gun Game Winner!");
-                maps\mp\gametypes\_gamelogic::endGame(getGunGameWinnerToken(self), "scorelimit");
+                winnerToken = getGunGameWinnerToken(self);
+                if (winnerToken == "none")
+                    maps\mp\gametypes\_gamelogic::endGame(self, "scorelimit");
+                else
+                    maps\mp\gametypes\_gamelogic::endGame(winnerToken, "scorelimit");
                 return;
             }
 

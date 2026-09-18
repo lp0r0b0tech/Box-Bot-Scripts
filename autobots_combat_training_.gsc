@@ -5,7 +5,6 @@
 // - Fixes persistence by normalizing + enforcing dvar + per-bot state
 // ============================================================
 #include scripts/mp/_bots;
-#include gungame;
 
 // --------------------------
 // Config
@@ -95,15 +94,9 @@ spawnConfirmPhase3Delay = 0.20;
 // --------------------------
 init()
 {
-    gunGameMode = shouldRunGunGameHere();
-    level.autobotsGunGameMode = gunGameMode;
-    if (gunGameMode)
-        initExternalGunGame();
-
     if (!shouldRunAutobotsHere())
     {
-        if (!gunGameMode)
-            dbg("init(): disabled outside Combat Training multiplayer");
+        dbg("init(): disabled outside Combat Training multiplayer");
         return;
     }
 
@@ -160,23 +153,10 @@ init()
     level thread botDifficultyEnforcer();
 
     dbg("init(): Combat Training active"
-        + (gunGameMode ? " with Gun Game coexistence" : "")
+        + ((isDefined(level.autobotsGunGameMode) && level.autobotsGunGameMode) ? " with Gun Game coexistence" : "")
         + " | diff=" + getActiveDifficultyLabel()
         + " | dvar=" + level.autobotDvarDifficulty);
     if (sanityTestEnable) level thread run60SecondSanityTest();
-}
-
-shouldRunGunGameHere()
-{
-    return gungame::isGunGameMode();
-}
-
-initExternalGunGame()
-{
-    if (isDefined(level.autobotsGunGameDelegated) && level.autobotsGunGameDelegated) return;
-    level.autobotsGunGameDelegated = true;
-    dbg("init(): delegating Gun Game mode to separate gungame.gsc");
-    gungame::init();
 }
 
 shouldRunAutobotsHere()
@@ -527,6 +507,7 @@ setBotDifficulty(difficulty)
 applyOpLoadout(ent)
 {
     if (!opWeaponsEnable || !isDefined(ent)) return;
+    if (isDefined(level.gungameInitialized) && level.gungameInitialized) return;
     if (isDefined(level.autobotsGunGameMode) && level.autobotsGunGameMode) return;
     if (!isDefined(ent.pers)) ent.pers = [];
 
