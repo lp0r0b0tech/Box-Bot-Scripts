@@ -1,5 +1,6 @@
 #include maps\mp\_utility;
 #include maps\mp\gametypes\_hud_util;
+#include maps\mp\gametypes\_gamelogic;
 
 init()
 {
@@ -78,6 +79,8 @@ onPlayerConnect()
         if (!isDefined(player)) continue;
 
         if (!isDefined(player.pers)) player.pers = [];
+        if (isDefined(player.pers["gg_watchers_started"]) && player.pers["gg_watchers_started"]) continue;
+        player.pers["gg_watchers_started"] = true;
         player.pers["gg_initialized"] = true;
         player.gg_level = 0;
         player thread onPlayerSpawned();

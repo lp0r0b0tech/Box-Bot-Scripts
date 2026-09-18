@@ -523,7 +523,7 @@ setBotDifficulty(difficulty)
 applyOpLoadout(ent)
 {
     if (!opWeaponsEnable || !isDefined(ent)) return;
-    if (isDefined(level.autobotsGunGameDelegated) && level.autobotsGunGameDelegated) return;
+    if (shouldRunGunGameHere()) return;
     if (!isDefined(ent.pers)) ent.pers = [];
 
     desiredSig = opPrimaryWeapon + "|" + opPrimaryAttachment + "|" + opSecondaryWeapon + "|" + opLethal + "|" + opTactical;
@@ -736,13 +736,14 @@ getSbmmLeadForScale(scale)
 
 refreshSbmmState()
 {
+    baseScale = clampFloat(botSbmmMinimumScale, 0.0, 1.0);
     startScale = clampFloat(botSbmmStartScale, 0.0, 1.0);
-    if (startScale < botSbmmMinimumScale) startScale = botSbmmMinimumScale;
+    if (startScale < baseScale) startScale = baseScale;
 
     if (!botSbmmEnable || getSelectedBotDifficulty() != "sbmm")
     {
-        targetScale = startScale;
-        scale = startScale;
+        targetScale = baseScale;
+        scale = baseScale;
     }
     else
     {
