@@ -22,6 +22,16 @@ isGunGameMode()
 init()
 {
     if (!isGunGameMode()) return;
+    initGunGameState();
+}
+
+initForced()
+{
+    initGunGameState();
+}
+
+initGunGameState()
+{
     if (isDefined(level.gungameInitialized) && level.gungameInitialized) return;
     level.gungameInitialized = true;
     level.autobotsGunGameMode = true;
@@ -144,12 +154,16 @@ initializeGunGamePlayerWhenReady()
 {
     level endon("game_ended");
     self endon("disconnect");
+    timeoutAt = 10.0;
 
     for (;;)
     {
         if (isDefined(self.pers))
             break;
+        if (timeoutAt <= 0.0)
+            return;
         wait 0.05;
+        timeoutAt = timeoutAt - 0.05;
     }
 
     initializeGunGamePlayer(self);
@@ -169,9 +183,10 @@ onPlayerSpawned()
 scheduleGunGameWeaponGrant()
 {
     if (!isDefined(self.pers)) self.pers = [];
-    if (isDefined(self.pers["gg_weapon_grant_pending"]) && self.pers["gg_weapon_grant_pending"]) return;
+    self.pers["gg_weapon_grant_requested"] = true;
+    if (isDefined(self.pers["gg_weapon_grant_running"]) && self.pers["gg_weapon_grant_running"]) return;
 
-    self.pers["gg_weapon_grant_pending"] = true;
+    self.pers["gg_weapon_grant_running"] = true;
     self thread giveGunGameWeapon();
 }
 
@@ -180,34 +195,33 @@ giveGunGameWeapon()
     self endon("disconnect");
     if (!isDefined(self.pers)) self.pers = [];
 
-    if (!isalive(self))
+    for (;;)
     {
-        self.pers["gg_weapon_grant_pending"] = false;
-        return;
+        self.pers["gg_weapon_grant_requested"] = false;
+
+        if (isalive(self) && isDefined(level.gg_weapons) && level.gg_weapons.size > 0)
+        {
+            if (!isDefined(self.gg_level)) self.gg_level = 0;
+            if (self.gg_level < 0) self.gg_level = 0;
+            if (self.gg_level >= level.gg_weapons.size) self.gg_level = level.gg_weapons.size - 1;
+
+            currentWeapon = level.gg_weapons[self.gg_level];
+            if (isDefined(currentWeapon) && currentWeapon != "")
+            {
+                self takeallweapons();
+                self giveweapon(currentWeapon);
+                self switchtoweapon(currentWeapon);
+                self givemaxammo(currentWeapon);
+            }
+        }
+
+        if (!isDefined(self.pers["gg_weapon_grant_requested"]) || !self.pers["gg_weapon_grant_requested"])
+            break;
     }
 
-    if (!isDefined(level.gg_weapons) || level.gg_weapons.size <= 0)
-    {
-        self.pers["gg_weapon_grant_pending"] = false;
-        return;
-    }
-
-    if (!isDefined(self.gg_level)) self.gg_level = 0;
-    if (self.gg_level < 0) self.gg_level = 0;
-    if (self.gg_level >= level.gg_weapons.size) self.gg_level = level.gg_weapons.size - 1;
-
-    currentWeapon = level.gg_weapons[self.gg_level];
-    if (!isDefined(currentWeapon) || currentWeapon == "")
-    {
-        self.pers["gg_weapon_grant_pending"] = false;
-        return;
-    }
-
-    self takeallweapons();
-    self giveweapon(currentWeapon);
-    self switchtoweapon(currentWeapon);
-    self givemaxammo(currentWeapon);
-    self.pers["gg_weapon_grant_pending"] = false;
+    self.pers["gg_weapon_grant_running"] = false;
+    if (isDefined(self.pers["gg_weapon_grant_requested"]) && self.pers["gg_weapon_grant_requested"])
+        self scheduleGunGameWeaponGrant();
 }
 
 watchKill()
@@ -332,7 +346,7 @@ runGunGameSanityCheck()
     if (!shouldDemoteGunGameVictim(false, false, "MOD_CRUSH", true))
         failures++;
 
-    testPlayer = [];
+    testPlayer = "ffa_winner";
     if (getGunGameEndGameWinnerForMode(testPlayer, true) != testPlayer)
         failures++;
 
