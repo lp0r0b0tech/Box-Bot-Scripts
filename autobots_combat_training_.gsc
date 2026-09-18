@@ -1174,7 +1174,7 @@ serverBotFill()
             if (!spawnBotsSafe(1, spawnTeam))
             {
                 spawnFailed = true;
-                break;
+                continue;
             }
 
             wait (awStyleEnable ? awPressureSpawnDelay : 0.25);
@@ -1301,15 +1301,19 @@ botDifficultyEnforcer()
             selectedToken = getDifficultyApplyToken(selectedDifficulty);
             selectedScale = getSbmmScale();
             needsApply = !isDefined(level.lastAppliedDifficultyToken) || selectedToken != level.lastAppliedDifficultyToken;
+            forceWritePers = false;
             if (!needsApply && selectedDifficulty == "sbmm")
             {
                 if (!isDefined(level.lastAppliedSbmmScale) || !floatNear(level.lastAppliedSbmmScale, selectedScale, 0.0001))
+                {
                     needsApply = true;
+                    forceWritePers = true;
+                }
             }
 
             if (needsApply)
             {
-                applyDifficultyToAllBots(false);
+                applyDifficultyToAllBots(forceWritePers);
                 level.lastAppliedDifficultyToken = selectedToken;
                 level.lastAppliedSbmmScale = selectedScale;
             }
