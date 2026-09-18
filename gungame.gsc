@@ -152,8 +152,19 @@ onPlayerConnect()
     {
         level waittill("connected", player);
         if (!isDefined(player)) continue;
-        player thread initializeGunGamePlayerWhenReady();
+        player thread initializeGunGamePlayerAfterSpawn();
     }
+}
+
+initializeGunGamePlayerAfterSpawn()
+{
+    level endon("game_ended");
+    self endon("disconnect");
+
+    if (!isalive(self))
+        self waittill("spawned_player");
+
+    self initializeGunGamePlayerWhenReady();
 }
 
 initializeGunGamePlayerWhenReady()

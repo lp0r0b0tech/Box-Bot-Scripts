@@ -147,6 +147,7 @@ init()
         forceGunGameActive = level.forceGunGameInCombatTraining;
     else if (forceGunGameInCombatTraining)
         forceGunGameActive = true;
+    level.forceGunGameInCombatTraining = forceGunGameActive;
     if (forceGunGameActive)
         gungame::initForced();
     else
@@ -205,8 +206,11 @@ isMultiplayerContext()
     if (isDefined(level.mapname))
     {
         mn = toLower(level.mapname);
-        if (getsubstr(mn, 0, 3) == "mp_") return true;
-        if (getsubstr(mn, 0, 3) == "cp_" || getsubstr(mn, 0, 3) == "zm_" || getsubstr(mn, 0, 3) == "sp_") return false;
+        if (length(mn) >= 3)
+        {
+            if (getsubstr(mn, 0, 3) == "mp_") return true;
+            if (getsubstr(mn, 0, 3) == "cp_" || getsubstr(mn, 0, 3) == "zm_" || getsubstr(mn, 0, 3) == "sp_") return false;
+        }
     }
 
     if (isDefined(level.teambased) || isDefined(level.teamBased)) return true;
@@ -788,6 +792,23 @@ getHumanSbmmTargetScale()
     return clampFloat(startScale + ((startScale - baseScale) * blendedPressure), baseScale, 1.0);
 }
 
+calculateSbmmScale(baseScale, rawStartScale, targetScale, currentScale)
+{
+    if (!isDefined(currentScale))
+    {
+        if (targetScale <= baseScale)
+            return smoothSbmmScale(rawStartScale, baseScale);
+
+        return smoothSbmmScale(rawStartScale, targetScale);
+    }
+
+    currentScale = clampFloat(currentScale, 0.0, 1.0);
+    if (targetScale <= baseScale)
+        return smoothSbmmScale(currentScale, baseScale);
+
+    return smoothSbmmScale(currentScale, targetScale);
+}
+
 smoothSbmmScale(currentScale, targetScale)
 {
     return smoothSbmmScaleWithSpeeds(currentScale, targetScale, botSbmmRiseSpeed, botSbmmFallSpeed);
@@ -826,23 +847,10 @@ refreshSbmmState()
     else
     {
         targetScale = getHumanSbmmTargetScale();
-        if (targetScale <= baseScale)
-        {
-            if (!isDefined(level.autobotSbmmScale))
-                scale = smoothSbmmScale(rawStartScale, baseScale);
-            else
-            {
-                currentScale = clampFloat(level.autobotSbmmScale, 0.0, 1.0);
-                scale = smoothSbmmScale(currentScale, baseScale);
-            }
-        }
-        else if (!isDefined(level.autobotSbmmScale))
-            scale = smoothSbmmScale(rawStartScale, targetScale);
-        else
-        {
-            currentScale = clampFloat(level.autobotSbmmScale, 0.0, 1.0);
-            scale = smoothSbmmScale(currentScale, targetScale);
-        }
+        currentScale = undefined;
+        if (isDefined(level.autobotSbmmScale))
+            currentScale = level.autobotSbmmScale;
+        scale = calculateSbmmScale(baseScale, rawStartScale, targetScale, currentScale);
     }
 
     level.autobotSbmmTargetScale = targetScale;
@@ -1092,6 +1100,24 @@ runSpawnBiasSanityCheck()
     else if (!floatNear(fallScale, 0.40, 0.001))
     {
         warnOnce("sbmm_fall_exact", "sbmm fall smoothing exact-step sanity failed");
+        failures++;
+    }
+
+    if (!floatNear(calculateSbmmScale(0.35, 0.45, 0.80, undefined), 0.6075, 0.001))
+    {
+        warnOnce("sbmm_startup_scale", "sbmm startup smoothing sanity failed");
+        failures++;
+    }
+
+    if (!floatNear(calculateSbmmScale(0.35, 0.20, 0.35, undefined), 0.2675, 0.001))
+    {
+        warnOnce("sbmm_floor_scale", "sbmm floor smoothing sanity failed");
+        failures++;
+    }
+
+    if (!floatNear(calculateSbmmScale(0.35, 0.45, 0.35, 0.80), 0.71, 0.001))
+    {
+        warnOnce("sbmm_fall_live", "sbmm live fall smoothing sanity failed");
         failures++;
     }
 
@@ -1351,7 +1377,8 @@ run60SecondSanityTest()
         total = countTotalPlayersForCap();
         bots = countBots();
         target = combatTrainingMaxPlayers;
-        expectedApplied = getActiveDifficultyLabel();
+        sampledDifficulty = getSelectedBotDifficulty();
+        expectedApplied = getDifficultyApplyToken(sampledDifficulty);
         expectedDvar = getBotDifficultyDvarTarget();
         dvarNow = getdvar("bot_difficulty");
         if (!isDefined(dvarNow)) dvarNow = "";
@@ -1377,7 +1404,7 @@ run60SecondSanityTest()
                     continue;
                 }
 
-                if (getSelectedBotDifficulty() == "sbmm")
+                if (sampledDifficulty == "sbmm")
                 {
                     if (!isValidDifficultyApplyToken("sbmm", p.pers["autobot_diff_applied"]))
                         badBotDiffSeen++;
