@@ -152,7 +152,6 @@ init()
         gungame::init();
     }
 
-    level.autobotsForceGunGameInCombatTraining = false;
     level.forceGunGameInCombatTraining = preserveForcedGunGame;
 
     refreshSbmmState();
@@ -858,13 +857,13 @@ onPlayerConnect()
 
 normalizeSpawnTeam(preferredTeam)
 {
-    if (!isDefined(preferredTeam)) return "autoassign";
+    if (!isDefined(preferredTeam)) return "";
 
     pt = normalizeTeamName(preferredTeam);
     if (pt == "allies" || pt == "axis")
         return pt;
 
-    return "autoassign";
+    return "";
 }
 
 runSpawnBiasSanityCheck()
@@ -884,13 +883,13 @@ runSpawnBiasSanityCheck()
     }
 
     undefinedTeam = "";
-    if (normalizeSpawnTeam(undefinedTeam) != "autoassign")
+    if (normalizeSpawnTeam(undefinedTeam) != "")
     {
         warnOnce("spawn_bias_undef", "spawn bias sanity failed for undefined");
         failures++;
     }
 
-    if (normalizeSpawnTeam("bogus") != "autoassign")
+    if (normalizeSpawnTeam("bogus") != "")
     {
         warnOnce("spawn_bias_invalid", "spawn bias sanity failed for invalid team");
         failures++;
@@ -1014,6 +1013,7 @@ spawnBotsSafe(amount, preferredTeam)
     beforeBots = countBots();
 
     spawnTeam = normalizeSpawnTeam(preferredTeam);
+    if (spawnTeam == "") spawnTeam = "autoassign";
     spawn_bots(amount, spawnTeam);
 
     wait spawnConfirmPhase1Delay;

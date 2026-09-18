@@ -203,6 +203,12 @@ watchKill()
                 winnerToken = getGunGameWinnerToken(self);
                 if (winnerToken == "none")
                 {
+                    if (isGunGameFreeForAllMode())
+                    {
+                        maps\mp\gametypes\_gamelogic::endGame(self, "scorelimit");
+                        return;
+                    }
+
                     self iprintlnbold("^1Gun Game could not resolve a winning team token.");
                     return;
                 }
@@ -249,4 +255,20 @@ getGunGameWinnerToken(player)
     if (teamToken == "allies" || teamToken == "axis") return teamToken;
 
     return "none";
+}
+
+isGunGameFreeForAllMode()
+{
+    if (isDefined(level.teambased))
+        return !level.teambased;
+
+    if (isDefined(level.teamBased))
+        return !level.teamBased;
+
+    gt = "";
+    if (isDefined(level.gametype)) gt = toLower(level.gametype);
+    if (gt == "dm" || gt == "ffa") return true;
+    if (issubstr(gt, "free") || issubstr(gt, "ffa")) return true;
+
+    return false;
 }
