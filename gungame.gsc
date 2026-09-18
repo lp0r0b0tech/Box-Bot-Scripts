@@ -77,6 +77,8 @@ onPlayerConnect()
         level waittill("connected", player);
         if (!isDefined(player)) continue;
 
+        if (!isDefined(player.pers)) player.pers = [];
+        player.pers["gg_initialized"] = true;
         player.gg_level = 0;
         player thread onPlayerSpawned();
         player thread watchKill();
@@ -132,7 +134,13 @@ watchKill()
         if (!validTierKill && finalTier && meansOfDeath == "MOD_MELEE")
             validTierKill = true;
 
-        if ((meansOfDeath == "MOD_MELEE" || meansOfDeath == "MOD_CRUSH") && isDefined(victim) && isDefined(victim.gg_level) && !(validTierKill && finalTier))
+        if ((meansOfDeath == "MOD_MELEE" || meansOfDeath == "MOD_CRUSH")
+            && isDefined(victim)
+            && isDefined(victim.gg_level)
+            && isDefined(victim.pers)
+            && isDefined(victim.pers["gg_initialized"])
+            && victim.pers["gg_initialized"]
+            && !(validTierKill && finalTier))
             victim thread demotePlayer();
 
         if (validTierKill)

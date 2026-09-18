@@ -170,12 +170,12 @@ shouldRunGunGameHere()
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
     if (gt == "gun" || gt == "gungame" || gt == "gun_game" || gt == "gun-game") return true;
-    if (isSubStr(gt, "gun game") || isSubStr(gt, "gun_game") || isSubStr(gt, "gun-game")) return true;
+    if (isSubStr(gt, "gungame") || isSubStr(gt, "gun game") || isSubStr(gt, "gun_game") || isSubStr(gt, "gun-game")) return true;
 
     pl = "";
     if (isDefined(level.playlist)) pl = toLower(level.playlist);
     if (pl == "gun" || pl == "gungame" || pl == "gun_game" || pl == "gun-game") return true;
-    if (isSubStr(pl, "gun game") || isSubStr(pl, "gun_game") || isSubStr(pl, "gun-game")) return true;
+    if (isSubStr(pl, "gungame") || isSubStr(pl, "gun game") || isSubStr(pl, "gun_game") || isSubStr(pl, "gun-game")) return true;
 
     return false;
 }
@@ -739,14 +739,19 @@ refreshSbmmState()
     startScale = clampFloat(botSbmmStartScale, 0.0, 1.0);
     if (startScale < botSbmmMinimumScale) startScale = botSbmmMinimumScale;
 
-    currentScale = startScale;
-    if (isDefined(level.autobotSbmmScale)) currentScale = clampFloat(level.autobotSbmmScale, 0.0, 1.0);
+    if (!botSbmmEnable || getSelectedBotDifficulty() != "sbmm")
+    {
+        targetScale = startScale;
+        scale = startScale;
+    }
+    else
+    {
+        currentScale = startScale;
+        if (isDefined(level.autobotSbmmScale)) currentScale = clampFloat(level.autobotSbmmScale, 0.0, 1.0);
 
-    targetScale = startScale;
-    if (botSbmmEnable && getSelectedBotDifficulty() == "sbmm")
         targetScale = getHumanSbmmTargetScale();
-
-    scale = smoothSbmmScale(currentScale, targetScale);
+        scale = smoothSbmmScale(currentScale, targetScale);
+    }
 
     level.autobotSbmmTargetScale = targetScale;
     level.autobotSbmmScale = scale;
@@ -1187,13 +1192,13 @@ run60SecondSanityTest()
         if (isDefined(level.time)) elapsed = (level.time - startTime) / 1000.0;
         if (elapsed >= sanityTestDuration) break;
 
+        refreshSbmmState();
+        safeSetBotDifficultyDvar();
         total = countTotalPlayersForCap();
         bots = countBots();
         target = combatTrainingMaxPlayers;
-        expectedApplied = level.autobotActiveDifficultyLabel;
-        if (!isDefined(expectedApplied) || expectedApplied == "") expectedApplied = getActiveDifficultyLabel();
-        expectedDvar = level.autobotDvarDifficulty;
-        if (!isDefined(expectedDvar) || expectedDvar == "") expectedDvar = getBotDifficultyDvarTarget();
+        expectedApplied = getActiveDifficultyLabel();
+        expectedDvar = getBotDifficultyDvarTarget();
         dvarNow = getdvar("bot_difficulty");
         if (!isDefined(dvarNow)) dvarNow = "";
         dvarNow = toLower(dvarNow);
