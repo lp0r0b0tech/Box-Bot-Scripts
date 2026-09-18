@@ -44,11 +44,11 @@ botDifficultyEnforcerInterval = 0.25;
 spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 8;
 
-// RAGE MODE profile (tuned for players using FOV 65 / FOV scale 1.25; bot_difficulty remains locked to ultra)
-rageBotAccuracy = 0.85;
-rageBotReactionTime = 0.18;
-rageBotMaxHealth = 100;
-rageBotAggression = 0.85;
+// RAGE MODE profile (very difficult for players using FOV 65 / FOV scale 1.25; bot_difficulty remains locked to ultra)
+rageBotAccuracy = 0.95;
+rageBotReactionTime = 0.12;
+rageBotMaxHealth = 125;
+rageBotAggression = 0.95;
 
 sanityTestEnable = true;
 sanityTestDuration = 60.0;
