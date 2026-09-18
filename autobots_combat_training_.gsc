@@ -144,13 +144,15 @@ init()
     lockedBotDifficulty = botDifficultyMode;
     preserveForcedGunGame = false;
     if (isDefined(level.forceGunGameInCombatTraining) && level.forceGunGameInCombatTraining) preserveForcedGunGame = true;
-    if (forceGunGameInCombatTraining) preserveForcedGunGame = true;
-    level.forceGunGameInCombatTraining = preserveForcedGunGame;
+    level.autobotsForceGunGameInCombatTraining = forceGunGameInCombatTraining;
+    level.forceGunGameInCombatTraining = preserveForcedGunGame || level.autobotsForceGunGameInCombatTraining;
 
     if (level.forceGunGameInCombatTraining)
     {
         gungame::init();
     }
+
+    level.forceGunGameInCombatTraining = preserveForcedGunGame;
 
     refreshSbmmState();
     safeSetBotDifficultyDvar();
@@ -730,6 +732,8 @@ smoothSbmmScaleWithSpeeds(currentScale, targetScale, riseSpeed, fallSpeed)
 {
     currentScale = clampFloat(currentScale, 0.0, 1.0);
     targetScale = clampFloat(targetScale, 0.0, 1.0);
+    riseSpeed = clampFloat(riseSpeed, 0.0, 1.0);
+    fallSpeed = clampFloat(fallSpeed, 0.0, 1.0);
 
     speed = fallSpeed;
     if (targetScale > currentScale) speed = riseSpeed;

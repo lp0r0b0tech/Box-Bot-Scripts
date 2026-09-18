@@ -5,6 +5,7 @@
 isGunGameMode()
 {
     if (isDefined(level.forceGunGameInCombatTraining) && level.forceGunGameInCombatTraining) return true;
+    if (isDefined(level.autobotsForceGunGameInCombatTraining) && level.autobotsForceGunGameInCombatTraining) return true;
 
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
@@ -201,9 +202,12 @@ watchKill()
                 self iprintlnbold("^2Gun Game Winner!");
                 winnerToken = getGunGameWinnerToken(self);
                 if (winnerToken == "none")
-                    maps\mp\gametypes\_gamelogic::endGame(self, "scorelimit");
-                else
-                    maps\mp\gametypes\_gamelogic::endGame(winnerToken, "scorelimit");
+                {
+                    self iprintlnbold("^1Gun Game could not resolve a winning team token.");
+                    return;
+                }
+
+                maps\mp\gametypes\_gamelogic::endGame(winnerToken, "scorelimit");
                 return;
             }
 
