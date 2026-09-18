@@ -161,19 +161,24 @@ initializeGunGamePlayerWhenReady()
     level endon("game_ended");
     self endon("disconnect");
     timeoutAt = 10.0;
+    totalWait = 30.0;
 
     for (;;)
     {
         if (isDefined(self.pers))
             break;
+        if (totalWait <= 0.0)
+            return;
         if (timeoutAt <= 0.0)
         {
             wait 1.0;
             timeoutAt = 10.0;
+            totalWait = totalWait - 1.0;
             continue;
         }
         wait 0.05;
         timeoutAt = timeoutAt - 0.05;
+        totalWait = totalWait - 0.05;
     }
 
     initializeGunGamePlayer(self);

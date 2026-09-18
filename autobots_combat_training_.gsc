@@ -149,6 +149,8 @@ init()
         forceGunGameActive = true;
     if (forceGunGameActive)
         gungame::initForced();
+    else
+        gungame::init();
 
     refreshSbmmState();
     safeSetBotDifficultyDvar();
@@ -211,7 +213,7 @@ isMultiplayerContext()
 
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
-    if (gt == "dm" || gt == "war" || gt == "dom" || gt == "conf" || gt == "sd" || gt == "ctf" || gt == "hp" || gt == "gun" || gt == "gungame") return true;
+    if (gt == "dm" || gt == "war" || gt == "dom" || gt == "conf" || gt == "sd" || gt == "ctf" || gt == "hp" || gt == "gun" || gt == "gungame" || gt == "gun_game" || gt == "gun-game") return true;
 
     return false;
 }

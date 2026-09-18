@@ -12,6 +12,7 @@ init()
     level.emz_emp_range = 1.5;
     level.emz_tick = 0.25;
     level.emz_log_interval = 1.0;
+    level.emz_sanity_failures = emz_validate_emp_range();
 
     if (!isDefined(level.emz_last_log_time))
         level.emz_last_log_time = 0;
@@ -50,6 +51,19 @@ emz_substr(hay, needle)
 {
     if (!isDefined(hay) || !isDefined(needle)) return false;
     return issubstr(hay, needle);
+}
+
+emz_is_within_emp_range(distanceValue, empRange)
+{
+    return distanceValue <= empRange;
+}
+
+emz_validate_emp_range()
+{
+    failures = 0;
+    if (!emz_is_within_emp_range(1.5, level.emz_emp_range)) failures++;
+    if (emz_is_within_emp_range(1.5001, level.emz_emp_range)) failures++;
+    return failures;
 }
 
 emz_log(msg)
@@ -120,7 +134,7 @@ emz_test_loop()
 
             dist = distance(self.origin, player.origin);
 
-            if (dist <= level.emz_emp_range)
+            if (emz_is_within_emp_range(dist, level.emz_emp_range))
                 emz_log("player within EMP range: " + dist);
         }
 
