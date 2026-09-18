@@ -2,8 +2,12 @@
 #include maps\mp\gametypes\_hud_util;
 #include maps\mp\gametypes\_gamelogic;
 
-ggWeaponPrefix = "iw6_";
-ggWeaponSuffix = "_mp";
+ggWeaponPrefix = "";
+ggWeaponSuffix = "";
+ggFallbackSafeMode = true;
+ggFallbackPrimaryWeapon = "iw5_m4_mp";
+ggFallbackSecondaryWeapon = "iw5_44magnum_mp";
+ggFallbackFinalTierWeapon = "iw5_44magnum_mp";
 
 isSubStr(hay, needle)
 {
@@ -119,64 +123,7 @@ initGunGameState()
 
     level.gg_weapons = [];
 
-    // Base and DLC rotation (best-effort AW aliases)
-    addGunGameWeaponAlias("bal27");            // Bal-27
-    addGunGameWeaponAlias("ak12");             // AK12
-    addGunGameWeaponAlias("arx160");           // ARX-160
-    addGunGameWeaponAlias("hbra3");            // HBRa3
-    addGunGameWeaponAlias("imr");              // IMR
-    addGunGameWeaponAlias("mk14");             // MK14
-    addGunGameWeaponAlias("ae4");              // AE4
-    addGunGameWeaponAlias("stg44");            // STG44
-    addGunGameWeaponAlias("ak47");             // AK-47
-
-    addGunGameWeaponAlias("kf5");              // KF5
-    addGunGameWeaponAlias("mp11");             // MP11
-    addGunGameWeaponAlias("asm1");             // ASM1
-    addGunGameWeaponAlias("sn6");              // SN6
-    addGunGameWeaponAlias("sac3");             // SAC3
-    addGunGameWeaponAlias("amr9");             // AMR9
-    addGunGameWeaponAlias("mp40");             // MP40
-    addGunGameWeaponAlias("sten");             // Sten
-
-    addGunGameWeaponAlias("lynx");             // Lynx
-    addGunGameWeaponAlias("mors");             // MORS
-    addGunGameWeaponAlias("na45");             // NA-45
-    addGunGameWeaponAlias("atlas20mm");        // Atlas 20mm
-    addGunGameWeaponAlias("svo");              // SVO
-
-    addGunGameWeaponAlias("tac19");            // Tac-19
-    addGunGameWeaponAlias("s12");              // S-12
-    addGunGameWeaponAlias("bulldog");          // Bulldog
-    addGunGameWeaponAlias("blunderbuss");      // Blunderbuss
-    addGunGameWeaponAlias("cel3cauterizer");   // CEL-3 Cauterizer
-
-    addGunGameWeaponAlias("em1");              // EM1
-    addGunGameWeaponAlias("pytaek");           // Pytaek
-    addGunGameWeaponAlias("xmg");              // XMG
-    addGunGameWeaponAlias("epm3");             // EPM3
-    addGunGameWeaponAlias("ameli");            // Ameli
-    addGunGameWeaponAlias("ohm");              // Ohm
-
-    addGunGameWeaponAlias("atlas45");          // Atlas 45
-    addGunGameWeaponAlias("rw1");              // RW1
-    addGunGameWeaponAlias("mp443grach");       // MP443 Grach
-    addGunGameWeaponAlias("pdw");              // PDW
-    addGunGameWeaponAlias("m1irons");          // M1 Irons
-    addGunGameWeaponAlias("m1911");            // 1911
-
-    addGunGameWeaponAlias("stingerm7");        // Stinger M7
-    addGunGameWeaponAlias("maaws");            // MAAWS
-    addGunGameWeaponAlias("mahem");            // MAHEM
-    addGunGameWeaponAlias("rpg7");             // RPG-7
-    addGunGameWeaponAlias("mdl");              // MDL
-    addGunGameWeaponAlias("crossbow");         // Crossbow
-    addGunGameWeaponAlias("repulsor");         // Repulsor
-    addGunGameWeaponAlias("m1garand");         // M1 Garand
-    addGunGameWeaponAlias("leveraction");      // Lever Action
-    addGunGameWeaponAlias("m16");              // M16
-
-    addGunGameWeaponAlias("combatknife");      // Final weapon
+    buildGunGameWeaponRotation();
 
     level.gungameSanityFailures = runGunGameSanityCheck();
     initializeExistingGunGamePlayers();
@@ -192,6 +139,69 @@ addGunGameWeaponAlias(baseAlias)
 {
     if (!isDefined(baseAlias) || baseAlias == "") return;
     addGunGameWeapon(buildGunGameWeaponAlias(baseAlias));
+}
+
+buildGunGameWeaponRotation()
+{
+    if (ggFallbackSafeMode)
+    {
+        addGunGameWeapon(ggFallbackPrimaryWeapon);
+        addGunGameWeapon(ggFallbackSecondaryWeapon);
+        // Keep a known-safe weapon equipped on the last tier; melee/crush still ends the match there.
+        addGunGameWeapon(ggFallbackFinalTierWeapon);
+        return;
+    }
+
+    addGunGameWeaponAlias("bal27");
+    addGunGameWeaponAlias("ak12");
+    addGunGameWeaponAlias("arx160");
+    addGunGameWeaponAlias("hbra3");
+    addGunGameWeaponAlias("imr");
+    addGunGameWeaponAlias("mk14");
+    addGunGameWeaponAlias("ae4");
+    addGunGameWeaponAlias("stg44");
+    addGunGameWeaponAlias("ak47");
+    addGunGameWeaponAlias("kf5");
+    addGunGameWeaponAlias("mp11");
+    addGunGameWeaponAlias("asm1");
+    addGunGameWeaponAlias("sn6");
+    addGunGameWeaponAlias("sac3");
+    addGunGameWeaponAlias("amr9");
+    addGunGameWeaponAlias("mp40");
+    addGunGameWeaponAlias("sten");
+    addGunGameWeaponAlias("lynx");
+    addGunGameWeaponAlias("mors");
+    addGunGameWeaponAlias("na45");
+    addGunGameWeaponAlias("atlas20mm");
+    addGunGameWeaponAlias("svo");
+    addGunGameWeaponAlias("tac19");
+    addGunGameWeaponAlias("s12");
+    addGunGameWeaponAlias("bulldog");
+    addGunGameWeaponAlias("blunderbuss");
+    addGunGameWeaponAlias("cel3cauterizer");
+    addGunGameWeaponAlias("em1");
+    addGunGameWeaponAlias("pytaek");
+    addGunGameWeaponAlias("xmg");
+    addGunGameWeaponAlias("epm3");
+    addGunGameWeaponAlias("ameli");
+    addGunGameWeaponAlias("ohm");
+    addGunGameWeaponAlias("atlas45");
+    addGunGameWeaponAlias("rw1");
+    addGunGameWeaponAlias("mp443grach");
+    addGunGameWeaponAlias("pdw");
+    addGunGameWeaponAlias("m1irons");
+    addGunGameWeaponAlias("m1911");
+    addGunGameWeaponAlias("stingerm7");
+    addGunGameWeaponAlias("maaws");
+    addGunGameWeaponAlias("mahem");
+    addGunGameWeaponAlias("rpg7");
+    addGunGameWeaponAlias("mdl");
+    addGunGameWeaponAlias("crossbow");
+    addGunGameWeaponAlias("repulsor");
+    addGunGameWeaponAlias("m1garand");
+    addGunGameWeaponAlias("leveraction");
+    addGunGameWeaponAlias("m16");
+    addGunGameWeaponAlias("combatknife");
 }
 
 addGunGameWeapon(weaponName)
@@ -388,7 +398,6 @@ watchKill()
             self.gg_level++;
             if (self.gg_level >= level.gg_weapons.size) self.gg_level = level.gg_weapons.size - 1;
             self scheduleGunGameWeaponGrant();
-            self playlocalsound("mp_war_objective_taken");
         }
     }
 }
@@ -402,8 +411,6 @@ demotePlayer()
     {
         self.gg_level--;
         self iprintlnbold("^1Humiliated! Demoted to previous tier.");
-        self playlocalsound("mp_war_objective_lost");
-
         if (isalive(self))
             self scheduleGunGameWeaponGrant();
     }
