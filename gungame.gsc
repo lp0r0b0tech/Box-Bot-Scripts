@@ -352,7 +352,9 @@ runGunGameSanityCheck()
     if (!shouldDemoteGunGameVictim(false, false, "MOD_CRUSH", true))
         failures++;
 
-    testPlayer = "ffa_winner";
+    testPlayer = [];
+    testPlayer.pers = [];
+    testPlayer.pers["team"] = "allies";
     if (getGunGameEndGameWinnerForMode(testPlayer, true) != testPlayer)
         failures++;
 

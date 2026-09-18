@@ -143,8 +143,10 @@ init()
     defaultBotDifficulty = botDifficultyMode;
     lockedBotDifficulty = botDifficultyMode;
     forceGunGameActive = false;
-    if (isDefined(level.forceGunGameInCombatTraining) && level.forceGunGameInCombatTraining) forceGunGameActive = true;
-    if (forceGunGameInCombatTraining) forceGunGameActive = true;
+    if (isDefined(level.forceGunGameInCombatTraining))
+        forceGunGameActive = level.forceGunGameInCombatTraining;
+    else if (forceGunGameInCombatTraining)
+        forceGunGameActive = true;
     if (forceGunGameActive)
         gungame::initForced();
 
