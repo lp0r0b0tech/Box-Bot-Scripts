@@ -245,7 +245,7 @@ watchKill()
 
     for (;;)
     {
-        self waittill("killed_enemy", victim, meansOfDeath, weapon);
+        self waittill("killed_enemy", victim, weapon, meansOfDeath);
         if (!isGunGameParticipant(self)) continue;
         if (!areGunGameEnemies(self, victim)) continue;
         if (!isDefined(level.gg_weapons) || level.gg_weapons.size <= 0) continue;
