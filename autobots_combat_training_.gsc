@@ -216,6 +216,11 @@ isMultiplayerContext()
     gt = "";
     if (isDefined(level.gametype)) gt = toLower(level.gametype);
     if (gt == "dm" || gt == "war" || gt == "dom" || gt == "conf" || gt == "sd" || gt == "ctf" || gt == "hp" || gt == "gun" || gt == "gungame" || gt == "gun_game" || gt == "gun-game") return true;
+    if (isCombatTrainingIdentifier(gt)) return true;
+
+    pl = "";
+    if (isDefined(level.playlist)) pl = toLower(level.playlist);
+    if (isCombatTrainingIdentifier(pl)) return true;
 
     return false;
 }
