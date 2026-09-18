@@ -1309,6 +1309,7 @@ run60SecondSanityTest()
         refreshSbmmState();
         expectedDiff = getSelectedBotDifficulty();
         expectedDvar = getBotDifficultyDvarTarget();
+        expectedToken = getDifficultyApplyToken(expectedDiff);
         total = countTotalPlayersForCap();
         bots = countBots();
         target = getBotTargetPlayerCount();
@@ -1325,7 +1326,11 @@ run60SecondSanityTest()
         if (total >= target) spawnSuccessStreak++; else spawnSuccessStreak = 0;
 
         badBotDiffSeen += verifyAppliedDifficultyTokens(expectedDiff, "sanity_test");
-        if (expectedDiff == "sbmm" && isDefined(level.lastAppliedSbmmScale) && !floatNear(level.lastAppliedSbmmScale, getEffectiveSbmmScale(), 0.10))
+        if (expectedDiff == "sbmm"
+            && isDefined(level.lastAppliedDifficultyToken)
+            && level.lastAppliedDifficultyToken == expectedToken
+            && isDefined(level.lastAppliedSbmmScale)
+            && !floatNear(level.lastAppliedSbmmScale, getEffectiveSbmmScale(), 0.10))
             scaleDriftFailures++;
 
         samples++;
