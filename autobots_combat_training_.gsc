@@ -306,6 +306,8 @@ initializeOptionalGunGameState()
     if (!isDefined(level.autobotDifficultyPending)) level.autobotDifficultyPending = false;
     if (!isDefined(level.autobotDifficultyForceWrite)) level.autobotDifficultyForceWrite = false;
     if (!isDefined(level.autobotDifficultyVerifyContext)) level.autobotDifficultyVerifyContext = "";
+    if (!isDefined(level.autobotDifficultyApplyGeneration)) level.autobotDifficultyApplyGeneration = 0;
+    if (!isDefined(level.autobotDifficultyApplyCompletedGeneration)) level.autobotDifficultyApplyCompletedGeneration = 0;
 }
 
 isGunGameActive()
@@ -320,10 +322,22 @@ requestDifficultyApply(forceWrite, verifyContext)
     if (!isDefined(level.autobotDifficultyPending)) level.autobotDifficultyPending = false;
     if (!isDefined(level.autobotDifficultyForceWrite)) level.autobotDifficultyForceWrite = false;
     if (!isDefined(level.autobotDifficultyVerifyContext)) level.autobotDifficultyVerifyContext = "";
+    if (!isDefined(level.autobotDifficultyApplyGeneration)) level.autobotDifficultyApplyGeneration = 0;
 
     if (forceWrite) level.autobotDifficultyForceWrite = true;
     if (isDefined(verifyContext) && verifyContext != "") level.autobotDifficultyVerifyContext = verifyContext;
+    level.autobotDifficultyApplyGeneration++;
     level.autobotDifficultyPending = true;
+    return level.autobotDifficultyApplyGeneration;
+}
+
+waitForDifficultyApplyCompletion(generation)
+{
+    if (!isDefined(generation) || generation <= 0) return;
+    if (!isDefined(level.autobotDifficultyApplyCompletedGeneration)) level.autobotDifficultyApplyCompletedGeneration = 0;
+
+    while (level.autobotDifficultyApplyCompletedGeneration < generation)
+        wait 0.05;
 }
 
 difficultyApplyWorker()
@@ -334,6 +348,8 @@ difficultyApplyWorker()
         if (!isDefined(level.autobotDifficultyPending)) level.autobotDifficultyPending = false;
         if (!isDefined(level.autobotDifficultyForceWrite)) level.autobotDifficultyForceWrite = false;
         if (!isDefined(level.autobotDifficultyVerifyContext)) level.autobotDifficultyVerifyContext = "";
+        if (!isDefined(level.autobotDifficultyApplyGeneration)) level.autobotDifficultyApplyGeneration = 0;
+        if (!isDefined(level.autobotDifficultyApplyCompletedGeneration)) level.autobotDifficultyApplyCompletedGeneration = 0;
         if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
 
         if (!level.autobotDifficultyPending) { wait 0.05; continue; }
@@ -343,6 +359,7 @@ difficultyApplyWorker()
 
         forceWrite = level.autobotDifficultyForceWrite;
         verifyContext = level.autobotDifficultyVerifyContext;
+        generation = level.autobotDifficultyApplyGeneration;
         level.autobotDifficultyPending = false;
         level.autobotDifficultyForceWrite = false;
         level.autobotDifficultyVerifyContext = "";
@@ -354,6 +371,7 @@ difficultyApplyWorker()
         if (verifyContext == "delayed_apply")
             level.delayedDifficultyApplyFailures = verifyAppliedDifficultyTokens(getSelectedBotDifficulty(), verifyContext);
 
+        level.autobotDifficultyApplyCompletedGeneration = generation;
         level.autobotAdjusting = false;
     }
 }
@@ -1143,13 +1161,13 @@ onPlayerConnect()
 confirmBotSpawn(beforePlayers, beforeBots)
 {
     wait spawnConfirmPhase1Delay;
-    if (countTotalPlayersForCap() > beforePlayers || countBots() > beforeBots) return true;
+    if (countBots() > beforeBots || (countTotalPlayersForCap() > beforePlayers && countBots() > beforeBots)) return true;
 
     wait spawnConfirmPhase2Delay;
-    if (countTotalPlayersForCap() > beforePlayers || countBots() > beforeBots) return true;
+    if (countBots() > beforeBots || (countTotalPlayersForCap() > beforePlayers && countBots() > beforeBots)) return true;
 
     wait spawnConfirmPhase3Delay;
-    if (countTotalPlayersForCap() > beforePlayers || countBots() > beforeBots) return true;
+    if (countBots() > beforeBots || (countTotalPlayersForCap() > beforePlayers && countBots() > beforeBots)) return true;
 
     return false;
 }
@@ -1296,7 +1314,8 @@ delayedBotDifficultyApply()
 {
     level endon("game_ended");
     wait 0.5;
-    requestDifficultyApply(true, "delayed_apply");
+    generation = requestDifficultyApply(true, "delayed_apply");
+    waitForDifficultyApplyCompletion(generation);
 }
 
 botDifficultyEnforcer()
@@ -1304,7 +1323,8 @@ botDifficultyEnforcer()
     level endon("game_ended");
     for (;;)
     {
-        requestDifficultyApply(false, "");
+        generation = requestDifficultyApply(false, "");
+        waitForDifficultyApplyCompletion(generation);
         wait botDifficultyEnforcerInterval;
     }
 }
@@ -1325,7 +1345,10 @@ liveSbmmUpdater()
         if (getSelectedBotDifficulty() == "sbmm")
         {
             if (currentToken != previousToken || !floatNear(currentScale, previousScale, 0.01))
-                requestDifficultyApply(false, "");
+            {
+                generation = requestDifficultyApply(false, "");
+                waitForDifficultyApplyCompletion(generation);
+            }
         }
 
         wait botSbmmUpdateInterval;
