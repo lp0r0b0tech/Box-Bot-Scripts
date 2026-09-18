@@ -2,6 +2,7 @@
 // Autobots Combat Training Script (MP-ONLY, HARDENED v5)
 // - Forces locked difficulty to ULTRA
 // - Fixes persistence by normalizing + enforcing dvar + per-bot state
+// - Optional SBMM-style runtime bot profiles while keeping bot_difficulty locked to ULTRA
 // ============================================================
 #include scripts/mp/_bots;
 
@@ -61,6 +62,50 @@ trimSafetyMaxDrops = 32;
 countStateLogUnknownOnce = true;
 
 // --------------------------
+// SBMM-style runtime tuning
+// Server owner tuning:
+// - Leave sbmmEnable = false to preserve the old fixed ultra baseline below.
+// - Keep bot_difficulty locked to ultra; only tune the bounded bot entity fields here.
+// - Low/Base/High are the safe profile anchors. Standard = Base, Protected = Low,
+//   Challenging = Base->High midpoint, Elite = High.
+// - Adjust K/D + score-per-minute weights/thresholds to decide when the lobby climbs tiers.
+// --------------------------
+sbmmEnable = true;
+sbmmEvaluationInterval = 10.0;
+
+sbmmNewPlayerKd = 1.0;
+sbmmNewPlayerScorePerMinute = 150.0;
+sbmmMinimumTrackedMinutes = 0.25;
+sbmmKdWeight = 0.70;
+sbmmScoreWeight = 0.30;
+sbmmKdFloor = 1.0;
+sbmmKdLow = 0.75;
+sbmmKdHigh = 2.25;
+sbmmScorePerMinuteLow = 75.0;
+sbmmScorePerMinuteHigh = 350.0;
+sbmmSmoothRise = 0.45;
+sbmmSmoothFall = 0.25;
+sbmmTierProtectedMax = 0.28;
+sbmmTierChallengingMin = 0.58;
+sbmmTierEliteMin = 0.82;
+sbmmTierHysteresis = 0.05;
+
+sbmmLowAccuracy = 2.15;
+sbmmLowReactionTime = 0.03;
+sbmmLowMaxHealth = 500;
+sbmmLowAggression = 2.05;
+
+sbmmBaseAccuracy = 2.75;
+sbmmBaseReactionTime = 0.01;
+sbmmBaseMaxHealth = 650;
+sbmmBaseAggression = 2.75;
+
+sbmmHighAccuracy = 3.35;
+sbmmHighReactionTime = 0.005;
+sbmmHighMaxHealth = 800;
+sbmmHighAggression = 3.30;
+
+// --------------------------
 // Atlas 45 upgrade-safe buff
 // --------------------------
 atlas45EnableBuff = true;
@@ -99,6 +144,38 @@ init()
     if (spawnConfirmPhase3Delay < 0.01) spawnConfirmPhase3Delay = 0.01;
     if (trimSafetyMaxDrops < 1) trimSafetyMaxDrops = 1;
     if (atlas45MonitorInterval < 0.05) atlas45MonitorInterval = 0.05;
+    if (sbmmEvaluationInterval < 2.0) sbmmEvaluationInterval = 2.0;
+    if (sbmmNewPlayerKd < 0.1) sbmmNewPlayerKd = 0.1;
+    if (sbmmNewPlayerScorePerMinute < 0.0) sbmmNewPlayerScorePerMinute = 0.0;
+    if (sbmmMinimumTrackedMinutes < 0.05) sbmmMinimumTrackedMinutes = 0.05;
+    if (sbmmKdWeight < 0.0) sbmmKdWeight = 0.0;
+    if (sbmmScoreWeight < 0.0) sbmmScoreWeight = 0.0;
+    if ((sbmmKdWeight + sbmmScoreWeight) <= 0.0)
+    {
+        sbmmKdWeight = 0.70;
+        sbmmScoreWeight = 0.30;
+    }
+    if (sbmmKdFloor < 0.25) sbmmKdFloor = 0.25;
+    if (sbmmKdLow < 0.1) sbmmKdLow = 0.1;
+    if (sbmmKdHigh <= sbmmKdLow) sbmmKdHigh = sbmmKdLow + 0.25;
+    if (sbmmScorePerMinuteLow < 0.0) sbmmScorePerMinuteLow = 0.0;
+    if (sbmmScorePerMinuteHigh <= sbmmScorePerMinuteLow) sbmmScorePerMinuteHigh = sbmmScorePerMinuteLow + 25.0;
+    if (sbmmSmoothRise <= 0.0 || sbmmSmoothRise > 1.0) sbmmSmoothRise = 0.45;
+    if (sbmmSmoothFall <= 0.0 || sbmmSmoothFall > 1.0) sbmmSmoothFall = 0.25;
+    if (sbmmTierProtectedMax < 0.0) sbmmTierProtectedMax = 0.0;
+    if (sbmmTierProtectedMax > 0.70) sbmmTierProtectedMax = 0.70;
+    if (sbmmTierChallengingMin <= sbmmTierProtectedMax) sbmmTierChallengingMin = sbmmTierProtectedMax + 0.10;
+    if (sbmmTierChallengingMin > 0.80) sbmmTierChallengingMin = 0.80;
+    if (sbmmTierEliteMin <= sbmmTierChallengingMin) sbmmTierEliteMin = sbmmTierChallengingMin + 0.10;
+    if (sbmmTierEliteMin > 0.95) sbmmTierEliteMin = 0.95;
+    if (sbmmTierHysteresis < 0.0) sbmmTierHysteresis = 0.0;
+    if (sbmmTierHysteresis > 0.20) sbmmTierHysteresis = 0.20;
+    if (sbmmLowReactionTime < 0.005) sbmmLowReactionTime = 0.005;
+    if (sbmmBaseReactionTime < 0.005) sbmmBaseReactionTime = 0.005;
+    if (sbmmHighReactionTime < 0.005) sbmmHighReactionTime = 0.005;
+    if (sbmmLowMaxHealth < 1) sbmmLowMaxHealth = 1;
+    if (sbmmBaseMaxHealth < 1) sbmmBaseMaxHealth = 1;
+    if (sbmmHighMaxHealth < 1) sbmmHighMaxHealth = 1;
 
     if (!isDefined(level.autobotsWarnOnce)) level.autobotsWarnOnce = [];
     if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
@@ -109,6 +186,7 @@ init()
     lockedBotDifficulty = "ultra";
     defaultBotDifficulty = "ultra";
     setdvar("bot_difficulty", "ultra");
+    initSbmmState();
 
     level thread onPlayerConnect();
     level thread serverBotFill();
@@ -116,6 +194,7 @@ init()
     level thread delayedBotDifficultyApply();
     level thread botDifficultyEnforcer();
     level thread atlas45GlobalMonitor();
+    if (sbmmEnable) level thread sbmmLobbyDifficultyManager();
 
     if (sanityTestEnable) level thread run60SecondSanityTest();
 }
@@ -218,12 +297,125 @@ safeFullHeal(ent)
     ent.health = ent.maxHealth;
 }
 
-setBotDifficulty(difficulty)
+clampNumber(value, minValue, maxValue)
 {
-    self.botAccuracy = 2.75;
-    self.reactionTime = 0.01;
-    self.maxHealth = 650;
-    self.botAggression = 2.75;
+    if (!isDefined(value)) return minValue;
+    if (value < minValue) return minValue;
+    if (value > maxValue) return maxValue;
+    return value;
+}
+
+initSbmmState()
+{
+    level.sbmmActiveTier = "standard";
+    level.sbmmActiveProfileKey = "base";
+    level.sbmmLastRawRating = 0.50;
+    level.sbmmSmoothedRating = 0.50;
+    level.sbmmTrackedHumans = 0;
+}
+
+getActiveSbmmTier()
+{
+    if (!sbmmEnable) return "standard";
+    if (!isDefined(level.sbmmActiveTier) || level.sbmmActiveTier == "") return "standard";
+    return level.sbmmActiveTier;
+}
+
+getActiveSbmmProfileKey()
+{
+    if (!sbmmEnable) return "base";
+    if (!isDefined(level.sbmmActiveProfileKey) || level.sbmmActiveProfileKey == "") return "base";
+    return level.sbmmActiveProfileKey;
+}
+
+resolveSbmmTier(tier)
+{
+    if (isDefined(tier) && tier != "") return tier;
+    return getActiveSbmmTier();
+}
+
+resolveSbmmProfileKey(profileKey)
+{
+    if (isDefined(profileKey) && profileKey != "") return profileKey;
+    return getActiveSbmmProfileKey();
+}
+
+getSbmmProfileKeyForTier(tier)
+{
+    if (!sbmmEnable) return "base";
+    if (tier == "protected") return "low";
+    if (tier == "challenging") return "mid";
+    if (tier == "elite") return "high";
+    return "base";
+}
+
+getSbmmProfileAccuracy(profileKey)
+{
+    if (profileKey == "low") return sbmmLowAccuracy;
+    if (profileKey == "mid") return (sbmmBaseAccuracy + sbmmHighAccuracy) / 2.0;
+    if (profileKey == "high") return sbmmHighAccuracy;
+    return sbmmBaseAccuracy;
+}
+
+getSbmmProfileReactionTime(profileKey)
+{
+    if (profileKey == "low") return sbmmLowReactionTime;
+    if (profileKey == "mid") return (sbmmBaseReactionTime + sbmmHighReactionTime) / 2.0;
+    if (profileKey == "high") return sbmmHighReactionTime;
+    return sbmmBaseReactionTime;
+}
+
+getSbmmProfileMaxHealth(profileKey)
+{
+    if (profileKey == "low") return sbmmLowMaxHealth;
+    if (profileKey == "mid") return int((sbmmBaseMaxHealth + sbmmHighMaxHealth) / 2.0);
+    if (profileKey == "high") return sbmmHighMaxHealth;
+    return sbmmBaseMaxHealth;
+}
+
+getSbmmProfileAggression(profileKey)
+{
+    if (profileKey == "low") return sbmmLowAggression;
+    if (profileKey == "mid") return (sbmmBaseAggression + sbmmHighAggression) / 2.0;
+    if (profileKey == "high") return sbmmHighAggression;
+    return sbmmBaseAggression;
+}
+
+getSbmmDebugSuffix()
+{
+    if (!sbmmEnable) return "";
+
+    tier = getActiveSbmmTier();
+    profileKey = getActiveSbmmProfileKey();
+    ratingPct = 50;
+    rawPct = 50;
+    humans = 0;
+
+    if (isDefined(level.sbmmSmoothedRating)) ratingPct = int(clampNumber(level.sbmmSmoothedRating, 0.0, 1.0) * 100.0);
+    if (isDefined(level.sbmmLastRawRating)) rawPct = int(clampNumber(level.sbmmLastRawRating, 0.0, 1.0) * 100.0);
+    if (isDefined(level.sbmmTrackedHumans)) humans = level.sbmmTrackedHumans;
+
+    return " sbmmTier=" + tier
+        + " sbmmProfile=" + profileKey
+        + " sbmmRatingPct=" + ratingPct
+        + " sbmmRawPct=" + rawPct
+        + " sbmmHumans=" + humans;
+}
+
+setBotDifficulty(difficulty, forcedProfileKey, forcedTier)
+{
+    profileKey = resolveSbmmProfileKey(forcedProfileKey);
+    activeTier = resolveSbmmTier(forcedTier);
+
+    self.botAccuracy = getSbmmProfileAccuracy(profileKey);
+    self.reactionTime = getSbmmProfileReactionTime(profileKey);
+    self.maxHealth = getSbmmProfileMaxHealth(profileKey);
+    self.botAggression = getSbmmProfileAggression(profileKey);
+
+    if (!isDefined(self.pers)) self.pers = [];
+    self.pers["autobot_profile_applied"] = profileKey;
+    self.pers["autobot_sbmm_tier"] = activeTier;
+
     if (awHealthRegenOnSpawn) safeFullHeal(self);
 }
 
@@ -309,6 +501,356 @@ countHumans()
     return n;
 }
 
+countCountableHumans()
+{
+    if (!isDefined(level.players)) return 0;
+    n = 0; foreach (p in level.players) if (isDefined(p) && !(p isBotEntity()) && isPlayerCountable(p)) n++;
+    return n;
+}
+
+isCurrentPlayerEntity(ent)
+{
+    if (!isDefined(ent) || !isDefined(level.players)) return false;
+
+    foreach (p in level.players)
+        if (isDefined(p) && p == ent)
+            return true;
+
+    return false;
+}
+
+// Event-driven first, with direct stat sampling as a defensive fallback for runtimes
+// that do not expose all death event arguments or scoreboard fields the same way.
+getSbmmKillsSample(ent)
+{
+    if (!isDefined(ent)) return 0;
+    if (isDefined(ent.kills)) return int(ent.kills);
+    if (isDefined(ent.pers) && isDefined(ent.pers["kills"])) return int(ent.pers["kills"]);
+    return 0;
+}
+
+getSbmmDeathsSample(ent)
+{
+    if (!isDefined(ent)) return 0;
+    if (isDefined(ent.deaths)) return int(ent.deaths);
+    if (isDefined(ent.pers) && isDefined(ent.pers["deaths"])) return int(ent.pers["deaths"]);
+    return 0;
+}
+
+getSbmmScoreSample(ent)
+{
+    if (!isDefined(ent)) return 0;
+    if (isDefined(ent.score)) return int(ent.score);
+    if (isDefined(ent.pers) && isDefined(ent.pers["score"])) return int(ent.pers["score"]);
+    if (isDefined(ent.pers) && isDefined(ent.pers["playerScore"])) return int(ent.pers["playerScore"]);
+    return 0;
+}
+
+initSbmmStatBaselines(ent)
+{
+    if (!isDefined(ent)) return;
+    if (!isDefined(ent.pers)) ent.pers = [];
+
+    if (!isDefined(ent.pers["sbmm_event_kills"])) ent.pers["sbmm_event_kills"] = 0;
+    if (!isDefined(ent.pers["sbmm_event_deaths"])) ent.pers["sbmm_event_deaths"] = 0;
+    if (!isDefined(ent.pers["sbmm_base_kills"])) ent.pers["sbmm_base_kills"] = getSbmmKillsSample(ent);
+    if (!isDefined(ent.pers["sbmm_base_deaths"])) ent.pers["sbmm_base_deaths"] = getSbmmDeathsSample(ent);
+    if (!isDefined(ent.pers["sbmm_base_score"])) ent.pers["sbmm_base_score"] = getSbmmScoreSample(ent);
+    if (!isDefined(ent.pers["sbmm_join_time"]))
+    {
+        if (isDefined(level.time)) ent.pers["sbmm_join_time"] = level.time;
+        else ent.pers["sbmm_join_time"] = 0;
+    }
+}
+
+startSbmmEntityTrackerIfNeeded(ent)
+{
+    if (!sbmmEnable || !isDefined(ent)) return;
+    if (!isDefined(ent.pers)) ent.pers = [];
+
+    initSbmmStatBaselines(ent);
+
+    if (!isDefined(ent.pers["sbmm_tracker_started"]) || !ent.pers["sbmm_tracker_started"])
+    {
+        ent.pers["sbmm_tracker_started"] = true;
+        ent thread sbmmTrackEntityDeaths();
+    }
+}
+
+sbmmTrackEntityDeaths()
+{
+    self endon("disconnect");
+    level endon("game_ended");
+
+    for (;;)
+    {
+        deathArg0 = undefined;
+        deathArg1 = undefined;
+        deathArg2 = undefined;
+        deathArg3 = undefined;
+        deathArg4 = undefined;
+        deathArg5 = undefined;
+        self waittill("death", deathArg0, deathArg1, deathArg2, deathArg3, deathArg4, deathArg5);
+
+        initSbmmStatBaselines(self);
+
+        if (!(self isBotEntity()))
+            self.pers["sbmm_event_deaths"]++;
+
+        attacker = getSbmmAttackerFromDeathArgs(self, deathArg0, deathArg1, deathArg2, deathArg3, deathArg4, deathArg5);
+        if (!isDefined(attacker) || attacker == self) continue;
+        if (!isCurrentPlayerEntity(attacker)) continue;
+
+        startSbmmEntityTrackerIfNeeded(attacker);
+        if (!(attacker isBotEntity()))
+            attacker.pers["sbmm_event_kills"]++;
+    }
+}
+
+getSbmmAttackerFromDeathArgs(victim, arg0, arg1, arg2, arg3, arg4, arg5)
+{
+    if (isCurrentPlayerEntity(arg0) && arg0 != victim) return arg0;
+    if (isCurrentPlayerEntity(arg1) && arg1 != victim) return arg1;
+    if (isCurrentPlayerEntity(arg2) && arg2 != victim) return arg2;
+    if (isCurrentPlayerEntity(arg3) && arg3 != victim) return arg3;
+    if (isCurrentPlayerEntity(arg4) && arg4 != victim) return arg4;
+    if (isCurrentPlayerEntity(arg5) && arg5 != victim) return arg5;
+    return undefined;
+}
+
+ensureSbmmTrackers()
+{
+    if (!sbmmEnable || !isDefined(level.players)) return;
+
+    foreach (p in level.players)
+    {
+        if (!isDefined(p)) continue;
+        startSbmmEntityTrackerIfNeeded(p);
+    }
+}
+
+getSbmmTrackedKills(ent)
+{
+    initSbmmStatBaselines(ent);
+
+    sampleNow = getSbmmKillsSample(ent);
+    base = ent.pers["sbmm_base_kills"];
+    delta = sampleNow - base;
+
+    if (delta < 0)
+    {
+        ent.pers["sbmm_base_kills"] = sampleNow;
+        delta = 0;
+    }
+
+    tracked = ent.pers["sbmm_event_kills"];
+    if (delta > tracked) tracked = delta;
+    if (tracked < 0) tracked = 0;
+    return tracked;
+}
+
+getSbmmTrackedDeaths(ent)
+{
+    initSbmmStatBaselines(ent);
+
+    sampleNow = getSbmmDeathsSample(ent);
+    base = ent.pers["sbmm_base_deaths"];
+    delta = sampleNow - base;
+
+    if (delta < 0)
+    {
+        ent.pers["sbmm_base_deaths"] = sampleNow;
+        delta = 0;
+    }
+
+    tracked = ent.pers["sbmm_event_deaths"];
+    if (delta > tracked) tracked = delta;
+    if (tracked < 0) tracked = 0;
+    return tracked;
+}
+
+getSbmmTrackedScore(ent)
+{
+    initSbmmStatBaselines(ent);
+
+    sampleNow = getSbmmScoreSample(ent);
+    base = ent.pers["sbmm_base_score"];
+    delta = sampleNow - base;
+
+    if (delta < 0)
+    {
+        ent.pers["sbmm_base_score"] = sampleNow;
+        delta = 0;
+    }
+
+    if (delta < 0) delta = 0;
+    return delta;
+}
+
+getSbmmTrackedMinutes(ent)
+{
+    initSbmmStatBaselines(ent);
+
+    now = 0;
+    if (isDefined(level.time)) now = level.time;
+
+    joinTime = ent.pers["sbmm_join_time"];
+    elapsedMs = now - joinTime;
+    if (elapsedMs <= 0) return sbmmMinimumTrackedMinutes;
+
+    minutes = elapsedMs / 60000.0;
+    if (minutes < sbmmMinimumTrackedMinutes) return sbmmMinimumTrackedMinutes;
+    return minutes;
+}
+
+normalizeSbmmValue(value, lowValue, highValue)
+{
+    if (highValue <= lowValue) return 0.50;
+    return clampNumber((value - lowValue) / (highValue - lowValue), 0.0, 1.0);
+}
+
+getSbmmPlayerRating(ent)
+{
+    kills = getSbmmTrackedKills(ent);
+    deaths = getSbmmTrackedDeaths(ent);
+    score = getSbmmTrackedScore(ent);
+    minutes = getSbmmTrackedMinutes(ent);
+
+    activity = kills + deaths;
+    if (activity <= 0 && score <= 0)
+    {
+        kd = sbmmNewPlayerKd;
+        spm = sbmmNewPlayerScorePerMinute;
+    }
+    else
+    {
+        kdDivisor = deaths;
+        if (kdDivisor < sbmmKdFloor) kdDivisor = sbmmKdFloor;
+
+        kd = kills / kdDivisor;
+        spm = score / minutes;
+    }
+
+    kdNorm = normalizeSbmmValue(kd, sbmmKdLow, sbmmKdHigh);
+    scoreNorm = normalizeSbmmValue(spm, sbmmScorePerMinuteLow, sbmmScorePerMinuteHigh);
+
+    totalWeight = sbmmKdWeight + sbmmScoreWeight;
+    if (totalWeight <= 0.0) return 0.50;
+
+    return clampNumber(((kdNorm * sbmmKdWeight) + (scoreNorm * sbmmScoreWeight)) / totalWeight, 0.0, 1.0);
+}
+
+calculateSbmmLobbyRating()
+{
+    totalRating = 0.0;
+    humans = 0;
+
+    if (!isDefined(level.players))
+    {
+        level.sbmmTrackedHumans = 0;
+        return 0.50;
+    }
+
+    foreach (p in level.players)
+    {
+        if (!isDefined(p) || (p isBotEntity()) || !isPlayerCountable(p)) continue;
+        totalRating += getSbmmPlayerRating(p);
+        humans++;
+    }
+
+    level.sbmmTrackedHumans = humans;
+
+    if (humans <= 0) return 0.50;
+    return clampNumber(totalRating / humans, 0.0, 1.0);
+}
+
+pickSbmmTierNoHysteresis(rating)
+{
+    if (rating >= sbmmTierEliteMin) return "elite";
+    if (rating >= sbmmTierChallengingMin) return "challenging";
+    if (rating <= sbmmTierProtectedMax) return "protected";
+    return "standard";
+}
+
+pickSbmmTier(rating, currentTier)
+{
+    if (!isDefined(currentTier) || currentTier == "") return pickSbmmTierNoHysteresis(rating);
+
+    if (currentTier == "protected")
+    {
+        if (rating >= (sbmmTierProtectedMax + sbmmTierHysteresis)) return "standard";
+        return "protected";
+    }
+
+    if (currentTier == "challenging")
+    {
+        if (rating < (sbmmTierChallengingMin - sbmmTierHysteresis)) return "standard";
+        if (rating >= (sbmmTierEliteMin + sbmmTierHysteresis)) return "elite";
+        return "challenging";
+    }
+
+    if (currentTier == "elite")
+    {
+        if (rating < (sbmmTierEliteMin - sbmmTierHysteresis)) return "challenging";
+        return "elite";
+    }
+
+    if (rating < (sbmmTierProtectedMax - sbmmTierHysteresis)) return "protected";
+    if (rating >= (sbmmTierChallengingMin + sbmmTierHysteresis)) return "challenging";
+    return "standard";
+}
+
+smoothSbmmRating(rawRating)
+{
+    if (!isDefined(level.sbmmSmoothedRating))
+    {
+        level.sbmmSmoothedRating = rawRating;
+        return rawRating;
+    }
+
+    alpha = sbmmSmoothFall;
+    if (rawRating > level.sbmmSmoothedRating) alpha = sbmmSmoothRise;
+
+    level.sbmmSmoothedRating = clampNumber(level.sbmmSmoothedRating + ((rawRating - level.sbmmSmoothedRating) * alpha), 0.0, 1.0);
+    return level.sbmmSmoothedRating;
+}
+
+evaluateSbmmAndApply(forceBotRefresh)
+{
+    if (!sbmmEnable) return;
+
+    ensureSbmmTrackers();
+
+    rawRating = calculateSbmmLobbyRating();
+    level.sbmmLastRawRating = rawRating;
+
+    smoothedRating = smoothSbmmRating(rawRating);
+    newTier = pickSbmmTier(smoothedRating, level.sbmmActiveTier);
+    newProfileKey = getSbmmProfileKeyForTier(newTier);
+
+    tierChanged = !isDefined(level.sbmmActiveTier) || level.sbmmActiveTier != newTier;
+    profileChanged = !isDefined(level.sbmmActiveProfileKey) || level.sbmmActiveProfileKey != newProfileKey;
+
+    if (tierChanged || profileChanged || forceBotRefresh)
+        applyDifficultyToAllBots(true, newProfileKey, newTier);
+
+    level.sbmmActiveTier = newTier;
+    level.sbmmActiveProfileKey = newProfileKey;
+}
+
+sbmmLobbyDifficultyManager()
+{
+    level endon("game_ended");
+    wait 0.5;
+    evaluateSbmmAndApply(true);
+
+    for (;;)
+    {
+        wait sbmmEvaluationInterval;
+        evaluateSbmmAndApply(false);
+    }
+}
+
 setBotRankCompat(rankValue)
 {
     r = int(rankValue);
@@ -325,31 +867,41 @@ applyBotPrestigeSetting()
     if (compatUseSetPrestigeNative) self setprestige(defaultBotPrestige);
 }
 
-applyAutobotDifficulty(diff)
+applyAutobotDifficulty(diff, forcedProfileKey, forcedTier)
 {
     if (!isDefined(self.pers)) self.pers = [];
     self.pers["autobot_diff_applied"] = "ultra";
-    self setBotDifficulty("ultra");
+    self setBotDifficulty("ultra", forcedProfileKey, forcedTier);
     applyOpLoadout(self);
     atlas45ApplyTierBuff(self, atlas45GetCurrentWeaponSafe(self));
 }
 
-applyDifficultyToAllBots(forceWritePers)
+applyDifficultyToAllBots(forceWritePers, forcedProfileKey, forcedTier)
 {
     if (getdvar("bot_difficulty") != "ultra") setdvar("bot_difficulty", "ultra");
     if (!isDefined(level.players)) return;
+
+    currentTier = resolveSbmmTier(forcedTier);
+    currentProfileKey = resolveSbmmProfileKey(forcedProfileKey);
 
     foreach (p in level.players)
     {
         if (!isDefined(p) || !(p isBotEntity())) continue;
 
         needsApply = true;
-        if (isDefined(p.pers) && isDefined(p.pers["autobot_diff_applied"]) && p.pers["autobot_diff_applied"] == "ultra" && !forceWritePers)
+        if (isDefined(p.pers)
+            && isDefined(p.pers["autobot_diff_applied"])
+            && p.pers["autobot_diff_applied"] == "ultra"
+            && isDefined(p.pers["autobot_profile_applied"])
+            && p.pers["autobot_profile_applied"] == currentProfileKey
+            && isDefined(p.pers["autobot_sbmm_tier"])
+            && p.pers["autobot_sbmm_tier"] == currentTier
+            && !forceWritePers)
             needsApply = false;
 
         if (needsApply)
         {
-            p applyAutobotDifficulty("ultra");
+            p applyAutobotDifficulty("ultra", currentProfileKey, currentTier);
             p setBotRankCompat(defaultBotLevel);
             p applyBotPrestigeSetting();
 
@@ -367,6 +919,8 @@ onPlayerConnect()
     {
         level waittill("connected", player);
         if (!isDefined(player)) continue;
+
+        if (sbmmEnable) startSbmmEntityTrackerIfNeeded(player);
 
         if (player isBotEntity())
         {
@@ -517,7 +1071,8 @@ liveDebugHeartbeat()
                 + " target=" + target
                 + " ct=" + level.combatTraining
                 + " diff=ultra"
-                + " dvar(bot_difficulty)=" + getdvar("bot_difficulty"));
+                + " dvar(bot_difficulty)=" + getdvar("bot_difficulty")
+                + getSbmmDebugSuffix());
         }
         wait debugHeartbeatInterval;
     }
@@ -583,7 +1138,8 @@ run60SecondSanityTest()
         + " badBotDiffSeen=" + badBotDiffSeen
         + " maxOvershoot=" + maxOvershoot
         + " spawnSuccessStreak=" + spawnSuccessStreak
-        + " spawnFailStreak=" + spawnFailStreak);
+        + " spawnFailStreak=" + spawnFailStreak
+        + getSbmmDebugSuffix());
 }
 
 // =========================
