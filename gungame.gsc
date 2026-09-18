@@ -94,10 +94,10 @@ onPlayerConnect()
         if (!isDefined(player)) continue;
 
         if (!isDefined(player.pers)) player.pers = [];
-        if (isDefined(player.pers["gg_watchers_started"]) && player.pers["gg_watchers_started"]) continue;
-        player.pers["gg_watchers_started"] = true;
         player.pers["gg_initialized"] = true;
         player.gg_level = 0;
+        if (isDefined(player.pers["gg_watchers_started"]) && player.pers["gg_watchers_started"]) continue;
+        player.pers["gg_watchers_started"] = true;
         player thread onPlayerSpawned();
         player thread watchKill();
     }
@@ -196,9 +196,16 @@ demotePlayer()
 
 getGunGameWinnerToken(player)
 {
-    if (!isDefined(player)) return player;
-    if (isDefined(player.pers) && isDefined(player.pers["team"])) return player.pers["team"];
-    if (isDefined(player.sessionteam)) return player.sessionteam;
-    if (isDefined(player.team)) return player.team;
-    return player;
+    if (!isDefined(player)) return "none";
+
+    teamToken = "";
+    if (isDefined(player.pers) && isDefined(player.pers["team"])) teamToken = toLower(player.pers["team"] + "");
+    else if (isDefined(player.sessionteam)) teamToken = toLower(player.sessionteam + "");
+    else if (isDefined(player.team)) teamToken = toLower(player.team + "");
+
+    if (teamToken == "team_allies") return "allies";
+    if (teamToken == "team_axis") return "axis";
+    if (teamToken == "allies" || teamToken == "axis") return teamToken;
+
+    return "none";
 }

@@ -210,7 +210,7 @@ isMultiplayerContext()
     if (isDefined(level.mapname))
     {
         mn = toLower(level.mapname);
-        if (isSubStr(mn, "mp_")) return true;
+        if (getsubstr(mn, 0, 3) == "mp_") return true;
     }
 
     return false;
