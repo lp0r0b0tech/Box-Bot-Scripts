@@ -1178,7 +1178,8 @@ run60SecondSanityTest()
         total = countTotalPlayersForCap();
         bots = countBots();
         target = combatTrainingMaxPlayers;
-        expectedApplied = getDifficultyApplyToken(getSelectedBotDifficulty());
+        expectedApplied = level.autobotActiveDifficultyLabel;
+        if (!isDefined(expectedApplied) || expectedApplied == "") expectedApplied = getActiveDifficultyLabel();
         expectedDvar = level.autobotDvarDifficulty;
         if (!isDefined(expectedDvar) || expectedDvar == "") expectedDvar = getBotDifficultyDvarTarget();
         dvarNow = getdvar("bot_difficulty");
