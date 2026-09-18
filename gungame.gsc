@@ -400,9 +400,6 @@ runGunGameSanityCheck()
 
 isGunGameFreeForAllMode()
 {
-    if (isDefined(level.forceGunGameInCombatTraining) && level.forceGunGameInCombatTraining)
-        return true;
-
     if (isDefined(level.teambased))
         return !level.teambased;
 
