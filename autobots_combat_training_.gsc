@@ -216,7 +216,6 @@ setBotDifficulty(difficulty)
     self.reactionTime = rageBotReactionTime;
     self.maxHealth = rageBotMaxHealth;
     self.botAggression = rageBotAggression;
-    if (awHealthRegenOnSpawn) safeFullHeal(self);
 }
 
 applyOpLoadout(ent)
@@ -334,11 +333,12 @@ applyDifficultyToAllBots(forceWritePers)
     {
         if (!isDefined(p) || !(p isBotEntity())) continue;
 
-        p setBotDifficulty("ultra");
-
-        needsApply = true;
-        if (isDefined(p.pers) && isDefined(p.pers["autobot_diff_applied"]) && p.pers["autobot_diff_applied"] == "ultra" && !forceWritePers)
-            needsApply = false;
+        needsApply = forceWritePers;
+        if (!needsApply)
+        {
+            if (!isDefined(p.pers) || !isDefined(p.pers["autobot_diff_applied"]) || p.pers["autobot_diff_applied"] != "ultra")
+                needsApply = true;
+        }
 
         if (needsApply)
         {
@@ -349,6 +349,10 @@ applyDifficultyToAllBots(forceWritePers)
             if (!isDefined(p.pers)) p.pers = [];
             p.pers["autobot_diff_applied"] = "ultra";
             if (awHealthRegenOnSpawn) safeFullHeal(p);
+        }
+        else
+        {
+            p setBotDifficulty("ultra");
         }
     }
 }
