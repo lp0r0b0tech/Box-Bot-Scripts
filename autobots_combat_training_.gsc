@@ -494,6 +494,11 @@ getSbmmDifficultyBucket(scale)
     return int((scale * 10.0) + 0.5);
 }
 
+getEffectiveSbmmScale()
+{
+    return clampFloat((getSbmmDifficultyBucket(getSbmmScale()) * 1.0) / 10.0, 0.0, 1.0);
+}
+
 getDifficultyApplyToken(difficulty)
 {
     diff = normalizeDifficultyName(difficulty);
@@ -600,7 +605,7 @@ setBotDifficulty(difficulty)
     }
     else if (diff == "sbmm")
     {
-        scale = getSbmmScale();
+        scale = getEffectiveSbmmScale();
         self.botAccuracy = lerpFloat(ultraBotAccuracy, godMaxAccuracy, scale);
         self.reactionTime = lerpFloat(ultraReactionTime, godMinReactionTime, scale);
         self.maxHealth = lerpInt(ultraMaxHealth, godMaxHealth, scale);
@@ -981,7 +986,7 @@ applyAutobotDifficulty(diff)
     self.pers["autobot_diff_label"] = normalizedDiff;
     self.pers["autobot_diff_applied"] = token;
     if (normalizedDiff == "sbmm")
-        self.pers["autobot_sbmm_scale"] = getSbmmScale();
+        self.pers["autobot_sbmm_scale"] = getEffectiveSbmmScale();
     else
         self.pers["autobot_sbmm_scale"] = -1.0;
 
@@ -997,7 +1002,7 @@ applyDifficultyToAllBots(forceWritePers)
 
     expectedDiff = getSelectedBotDifficulty();
     expectedToken = getDifficultyApplyToken(expectedDiff);
-    expectedScale = getSbmmScale();
+    expectedScale = getEffectiveSbmmScale();
 
     foreach (p in level.players)
     {
@@ -1230,12 +1235,12 @@ liveSbmmUpdater()
     level endon("game_ended");
     for (;;)
     {
-        previousScale = getSbmmScale();
+        previousScale = getEffectiveSbmmScale();
         previousToken = getDifficultyApplyToken(getSelectedBotDifficulty());
 
         refreshSbmmState();
 
-        currentScale = getSbmmScale();
+        currentScale = getEffectiveSbmmScale();
         currentToken = getDifficultyApplyToken(getSelectedBotDifficulty());
 
         if (getSelectedBotDifficulty() == "sbmm")
@@ -1255,6 +1260,7 @@ liveDebugHeartbeat()
     {
         if (debugAutobots && debugVerbose)
         {
+            preferredSpawnTeam = getPreferredBotSpawnTeam();
             dbg("heartbeat totalCap=" + countTotalPlayersForCap()
                 + " totalRaw=" + (isDefined(level.players) ? level.players.size : 0)
                 + " humans=" + countHumans()
@@ -1264,7 +1270,8 @@ liveDebugHeartbeat()
                 + " diff=" + getActiveDifficultyLabel()
                 + " scale=" + getSbmmScale()
                 + " targetScale=" + (isDefined(level.autobotSbmmTargetScale) ? level.autobotSbmmTargetScale : -1.0)
-                + " spawnTeam=" + getPreferredBotSpawnTeam()
+                + " appliedScale=" + getEffectiveSbmmScale()
+                + " spawnTeam=" + preferredSpawnTeam
                 + " winBiasLead=" + (isDefined(level.autobotWinBiasLead) ? level.autobotWinBiasLead : botWinBiasLead)
                 + " dvar(bot_difficulty)=" + getdvar("bot_difficulty"));
         }
