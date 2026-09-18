@@ -1217,10 +1217,17 @@ delayedBotDifficultyApply()
 {
     level endon("game_ended");
     wait 0.5;
+
+    if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
+    hadLock = level.autobotAdjusting;
+    if (!hadLock) level.autobotAdjusting = true;
+
     refreshSbmmState();
     safeSetBotDifficultyDvar();
     applyDifficultyToAllBots(true);
     level.delayedDifficultyApplyFailures = verifyAppliedDifficultyTokens(getSelectedBotDifficulty(), "delayed_apply");
+
+    if (!hadLock) level.autobotAdjusting = false;
 }
 
 botDifficultyEnforcer()
