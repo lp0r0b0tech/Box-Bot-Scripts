@@ -61,18 +61,6 @@ trimSafetyMaxDrops = 32;
 countStateLogUnknownOnce = true;
 
 // --------------------------
-// Atlas 45 upgrade-safe buff
-// --------------------------
-atlas45EnableBuff = true;
-atlas45BaseId = "iw5_44magnum_mp";
-atlas45Upg1Id = "iw5_44magnum_mp_upgraded";
-atlas45Upg2Id = "iw5_44magnum_mp_upgraded2";
-atlas45BaseMult = 1.20;
-atlas45Upg1Mult = 1.45;
-atlas45Upg2Mult = 1.75;
-atlas45MonitorInterval = 0.25;
-
-// --------------------------
 // Init
 // --------------------------
 init()
@@ -98,7 +86,6 @@ init()
     if (spawnConfirmPhase2Delay < 0.01) spawnConfirmPhase2Delay = 0.01;
     if (spawnConfirmPhase3Delay < 0.01) spawnConfirmPhase3Delay = 0.01;
     if (trimSafetyMaxDrops < 1) trimSafetyMaxDrops = 1;
-    if (atlas45MonitorInterval < 0.05) atlas45MonitorInterval = 0.05;
 
     if (!isDefined(level.autobotsWarnOnce)) level.autobotsWarnOnce = [];
     if (!isDefined(level.autobotAdjusting)) level.autobotAdjusting = false;
@@ -115,7 +102,6 @@ init()
     level thread liveDebugHeartbeat();
     level thread delayedBotDifficultyApply();
     level thread botDifficultyEnforcer();
-    level thread atlas45GlobalMonitor();
 
     if (sanityTestEnable) level thread run60SecondSanityTest();
 }
@@ -331,7 +317,6 @@ applyAutobotDifficulty(diff)
     self.pers["autobot_diff_applied"] = "ultra";
     self setBotDifficulty("ultra");
     applyOpLoadout(self);
-    atlas45ApplyTierBuff(self, atlas45GetCurrentWeaponSafe(self));
 }
 
 applyDifficultyToAllBots(forceWritePers)
@@ -584,101 +569,4 @@ run60SecondSanityTest()
         + " maxOvershoot=" + maxOvershoot
         + " spawnSuccessStreak=" + spawnSuccessStreak
         + " spawnFailStreak=" + spawnFailStreak);
-}
-
-// =========================
-// Atlas 45 upgrade-safe buff
-// =========================
-atlas45GlobalMonitor()
-{
-    level endon("game_ended");
-
-    for (;;)
-    {
-        if (isDefined(level.players))
-        {
-            foreach (p in level.players)
-            {
-                if (!isDefined(p)) continue;
-                if (!(p isBotEntity())) continue;
-
-                if (!isDefined(p.pers)) p.pers = [];
-
-                if (!isDefined(p.pers["atlas45_monitor_started"]) || !p.pers["atlas45_monitor_started"])
-                {
-                    p.pers["atlas45_monitor_started"] = true;
-                    p thread atlas45EntityMonitor();
-                }
-            }
-        }
-
-        wait 1.0;
-    }
-}
-
-atlas45EntityMonitor()
-{
-    self endon("death");
-    self endon("disconnect");
-    level endon("game_ended");
-
-    if (!isDefined(self.pers)) self.pers = [];
-    self.pers["atlas45_last_weapon"] = "";
-
-    for (;;)
-    {
-        if (!atlas45EnableBuff) { wait atlas45MonitorInterval; continue; }
-
-        w = atlas45GetCurrentWeaponSafe(self);
-        if (!isDefined(w)) w = "";
-        w = toLower(w);
-
-        last = "";
-        if (isDefined(self.pers["atlas45_last_weapon"])) last = self.pers["atlas45_last_weapon"];
-
-        if (w != last)
-        {
-            self.pers["atlas45_last_weapon"] = w;
-            atlas45ApplyTierBuff(self, w);
-        }
-
-        wait atlas45MonitorInterval;
-    }
-}
-
-atlas45GetCurrentWeaponSafe(ent)
-{
-    if (!isDefined(ent)) return "";
-    cw = ent getcurrentweapon();
-    if (!isDefined(cw)) return "";
-    return cw;
-}
-
-atlas45ApplyTierBuff(ent, currentWeapon)
-{
-    if (!isDefined(ent)) return;
-    if (!isDefined(ent.pers)) ent.pers = [];
-
-    w = toLower(currentWeapon);
-    mult = 1.0;
-
-    if (w == toLower(atlas45Upg2Id)) mult = atlas45Upg2Mult;
-    else if (w == toLower(atlas45Upg1Id)) mult = atlas45Upg1Mult;
-    else if (w == toLower(atlas45BaseId)) mult = atlas45BaseMult;
-
-    ent.pers["weapon_damage_mult_" + atlas45BaseId] = 1.0;
-    ent.pers["weapon_damage_mult_" + atlas45Upg1Id] = 1.0;
-    ent.pers["weapon_damage_mult_" + atlas45Upg2Id] = 1.0;
-
-    if (mult > 1.0)
-    {
-        ent.pers["weapon_damage_mult_" + atlas45BaseId] = mult;
-        ent.pers["weapon_damage_mult_" + atlas45Upg1Id] = mult;
-        ent.pers["weapon_damage_mult_" + atlas45Upg2Id] = mult;
-        ent.pers["atlas45_damage_mult_active"] = mult;
-    }
-    else
-    {
-        ent.pers["atlas45_damage_mult_active"] = 1.0;
-    }
 }
