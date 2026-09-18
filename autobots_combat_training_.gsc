@@ -53,6 +53,7 @@ compatUseBotDropNative = true;
 
 debugAutobots = true;
 debugVerbose = false;
+debugLogPreferredSpawnTeam = false;
 debugHeartbeatInterval = 5.0;
 
 botDifficultyEnforcerInterval = 2.0;
@@ -1263,7 +1264,8 @@ liveDebugHeartbeat()
     {
         if (debugAutobots && debugVerbose)
         {
-            preferredSpawnTeam = getPreferredBotSpawnTeam();
+            preferredSpawnTeam = "";
+            if (debugLogPreferredSpawnTeam) preferredSpawnTeam = getPreferredBotSpawnTeam();
             dbg("heartbeat totalCap=" + countTotalPlayersForCap()
                 + " totalRaw=" + (isDefined(level.players) ? level.players.size : 0)
                 + " humans=" + countHumans()
@@ -1274,7 +1276,7 @@ liveDebugHeartbeat()
                 + " scale=" + getSbmmScale()
                 + " targetScale=" + (isDefined(level.autobotSbmmTargetScale) ? level.autobotSbmmTargetScale : -1.0)
                 + " appliedScale=" + getEffectiveSbmmScale()
-                + " spawnTeam=" + preferredSpawnTeam
+                + (debugLogPreferredSpawnTeam ? " spawnTeam=" + preferredSpawnTeam : "")
                 + " winBiasLead=" + (isDefined(level.autobotWinBiasLead) ? level.autobotWinBiasLead : botWinBiasLead)
                 + " dvar(bot_difficulty)=" + getdvar("bot_difficulty"));
         }
