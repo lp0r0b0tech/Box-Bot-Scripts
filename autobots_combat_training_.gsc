@@ -83,9 +83,13 @@ init()
     if (awTrimDelay < 0.01) awTrimDelay = 0.01;
     if (debugHeartbeatInterval < 0.2) debugHeartbeatInterval = 0.2;
     if (botDifficultyEnforcerInterval < 0.10) botDifficultyEnforcerInterval = 0.10;
+    if (rageBotAccuracy < 0.0) rageBotAccuracy = 0.0;
     if (rageBotAccuracy > 2.75) rageBotAccuracy = 2.75;
     if (rageBotReactionTime < 0.0) rageBotReactionTime = 0.0;
+    if (rageBotReactionTime > 1.0) rageBotReactionTime = 1.0;
     if (rageBotMaxHealth < 100) rageBotMaxHealth = 100;
+    if (rageBotMaxHealth > 2500) rageBotMaxHealth = 2500;
+    if (rageBotAggression < 0.0) rageBotAggression = 0.0;
     if (rageBotAggression > 2.75) rageBotAggression = 2.75;
     if (spawnFailBackoff < 0.10) spawnFailBackoff = 0.10;
     if (maxSpawnAttemptsPerTick < 1) maxSpawnAttemptsPerTick = 1;
