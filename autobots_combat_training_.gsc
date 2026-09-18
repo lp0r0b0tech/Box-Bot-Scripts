@@ -5,6 +5,7 @@
 // - Fixes persistence by normalizing + enforcing dvar + per-bot state
 // ============================================================
 #include scripts/mp/_bots;
+#include gungame;
 
 // --------------------------
 // Config
@@ -1155,8 +1156,6 @@ run60SecondSanityTest()
     level endon("game_ended");
     if (!debugAutobots) return;
 
-    expectedDvar = level.autobotDvarDifficulty;
-    if (!isDefined(expectedDvar) || expectedDvar == "") expectedDvar = getBotDifficultyDvarTarget();
     startTime = 0;
     if (isDefined(level.time)) startTime = level.time;
 
@@ -1180,6 +1179,8 @@ run60SecondSanityTest()
         bots = countBots();
         target = combatTrainingMaxPlayers;
         expectedApplied = getDifficultyApplyToken(getSelectedBotDifficulty());
+        expectedDvar = level.autobotDvarDifficulty;
+        if (!isDefined(expectedDvar) || expectedDvar == "") expectedDvar = getBotDifficultyDvarTarget();
         dvarNow = getdvar("bot_difficulty");
         if (!isDefined(dvarNow)) dvarNow = "";
         dvarNow = toLower(dvarNow);
