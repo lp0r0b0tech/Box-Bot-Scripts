@@ -163,15 +163,11 @@ init()
     if (sbmmSmoothRise <= 0.0 || sbmmSmoothRise > 1.0) sbmmSmoothRise = 0.45;
     if (sbmmSmoothFall <= 0.0 || sbmmSmoothFall > 1.0) sbmmSmoothFall = 0.25;
     if (sbmmTierProtectedMax < 0.0) sbmmTierProtectedMax = 0.0;
-    if (sbmmTierProtectedMax > 1.0) sbmmTierProtectedMax = 1.0;
+    if (sbmmTierProtectedMax > 0.70) sbmmTierProtectedMax = 0.70;
     if (sbmmTierChallengingMin <= sbmmTierProtectedMax) sbmmTierChallengingMin = sbmmTierProtectedMax + 0.10;
-    if (sbmmTierChallengingMin > 0.90) sbmmTierChallengingMin = 0.90;
+    if (sbmmTierChallengingMin > 0.80) sbmmTierChallengingMin = 0.80;
     if (sbmmTierEliteMin <= sbmmTierChallengingMin) sbmmTierEliteMin = sbmmTierChallengingMin + 0.10;
-    if (sbmmTierEliteMin > 1.0)
-    {
-        sbmmTierEliteMin = 1.0;
-        if (sbmmTierChallengingMin >= sbmmTierEliteMin) sbmmTierChallengingMin = sbmmTierEliteMin - 0.10;
-    }
+    if (sbmmTierEliteMin > 0.95) sbmmTierEliteMin = 0.95;
     if (sbmmTierHysteresis < 0.0) sbmmTierHysteresis = 0.0;
     if (sbmmTierHysteresis > 0.20) sbmmTierHysteresis = 0.20;
     if (sbmmLowReactionTime < 0.005) sbmmLowReactionTime = 0.005;
@@ -576,14 +572,20 @@ sbmmTrackEntityDeaths()
 
     for (;;)
     {
-        attacker = undefined;
-        self waittill("death", attacker);
+        deathArg0 = undefined;
+        deathArg1 = undefined;
+        deathArg2 = undefined;
+        deathArg3 = undefined;
+        deathArg4 = undefined;
+        deathArg5 = undefined;
+        self waittill("death", deathArg0, deathArg1, deathArg2, deathArg3, deathArg4, deathArg5);
 
         initSbmmStatBaselines(self);
 
         if (!(self isBotEntity()))
             self.pers["sbmm_event_deaths"]++;
 
+        attacker = getSbmmAttackerFromDeathArgs(self, deathArg0, deathArg1, deathArg2, deathArg3, deathArg4, deathArg5);
         if (!isDefined(attacker) || attacker == self) continue;
         if (!isCurrentPlayerEntity(attacker)) continue;
 
@@ -591,6 +593,17 @@ sbmmTrackEntityDeaths()
         if (!(attacker isBotEntity()))
             attacker.pers["sbmm_event_kills"]++;
     }
+}
+
+getSbmmAttackerFromDeathArgs(victim, arg0, arg1, arg2, arg3, arg4, arg5)
+{
+    if (isCurrentPlayerEntity(arg0) && arg0 != victim) return arg0;
+    if (isCurrentPlayerEntity(arg1) && arg1 != victim) return arg1;
+    if (isCurrentPlayerEntity(arg2) && arg2 != victim) return arg2;
+    if (isCurrentPlayerEntity(arg3) && arg3 != victim) return arg3;
+    if (isCurrentPlayerEntity(arg4) && arg4 != victim) return arg4;
+    if (isCurrentPlayerEntity(arg5) && arg5 != victim) return arg5;
+    return undefined;
 }
 
 ensureSbmmTrackers()
