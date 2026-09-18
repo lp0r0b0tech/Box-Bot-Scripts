@@ -1087,13 +1087,6 @@ getPreferredBotSpawnTeamByCounts(alliesHumans, axisHumans, alliesPlayers, axisPl
     return "";
 }
 
-getPreferredBotWinTeam()
-{
-    alliesHumans = countHumansOnTeam("allies");
-    axisHumans = countHumansOnTeam("axis");
-    return pickPreferredBotWinTeamByCounts(alliesHumans, axisHumans);
-}
-
 getPreferredBotSpawnTeam()
 {
     activeLead = getActiveBotWinBiasLead();
