@@ -137,8 +137,22 @@ onPlayerConnect()
     {
         level waittill("connected", player);
         if (!isDefined(player)) continue;
-        initializeGunGamePlayer(player);
+        player thread initializeGunGamePlayerWhenReady();
     }
+}
+
+initializeGunGamePlayerWhenReady()
+{
+    self endon("disconnect");
+
+    for (;;)
+    {
+        if (isDefined(self.pers) || isDefined(self.sessionteam) || isDefined(self.team) || isalive(self))
+            break;
+        wait 0.05;
+    }
+
+    initializeGunGamePlayer(self);
 }
 
 onPlayerSpawned()
@@ -251,9 +265,14 @@ getGunGameWinnerToken(player)
 
 getGunGameEndGameWinner(player)
 {
+    return getGunGameEndGameWinnerForMode(player, isGunGameFreeForAllMode());
+}
+
+getGunGameEndGameWinnerForMode(player, freeForAllMode)
+{
     winnerToken = getGunGameWinnerToken(player);
     if (winnerToken != "none") return winnerToken;
-    if (isGunGameFreeForAllMode()) return player;
+    if (freeForAllMode) return player;
     return undefined;
 }
 
@@ -279,6 +298,9 @@ runGunGameSanityCheck()
     if (!shouldAwardFinalTierGunGameKill(false, true, "MOD_MELEE"))
         failures++;
 
+    if (!shouldAwardFinalTierGunGameKill(false, true, "MOD_CRUSH"))
+        failures++;
+
     if (shouldDemoteGunGameVictim(true, true, "MOD_MELEE", true))
         failures++;
 
@@ -286,6 +308,10 @@ runGunGameSanityCheck()
         failures++;
 
     if (!shouldDemoteGunGameVictim(false, false, "MOD_CRUSH", true))
+        failures++;
+
+    testPlayer = [];
+    if (getGunGameEndGameWinnerForMode(testPlayer, true) != testPlayer)
         failures++;
 
     return failures;

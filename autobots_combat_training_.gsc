@@ -882,6 +882,18 @@ runSpawnBiasSanityCheck()
         failures++;
     }
 
+    if (normalizeSpawnTeam("team_allies") != "allies")
+    {
+        warnOnce("spawn_bias_team_allies", "spawn bias sanity failed for team_allies");
+        failures++;
+    }
+
+    if (normalizeSpawnTeam("team_axis") != "axis")
+    {
+        warnOnce("spawn_bias_team_axis", "spawn bias sanity failed for team_axis");
+        failures++;
+    }
+
     undefinedTeam = "";
     if (normalizeSpawnTeam(undefinedTeam) != "")
     {
@@ -1176,7 +1188,7 @@ botDifficultyEnforcer()
         safeSetBotDifficultyDvar();
         applyDifficultyToAllBots(false);
         waitInterval = botDifficultyEnforcerInterval;
-        if (botSbmmEnable && getSelectedBotDifficulty() == "sbmm") waitInterval = botSbmmUpdateInterval;
+        if (botSbmmEnable && getSelectedBotDifficulty() == "sbmm" && botSbmmUpdateInterval > waitInterval) waitInterval = botSbmmUpdateInterval;
         wait waitInterval;
     }
 }
