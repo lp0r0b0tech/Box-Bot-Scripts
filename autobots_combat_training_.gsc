@@ -95,14 +95,11 @@ spawnConfirmPhase3Delay = 0.20;
 init()
 {
     if (shouldRunGunGameHere())
-    {
         initExternalGunGame();
-        return;
-    }
 
     if (!shouldRunAutobotsHere())
     {
-        dbg("init(): disabled outside Combat Training multiplayer");
+        dbg("init(): disabled outside Combat Training / Gun Game multiplayer");
         return;
     }
 
@@ -160,7 +157,7 @@ init()
     level thread delayedBotDifficultyApply();
     level thread botDifficultyEnforcer();
 
-    dbg("init(): Combat Training only active | diff=" + getActiveDifficultyLabel() + " | dvar=" + level.autobotDvarDifficulty);
+    dbg("init(): Combat Training / Gun Game active | diff=" + getActiveDifficultyLabel() + " | dvar=" + level.autobotDvarDifficulty);
     if (sanityTestEnable) level thread run60SecondSanityTest();
 }
 
@@ -206,7 +203,8 @@ shouldRunAutobotsHere()
         if (isSubStr(pl, "exo survival") || isSubStr(pl, "exo zombies")) return false;
     }
 
-    return detectCombatTraining();
+    if (detectCombatTraining()) return true;
+    return shouldRunGunGameHere();
 }
 
 isSubStr(hay, needle)
@@ -520,6 +518,7 @@ setBotDifficulty(difficulty)
 applyOpLoadout(ent)
 {
     if (!opWeaponsEnable || !isDefined(ent)) return;
+    if (shouldRunGunGameHere()) return;
     if (!isDefined(ent.pers)) ent.pers = [];
 
     desiredSig = opPrimaryWeapon + "|" + opPrimaryAttachment + "|" + opSecondaryWeapon + "|" + opLethal + "|" + opTactical;
