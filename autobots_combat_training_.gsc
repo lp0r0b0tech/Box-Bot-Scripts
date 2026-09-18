@@ -328,6 +328,18 @@ getActiveSbmmProfileKey()
     return level.sbmmActiveProfileKey;
 }
 
+resolveSbmmTier(tier)
+{
+    if (isDefined(tier) && tier != "") return tier;
+    return getActiveSbmmTier();
+}
+
+resolveSbmmProfileKey(profileKey)
+{
+    if (isDefined(profileKey) && profileKey != "") return profileKey;
+    return getActiveSbmmProfileKey();
+}
+
 getSbmmProfileKeyForTier(tier)
 {
     if (!sbmmEnable) return "base";
@@ -390,10 +402,10 @@ getSbmmDebugSuffix()
         + " sbmmHumans=" + humans;
 }
 
-setBotDifficulty(difficulty)
+setBotDifficulty(difficulty, forcedProfileKey, forcedTier)
 {
-    profileKey = getActiveSbmmProfileKey();
-    activeTier = getActiveSbmmTier();
+    profileKey = resolveSbmmProfileKey(forcedProfileKey);
+    activeTier = resolveSbmmTier(forcedTier);
 
     self.botAccuracy = getSbmmProfileAccuracy(profileKey);
     self.reactionTime = getSbmmProfileReactionTime(profileKey);
@@ -819,11 +831,11 @@ evaluateSbmmAndApply(forceBotRefresh)
     tierChanged = !isDefined(level.sbmmActiveTier) || level.sbmmActiveTier != newTier;
     profileChanged = !isDefined(level.sbmmActiveProfileKey) || level.sbmmActiveProfileKey != newProfileKey;
 
+    if (tierChanged || profileChanged || forceBotRefresh)
+        applyDifficultyToAllBots(true, newProfileKey, newTier);
+
     level.sbmmActiveTier = newTier;
     level.sbmmActiveProfileKey = newProfileKey;
-
-    if (tierChanged || profileChanged || forceBotRefresh)
-        applyDifficultyToAllBots(true);
 }
 
 sbmmLobbyDifficultyManager()
@@ -855,22 +867,22 @@ applyBotPrestigeSetting()
     if (compatUseSetPrestigeNative) self setprestige(defaultBotPrestige);
 }
 
-applyAutobotDifficulty(diff)
+applyAutobotDifficulty(diff, forcedProfileKey, forcedTier)
 {
     if (!isDefined(self.pers)) self.pers = [];
     self.pers["autobot_diff_applied"] = "ultra";
-    self setBotDifficulty("ultra");
+    self setBotDifficulty("ultra", forcedProfileKey, forcedTier);
     applyOpLoadout(self);
     atlas45ApplyTierBuff(self, atlas45GetCurrentWeaponSafe(self));
 }
 
-applyDifficultyToAllBots(forceWritePers)
+applyDifficultyToAllBots(forceWritePers, forcedProfileKey, forcedTier)
 {
     if (getdvar("bot_difficulty") != "ultra") setdvar("bot_difficulty", "ultra");
     if (!isDefined(level.players)) return;
 
-    currentTier = getActiveSbmmTier();
-    currentProfileKey = getActiveSbmmProfileKey();
+    currentTier = resolveSbmmTier(forcedTier);
+    currentProfileKey = resolveSbmmProfileKey(forcedProfileKey);
 
     foreach (p in level.players)
     {
@@ -889,7 +901,7 @@ applyDifficultyToAllBots(forceWritePers)
 
         if (needsApply)
         {
-            p applyAutobotDifficulty("ultra");
+            p applyAutobotDifficulty("ultra", currentProfileKey, currentTier);
             p setBotRankCompat(defaultBotLevel);
             p applyBotPrestigeSetting();
 
