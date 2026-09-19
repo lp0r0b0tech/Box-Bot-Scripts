@@ -27,22 +27,30 @@ awHealthRegenOnSpawn = true;
 opWeaponsEnable = true;
 opPrimaryWeapon = "iw5_m4_mp";
 opPrimaryAttachment = "reflex";
+opPrimaryVariant = "iw5_m4_mp_reflex_xmags_camo11";
 opSecondaryWeapon = "iw5_44magnum_mp";
+opSecondaryVariant = "iw5_44magnum_mp_akimbo_xmags";
 opLethal = "frag_grenade_mp";
 opTactical = "flash_grenade_mp";
 opGiveFullAmmo = true;
 
-compatUseSetPrestigeNative = false;
-compatUseSetRankNative = false;
+compatUseSetPrestigeNative = true;
+compatUseSetRankNative = true;
 compatUseBotDropNative = true;
 
 debugAutobots = true;
 debugVerbose = false;
 debugHeartbeatInterval = 5.0;
 
-botDifficultyEnforcerInterval = 2.0;
+botDifficultyEnforcerInterval = 0.25;
 spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 8;
+
+// RAGE MODE profile (aimbot-like precision tuning; bot_difficulty remains locked to ultra)
+rageBotAccuracy = 9.99;
+rageBotReactionTime = 0.0;
+rageBotMaxHealth = 2500;
+rageBotAggression = 9.99;
 
 sanityTestEnable = true;
 sanityTestDuration = 60.0;
@@ -76,7 +84,15 @@ init()
     if (awPressureSpawnDelay < 0.05) awPressureSpawnDelay = 0.05;
     if (awTrimDelay < 0.01) awTrimDelay = 0.01;
     if (debugHeartbeatInterval < 0.2) debugHeartbeatInterval = 0.2;
-    if (botDifficultyEnforcerInterval < 1.0) botDifficultyEnforcerInterval = 1.0;
+    if (botDifficultyEnforcerInterval < 0.10) botDifficultyEnforcerInterval = 0.10;
+    if (rageBotAccuracy < 0.0) rageBotAccuracy = 0.0;
+    if (rageBotAccuracy > 9.99) rageBotAccuracy = 9.99;
+    if (rageBotReactionTime < 0.0) rageBotReactionTime = 0.0;
+    if (rageBotReactionTime > 1.0) rageBotReactionTime = 1.0;
+    if (rageBotMaxHealth < 100) rageBotMaxHealth = 100;
+    if (rageBotMaxHealth > 2500) rageBotMaxHealth = 2500;
+    if (rageBotAggression < 0.0) rageBotAggression = 0.0;
+    if (rageBotAggression > 9.99) rageBotAggression = 9.99;
     if (spawnFailBackoff < 0.10) spawnFailBackoff = 0.10;
     if (maxSpawnAttemptsPerTick < 1) maxSpawnAttemptsPerTick = 1;
     if (sanityTestDuration < 5.0) sanityTestDuration = 5.0;
@@ -206,11 +222,10 @@ safeFullHeal(ent)
 
 setBotDifficulty(difficulty)
 {
-    self.botAccuracy = 2.75;
-    self.reactionTime = 0.01;
-    self.maxHealth = 650;
-    self.botAggression = 2.75;
-    if (awHealthRegenOnSpawn) safeFullHeal(self);
+    self.botAccuracy = rageBotAccuracy;
+    self.reactionTime = rageBotReactionTime;
+    self.maxHealth = rageBotMaxHealth;
+    self.botAggression = rageBotAggression;
 }
 
 applyOpLoadout(ent)
@@ -218,15 +233,23 @@ applyOpLoadout(ent)
     if (!opWeaponsEnable || !isDefined(ent)) return;
     if (!isDefined(ent.pers)) ent.pers = [];
 
-    desiredSig = opPrimaryWeapon + "|" + opPrimaryAttachment + "|" + opSecondaryWeapon + "|" + opLethal + "|" + opTactical;
-
     primaryToGive = "";
-    if (isDefined(opPrimaryWeapon) && opPrimaryWeapon != "")
+    if (isDefined(opPrimaryVariant) && opPrimaryVariant != "")
+        primaryToGive = opPrimaryVariant;
+    else if (isDefined(opPrimaryWeapon) && opPrimaryWeapon != "")
     {
         primaryToGive = opPrimaryWeapon;
         if (isDefined(opPrimaryAttachment) && opPrimaryAttachment != "")
             primaryToGive = opPrimaryWeapon + "_" + opPrimaryAttachment;
     }
+
+    secondaryToGive = "";
+    if (isDefined(opSecondaryVariant) && opSecondaryVariant != "")
+        secondaryToGive = opSecondaryVariant;
+    else if (isDefined(opSecondaryWeapon) && opSecondaryWeapon != "")
+        secondaryToGive = opSecondaryWeapon;
+
+    desiredSig = primaryToGive + "|" + secondaryToGive + "|" + opLethal + "|" + opTactical;
 
     if (isDefined(ent.pers["autobot_loadout_sig"]) && ent.pers["autobot_loadout_sig"] == desiredSig) return;
 
@@ -243,10 +266,12 @@ applyOpLoadout(ent)
         }
     }
 
-    if (isDefined(opSecondaryWeapon) && opSecondaryWeapon != "")
+    if (secondaryToGive != "")
     {
-        ent giveweapon(opSecondaryWeapon);
-        if (opGiveFullAmmo) ent givemaxammo(opSecondaryWeapon);
+        ent giveweapon(secondaryToGive);
+        if (opGiveFullAmmo) ent givemaxammo(secondaryToGive);
+        if (secondaryToGive != opSecondaryWeapon && isDefined(opSecondaryWeapon) && opSecondaryWeapon != "")
+            ent givemaxammo(opSecondaryWeapon);
     }
 
     if (isDefined(opLethal) && opLethal != "") ent giveweapon(opLethal);
@@ -328,9 +353,12 @@ applyDifficultyToAllBots(forceWritePers)
     {
         if (!isDefined(p) || !(p isBotEntity())) continue;
 
-        needsApply = true;
-        if (isDefined(p.pers) && isDefined(p.pers["autobot_diff_applied"]) && p.pers["autobot_diff_applied"] == "ultra" && !forceWritePers)
-            needsApply = false;
+        needsApply = forceWritePers;
+        if (!needsApply)
+        {
+            if (!isDefined(p.pers) || !isDefined(p.pers["autobot_diff_applied"]) || p.pers["autobot_diff_applied"] != "ultra")
+                needsApply = true;
+        }
 
         if (needsApply)
         {
@@ -341,6 +369,10 @@ applyDifficultyToAllBots(forceWritePers)
             if (!isDefined(p.pers)) p.pers = [];
             p.pers["autobot_diff_applied"] = "ultra";
             if (awHealthRegenOnSpawn) safeFullHeal(p);
+        }
+        else
+        {
+            p setBotDifficulty("ultra");
         }
     }
 }
