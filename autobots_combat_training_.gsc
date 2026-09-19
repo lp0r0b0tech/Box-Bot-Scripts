@@ -44,11 +44,11 @@ botDifficultyEnforcerInterval = 0.25;
 spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 8;
 
-// RAGE MODE profile (safest-max tuning; bot_difficulty remains locked to ultra)
-rageBotAccuracy = 2.75;
+// RAGE MODE profile (aimbot-like precision tuning; bot_difficulty remains locked to ultra)
+rageBotAccuracy = 9.99;
 rageBotReactionTime = 0.0;
 rageBotMaxHealth = 2500;
-rageBotAggression = 2.75;
+rageBotAggression = 9.99;
 
 sanityTestEnable = true;
 sanityTestDuration = 60.0;
@@ -84,13 +84,13 @@ init()
     if (debugHeartbeatInterval < 0.2) debugHeartbeatInterval = 0.2;
     if (botDifficultyEnforcerInterval < 0.10) botDifficultyEnforcerInterval = 0.10;
     if (rageBotAccuracy < 0.0) rageBotAccuracy = 0.0;
-    if (rageBotAccuracy > 2.75) rageBotAccuracy = 2.75;
+    if (rageBotAccuracy > 9.99) rageBotAccuracy = 9.99;
     if (rageBotReactionTime < 0.0) rageBotReactionTime = 0.0;
     if (rageBotReactionTime > 1.0) rageBotReactionTime = 1.0;
     if (rageBotMaxHealth < 100) rageBotMaxHealth = 100;
     if (rageBotMaxHealth > 2500) rageBotMaxHealth = 2500;
     if (rageBotAggression < 0.0) rageBotAggression = 0.0;
-    if (rageBotAggression > 2.75) rageBotAggression = 2.75;
+    if (rageBotAggression > 9.99) rageBotAggression = 9.99;
     if (spawnFailBackoff < 0.10) spawnFailBackoff = 0.10;
     if (maxSpawnAttemptsPerTick < 1) maxSpawnAttemptsPerTick = 1;
     if (sanityTestDuration < 5.0) sanityTestDuration = 5.0;
