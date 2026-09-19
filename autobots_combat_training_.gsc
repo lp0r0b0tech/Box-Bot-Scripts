@@ -32,8 +32,8 @@ opLethal = "frag_grenade_mp";
 opTactical = "flash_grenade_mp";
 opGiveFullAmmo = true;
 
-compatUseSetPrestigeNative = false;
-compatUseSetRankNative = false;
+compatUseSetPrestigeNative = true;
+compatUseSetRankNative = true;
 compatUseBotDropNative = true;
 
 debugAutobots = true;
