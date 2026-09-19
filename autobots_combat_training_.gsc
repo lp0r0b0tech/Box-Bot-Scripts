@@ -27,7 +27,9 @@ awHealthRegenOnSpawn = true;
 opWeaponsEnable = true;
 opPrimaryWeapon = "iw5_m4_mp";
 opPrimaryAttachment = "reflex";
+opPrimaryVariant = "iw5_m4_mp_reflex_xmags_camo11";
 opSecondaryWeapon = "iw5_44magnum_mp";
+opSecondaryVariant = "iw5_44magnum_mp_akimbo_xmags";
 opLethal = "frag_grenade_mp";
 opTactical = "flash_grenade_mp";
 opGiveFullAmmo = true;
@@ -231,15 +233,23 @@ applyOpLoadout(ent)
     if (!opWeaponsEnable || !isDefined(ent)) return;
     if (!isDefined(ent.pers)) ent.pers = [];
 
-    desiredSig = opPrimaryWeapon + "|" + opPrimaryAttachment + "|" + opSecondaryWeapon + "|" + opLethal + "|" + opTactical;
-
     primaryToGive = "";
-    if (isDefined(opPrimaryWeapon) && opPrimaryWeapon != "")
+    if (isDefined(opPrimaryVariant) && opPrimaryVariant != "")
+        primaryToGive = opPrimaryVariant;
+    else if (isDefined(opPrimaryWeapon) && opPrimaryWeapon != "")
     {
         primaryToGive = opPrimaryWeapon;
         if (isDefined(opPrimaryAttachment) && opPrimaryAttachment != "")
             primaryToGive = opPrimaryWeapon + "_" + opPrimaryAttachment;
     }
+
+    secondaryToGive = "";
+    if (isDefined(opSecondaryVariant) && opSecondaryVariant != "")
+        secondaryToGive = opSecondaryVariant;
+    else if (isDefined(opSecondaryWeapon) && opSecondaryWeapon != "")
+        secondaryToGive = opSecondaryWeapon;
+
+    desiredSig = primaryToGive + "|" + secondaryToGive + "|" + opLethal + "|" + opTactical;
 
     if (isDefined(ent.pers["autobot_loadout_sig"]) && ent.pers["autobot_loadout_sig"] == desiredSig) return;
 
@@ -256,10 +266,12 @@ applyOpLoadout(ent)
         }
     }
 
-    if (isDefined(opSecondaryWeapon) && opSecondaryWeapon != "")
+    if (secondaryToGive != "")
     {
-        ent giveweapon(opSecondaryWeapon);
-        if (opGiveFullAmmo) ent givemaxammo(opSecondaryWeapon);
+        ent giveweapon(secondaryToGive);
+        if (opGiveFullAmmo) ent givemaxammo(secondaryToGive);
+        if (secondaryToGive != opSecondaryWeapon && isDefined(opSecondaryWeapon) && opSecondaryWeapon != "")
+            ent givemaxammo(opSecondaryWeapon);
     }
 
     if (isDefined(opLethal) && opLethal != "") ent giveweapon(opLethal);
