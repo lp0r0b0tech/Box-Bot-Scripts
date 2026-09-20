@@ -27,7 +27,8 @@ When `scr_zm_autobots_enable` is enabled, the script keeps a configurable number
 - move away from heavy zombie pressure when low on health/ammo;
 - circle/train zombies when stable;
 - buy nearby perks, doors, Pack-a-Punch, and exo utility when allowed by dvars;
-- use frag/tactical equipment when surrounded.
+- use frag/tactical equipment when surrounded;
+- initialize S1x test clients directly from the script when auto-spawned so their bot loop does not rely only on a later connect notify.
 
 ### 2) BO2-style zombies feel
 

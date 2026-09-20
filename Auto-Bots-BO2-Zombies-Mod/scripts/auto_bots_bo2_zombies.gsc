@@ -34,6 +34,8 @@
 #define ABZM_BO2_REVIVE_POINTS                250
 #define ABZM_BO2_BLEEDOUT_TIME                45
 #define ABZM_BO2_REVIVE_TIME                  5
+#define ABZM_BO2_REVIVE_RANGE                 96
+#define ABZM_BO2_RUN_ROUND                    3
 
 #define ABZM_BO2_INSTAKILL_DURATION           30
 #define ABZM_BO2_DOUBLEPOINTS_DURATION        30
@@ -145,6 +147,13 @@ onPlayerConnected()
 {
     self endon( "disconnect" );
 
+    if ( isdefined( self.abzmConnectedHandlerStarted ) && self.abzmConnectedHandlerStarted )
+    {
+        return;
+    }
+
+    self.abzmConnectedHandlerStarted = true;
+
     if ( !isdefined( self.abzmDownedTrackerStarted ) || !self.abzmDownedTrackerStarted )
     {
         self.abzmDownedTrackerStarted = true;
@@ -233,8 +242,15 @@ maintainAutoBots()
             currentBots = getActiveBotCount();
             while ( currentBots < level.abzm.botCount )
             {
-                spawnAutoBot( currentBots );
-                currentBots++;
+                if ( spawnAutoBot( currentBots ) )
+                {
+                    currentBots++;
+                }
+                else
+                {
+                    wait 1.0;
+                }
+
                 wait 0.25;
             }
         }
@@ -248,7 +264,7 @@ spawnAutoBot( botIndex )
     bot = addtestclient();
     if ( !isdefined( bot ) )
     {
-        return;
+        return false;
     }
 
     nameIndex = botIndex % level.abzm.botNames.size;
@@ -256,6 +272,8 @@ spawnAutoBot( botIndex )
     bot.pers["isBot"] = true;
     bot.name = level.abzm.botNames[nameIndex];
     bot.abzmSkill = level.abzm.botSkill;
+    bot thread onPlayerConnected();
+    return true;
 }
 
 botLifeLoop()
@@ -341,7 +359,7 @@ attemptBotRevive()
     self moveto( downed.origin, 0.35 );
     wait ABZM_BO2_REVIVE_TIME;
 
-    if ( isdefined( downed ) && isplayer( downed ) && downed.abzmDowned )
+    if ( isdefined( downed ) && isplayer( downed ) && downed.abzmDowned && distance( self.origin, downed.origin ) <= ABZM_BO2_REVIVE_RANGE )
     {
         downed notify( "revived" );
         awardPlayerPoints( self, ABZM_BO2_REVIVE_POINTS );
@@ -603,6 +621,11 @@ calculateBo2ZombieHealth( roundNumber )
 
 calculateBo2ZombieSpeed( roundNumber )
 {
+    if ( roundNumber < ABZM_BO2_RUN_ROUND )
+    {
+        return ABZM_BO2_WALK_SPEED;
+    }
+
     if ( roundNumber < level.abzm.sprintRound )
     {
         return ABZM_BO2_RUN_SPEED;
