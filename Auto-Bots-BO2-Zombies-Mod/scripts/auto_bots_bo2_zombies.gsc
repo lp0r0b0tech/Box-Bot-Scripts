@@ -27,11 +27,11 @@
 #define ABZM_BO2_HEALTH_CURVE_ROUND           10
 #define ABZM_BO2_HEALTH_CURVE_MULTIPLIER      1.10
 #define ABZM_BO2_HEALTH_CAP                   35000
-#define ABZM_BO2_HEALTH_SOFTCAP_START_ROUND   35
-#define ABZM_BO2_HEALTH_SOFTCAP               15000
-#define ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE 0.18
-#define ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP      40
-#define ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP      700
+#define ABZM_BO2_HEALTH_SOFTCAP_START_ROUND   45
+#define ABZM_BO2_HEALTH_SOFTCAP               32000
+#define ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE 0.08
+#define ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP      10
+#define ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP      120
 
 #define ABZM_BO2_WALK_SPEED                   110
 #define ABZM_BO2_RUN_SPEED                    150
@@ -976,9 +976,10 @@ calculateBo2ZombieHealthForRoundStep( roundNumber, previousHealth )
 
 calculateBo2LateRoundZombieHealth( previousHealth )
 {
-    // Preserve the existing BO2-feel curve through the configured start round, then
-    // ease late rounds into a bounded plateau so round 100 stays practical. Special
-    // rounds still apply ABZM_BO2_SPECIAL_HEALTH_SCALE after this base value is set.
+    // Preserve the existing BO2-feel curve through round 45, then keep rounds 46+
+    // scaling with a much gentler bounded ramp so rounds 55-100+ continue climbing
+    // without jumping straight into the old hard-cap wall. Special rounds still
+    // apply ABZM_BO2_SPECIAL_HEALTH_SCALE after this base value is set.
     effectiveSoftcap = int( abzmClamp( ABZM_BO2_HEALTH_SOFTCAP, ABZM_BO2_BASE_HEALTH, ABZM_BO2_HEALTH_CAP ) );
 
     if ( previousHealth >= effectiveSoftcap )
