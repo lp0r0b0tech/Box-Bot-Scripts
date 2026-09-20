@@ -1000,15 +1000,7 @@ calculateBo2ReplayLegacyRound( roundNumber )
         );
     }
 
-    lastReplayLegacyRound = remapRoundRangeFloat(
-        ABZM_BO2_REPLAY_PHASE_END_ROUND,
-        ABZM_BO2_REPLAY_PHASE_START_ROUND,
-        ABZM_BO2_REPLAY_PHASE_END_ROUND,
-        ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND,
-        ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND
-    );
-
-    return int( lastReplayLegacyRound ) + (roundNumber - ABZM_BO2_REPLAY_PHASE_END_ROUND);
+    return ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND + (roundNumber - ABZM_BO2_REPLAY_PHASE_END_ROUND);
 }
 
 calculateInterpolatedLegacyBo2ZombieHealth( legacyRoundFloat, maximumLegacyRound )
