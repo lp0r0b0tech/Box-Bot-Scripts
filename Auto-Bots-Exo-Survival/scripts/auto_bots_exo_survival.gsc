@@ -135,7 +135,7 @@ initDvars()
 
 refreshRuntimeConfig()
 {
-    level.abes.autoBotsEnabled = getdvarint( "scr_es_autobots_enabled" ) > 0 || getdvarint( "scr_es_autobots_enable" ) > 0;
+    level.abes.autoBotsEnabled = getdvarint( "scr_es_autobots_enabled" ) > 0;
     level.abes.botCount = abesClamp( getdvarint( "scr_es_autobots_count" ), 0, ABES_MAX_BOTS );
     level.abes.botSkill = abesClamp( getdvarfloat( "scr_es_autobots_skill" ), 0.25, 3.0 );
 
@@ -1056,8 +1056,7 @@ attemptPurchase( node, cost )
 
     if ( cost <= 0 )
     {
-        markInteractionSuccess( node );
-        return true;
+        return false;
     }
 
     if ( !isdefined( self.score ) )
