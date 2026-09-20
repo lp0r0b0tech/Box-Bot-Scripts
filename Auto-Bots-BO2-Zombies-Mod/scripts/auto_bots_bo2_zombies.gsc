@@ -154,7 +154,6 @@ buildModState()
     state.lastSpecialRound = 0;
     state.forceSpecialRound = false;
     state.trackedZombies = [];
-    state.healthByRound = [];
     state.interactableCandidates = [];
     state.interactableCacheTime = 0;
     state.botNames = [];
@@ -941,19 +940,14 @@ tunePowerupDrop( powerup )
 
 calculateBo2ZombieHealth( roundNumber )
 {
-    if ( isdefined( level.abzm ) && isdefined( level.abzm.healthByRound[roundNumber] ) )
-    {
-        return level.abzm.healthByRound[roundNumber];
-    }
-
     if ( roundNumber <= 1 )
     {
-        return cacheBo2ZombieHealth( roundNumber, ABZM_BO2_BASE_HEALTH );
+        return ABZM_BO2_BASE_HEALTH;
     }
 
     if ( roundNumber <= ABZM_BO2_HEALTH_CURVE_ROUND )
     {
-        return cacheBo2ZombieHealth( roundNumber, min( ABZM_BO2_HEALTH_CAP, ABZM_BO2_BASE_HEALTH + ((roundNumber - 1) * ABZM_BO2_HEALTH_INCREMENT) ) );
+        return min( ABZM_BO2_HEALTH_CAP, ABZM_BO2_BASE_HEALTH + ((roundNumber - 1) * ABZM_BO2_HEALTH_INCREMENT) );
     }
 
     health = ABZM_BO2_BASE_HEALTH + ((ABZM_BO2_HEALTH_CURVE_ROUND - 1) * ABZM_BO2_HEALTH_INCREMENT);
@@ -963,11 +957,11 @@ calculateBo2ZombieHealth( roundNumber )
         health = calculateBo2ZombieHealthForRoundStep( i, health );
         if ( health >= ABZM_BO2_HEALTH_CAP )
         {
-            return cacheBo2ZombieHealth( roundNumber, ABZM_BO2_HEALTH_CAP );
+            return ABZM_BO2_HEALTH_CAP;
         }
     }
 
-    return cacheBo2ZombieHealth( roundNumber, health );
+    return health;
 }
 
 calculateBo2ZombieHealthForRoundStep( roundNumber, previousHealth )
@@ -997,16 +991,6 @@ calculateBo2LateRoundZombieHealth( previousHealth )
     healthStep = int( abzmClamp( healthStep, ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP, ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP ) );
 
     return min( ABZM_BO2_HEALTH_CAP, min( effectiveSoftcap, previousHealth + healthStep ) );
-}
-
-cacheBo2ZombieHealth( roundNumber, health )
-{
-    if ( isdefined( level.abzm ) )
-    {
-        level.abzm.healthByRound[roundNumber] = health;
-    }
-
-    return health;
 }
 
 calculateBo2ZombieSpeed( roundNumber )
