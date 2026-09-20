@@ -954,7 +954,15 @@ calculateBo2ZombieHealth( roundNumber )
 
     for ( i = ABZM_BO2_HEALTH_CURVE_ROUND + 1; i <= roundNumber; i++ )
     {
-        health = calculateBo2ZombieHealthForRoundStep( i, health );
+        if ( i <= ABZM_BO2_HEALTH_LEGACY_CURVE_END_ROUND )
+        {
+            health = min( ABZM_BO2_HEALTH_CAP, int( health * ABZM_BO2_HEALTH_CURVE_MULTIPLIER ) );
+        }
+        else
+        {
+            health = calculateBo2LateRoundZombieHealth( health );
+        }
+
         if ( health >= ABZM_BO2_HEALTH_CAP )
         {
             return ABZM_BO2_HEALTH_CAP;
@@ -962,16 +970,6 @@ calculateBo2ZombieHealth( roundNumber )
     }
 
     return health;
-}
-
-calculateBo2ZombieHealthForRoundStep( roundNumber, previousHealth )
-{
-    if ( roundNumber <= ABZM_BO2_HEALTH_LEGACY_CURVE_END_ROUND )
-    {
-        return min( ABZM_BO2_HEALTH_CAP, int( previousHealth * ABZM_BO2_HEALTH_CURVE_MULTIPLIER ) );
-    }
-
-    return calculateBo2LateRoundZombieHealth( previousHealth );
 }
 
 calculateBo2LateRoundZombieHealth( previousHealth )
