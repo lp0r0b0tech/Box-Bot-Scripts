@@ -11,11 +11,11 @@ Place the whole `Auto-Bots-BO2-Zombies-Mod` folder into your **S1x** scripts/mod
 
 A practical layout is:
 
-- `.../s1x/Auto-Bots-BO2-Zombies-Mod/scripts/zm/auto_bots_bo2_zombies.gsc`
+- `.../s1x/Auto-Bots-BO2-Zombies-Mod/scripts/auto_bots_bo2_zombies.gsc`
 
 Included script path:
 
-- `scripts/zm/auto_bots_bo2_zombies.gsc`
+- `scripts/auto_bots_bo2_zombies.gsc`
 
 ## What the mod does
 
@@ -52,6 +52,8 @@ When `scr_zm_bo2_enable` is enabled, the script applies BO2-inspired tuning for:
 - `scr_zm_autobots_use_equipment` - `0/1`, whether bots auto-throw frag/tactical equipment.
 
 ### BO2 Feel Tuning
+
+These defaults are applied with `setdvarifuninitialized`, so existing S1x dvar values are preserved and only missing values are initialized by the script.
 
 - `scr_zm_bo2_enable` - `0/1`, master switch for BO2-style zombie tuning.
 - `scr_zm_bo2_sprint_round` - round where sprint behavior starts.

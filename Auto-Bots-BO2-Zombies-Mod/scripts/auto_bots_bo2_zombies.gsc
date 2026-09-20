@@ -1,8 +1,7 @@
 // Auto Bots + BO2 Feel Zombies Mod for Advanced Warfare Exo Zombies (S1x)
 //
-// This script is intentionally self-contained so it can be dropped into a simple
-// mod folder. The exact zombie/bot notify names can vary slightly between S1x
-// builds, so the hook wrappers below are kept explicit and easy to tune.
+// Self-contained S1x entry script. Keep the constants grouped at the top so the
+// package can be tuned quickly without hunting through the logic below.
 
 #define ABZM_DEFAULT_AUTOBOTS_ENABLED         0
 #define ABZM_DEFAULT_BOT_COUNT                3
@@ -48,6 +47,11 @@
 
 init()
 {
+    if ( GetMode() != "zombies" )
+    {
+        return;
+    }
+
     level.abzm = buildModState();
     initDvars();
     level thread abzmBoot();
@@ -59,6 +63,8 @@ buildModState()
     state.enabled = false;
     state.round = 1;
     state.lastSpecialRound = 0;
+    state.forceSpecialRound = false;
+    state.trackedZombies = [];
     state.botNames = [];
     state.botNames[0] = "Atlas-1";
     state.botNames[1] = "Atlas-2";
@@ -139,16 +145,20 @@ onPlayerConnected()
 {
     self endon( "disconnect" );
 
-    self thread trackDownedState();
+    if ( !isdefined( self.abzmDownedTrackerStarted ) || !self.abzmDownedTrackerStarted )
+    {
+        self.abzmDownedTrackerStarted = true;
+        self thread trackDownedState();
+    }
 
     for ( ;; )
     {
         self waittill( "spawned_player" );
         self.abzmIsBot = isBotEntity( self );
-        self thread trackDownedState();
 
-        if ( self.abzmIsBot )
+        if ( self.abzmIsBot && ( !isdefined( self.abzmLifeLoopStarted ) || !self.abzmLifeLoopStarted ) )
         {
+            self.abzmLifeLoopStarted = true;
             self thread botLifeLoop();
         }
     }
@@ -169,7 +179,7 @@ trackDownedState()
             self.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
         }
 
-        self waittill_any( "revived", "spawned_player", "disconnect" );
+        self waittill_any( "revived", "spawned_player" );
         self.abzmDowned = false;
     }
 }
@@ -193,14 +203,10 @@ monitorRoundState()
 
 applyRoundTuning( roundNumber )
 {
-    if ( shouldRunSpecialRound( roundNumber ) )
+    level.abzm.forceSpecialRound = shouldRunSpecialRound( roundNumber );
+    if ( level.abzm.forceSpecialRound )
     {
         level.abzm.lastSpecialRound = roundNumber;
-        level.abzm.forceSpecialRound = true;
-    }
-    else
-    {
-        level.abzm.forceSpecialRound = false;
     }
 }
 
@@ -245,11 +251,11 @@ spawnAutoBot( botIndex )
         return;
     }
 
+    nameIndex = botIndex % level.abzm.botNames.size;
     bot.abzmIsBot = true;
     bot.pers["isBot"] = true;
-    bot.name = level.abzm.botNames[botIndex % level.abzm.botNames.size];
+    bot.name = level.abzm.botNames[nameIndex];
     bot.abzmSkill = level.abzm.botSkill;
-    bot thread onPlayerConnected();
 }
 
 botLifeLoop()
@@ -260,13 +266,19 @@ botLifeLoop()
     {
         if ( self.abzmDowned )
         {
-            wait 0.25;
+            self waittill_any( "revived", "spawned_player", "disconnect" );
             continue;
         }
 
-        self thread botBrainLoop();
+        if ( !isdefined( self.abzmBrainRunning ) || !self.abzmBrainRunning )
+        {
+            self.abzmBrainRunning = true;
+            self thread botBrainLoop();
+        }
+
         self waittill_any( "death", "downed", "disconnect" );
         self notify( "abzm_stop_brain" );
+        self.abzmBrainRunning = false;
         wait 0.25;
     }
 }
@@ -436,8 +448,19 @@ monitorZombieSpawns()
             continue;
         }
 
+        rememberZombie( zombie );
         zombie thread tuneZombieForCurrentRound();
     }
+}
+
+rememberZombie( zombie )
+{
+    if ( !isdefined( zombie ) )
+    {
+        return;
+    }
+
+    level.abzm.trackedZombies[level.abzm.trackedZombies.size] = zombie;
 }
 
 tuneZombieForCurrentRound()
@@ -620,12 +643,13 @@ shouldRetreat()
 
 currentWeaponNeedsAmmo()
 {
-    if ( !isdefined( self getcurrentweapon() ) )
+    weapon = self getcurrentweapon();
+    if ( !isdefined( weapon ) )
     {
         return false;
     }
 
-    return self getweaponammoclip( self getcurrentweapon() ) <= 5;
+    return self getweaponammoclip( weapon ) <= 5;
 }
 
 getClosestDownedTeammate()
@@ -637,7 +661,7 @@ getClosestDownedTeammate()
     for ( i = 0; i < players.size; i++ )
     {
         player = players[i];
-        if ( player == self || !isdefined( player ) || !isalive( player ) )
+        if ( player == self || !isdefined( player ) )
         {
             continue;
         }
@@ -714,20 +738,31 @@ chooseRetreatAnchor()
     return self.origin + (away * 220);
 }
 
+getTrackedZombies()
+{
+    liveZombies = [];
+
+    for ( i = 0; i < level.abzm.trackedZombies.size; i++ )
+    {
+        zombie = level.abzm.trackedZombies[i];
+        if ( isdefined( zombie ) && isalive( zombie ) )
+        {
+            liveZombies[liveZombies.size] = zombie;
+        }
+    }
+
+    return liveZombies;
+}
+
 getClosestZombie()
 {
-    zombies = getentarray( "zombie", "targetname" );
+    zombies = getTrackedZombies();
     best = undefined;
     bestDist = 999999;
 
     for ( i = 0; i < zombies.size; i++ )
     {
         zombie = zombies[i];
-        if ( !isdefined( zombie ) || !isalive( zombie ) )
-        {
-            continue;
-        }
-
         dist = distance( self.origin, zombie.origin );
         if ( dist < bestDist )
         {
@@ -741,13 +776,13 @@ getClosestZombie()
 
 countNearbyZombies( origin, radius )
 {
-    zombies = getentarray( "zombie", "targetname" );
+    zombies = getTrackedZombies();
     count = 0;
 
     for ( i = 0; i < zombies.size; i++ )
     {
         zombie = zombies[i];
-        if ( isdefined( zombie ) && isalive( zombie ) && distance( origin, zombie.origin ) <= radius )
+        if ( distance( origin, zombie.origin ) <= radius )
         {
             count++;
         }
