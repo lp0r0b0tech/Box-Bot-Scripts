@@ -951,7 +951,13 @@ calculateBo2ZombieHealth( roundNumber )
 
     easyPhaseBaseHealth = calculateBo2EasyPhaseZombieHealth( ABZM_BO2_EASY_PHASE_END_ROUND );
     replayLegacyRound = calculateBo2ReplayLegacyRound( roundNumber );
-    replayHealth = calculateInterpolatedLegacyBo2ZombieHealth( replayLegacyRound, int( replayLegacyRound ) + 1 );
+    replayLegacyMaximumRound = ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND;
+    if ( roundNumber > ABZM_BO2_REPLAY_PHASE_END_ROUND )
+    {
+        replayLegacyMaximumRound = int( replayLegacyRound ) + 1;
+    }
+
+    replayHealth = calculateInterpolatedLegacyBo2ZombieHealth( replayLegacyRound, replayLegacyMaximumRound );
     replayBaseHealth = calculateLegacyBo2ZombieHealth( ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND );
     replayDelta = replayHealth - replayBaseHealth;
     return min( ABZM_BO2_HEALTH_CAP, easyPhaseBaseHealth + replayDelta );
