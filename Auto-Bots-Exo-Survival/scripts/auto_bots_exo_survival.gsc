@@ -539,6 +539,13 @@ claimReviveTarget( downed )
         return false;
     }
 
+    if ( isdefined( downed.abesClaimLock ) && downed.abesClaimLock )
+    {
+        return false;
+    }
+
+    downed.abesClaimLock = true;
+
     claimAge = 999999;
     if ( isdefined( downed.abesReviveClaimTime ) )
     {
@@ -547,11 +554,13 @@ claimReviveTarget( downed )
 
     if ( isdefined( downed.abesReviveClaimant ) && downed.abesReviveClaimant != self && claimAge < ABES_REVIVE_CLAIM_TIMEOUT_SEC )
     {
+        downed.abesClaimLock = false;
         return false;
     }
 
     downed.abesReviveClaimant = self;
     downed.abesReviveClaimTime = gettime();
+    downed.abesClaimLock = false;
     return true;
 }
 
@@ -1067,7 +1076,8 @@ attemptPurchase( node, cost )
         }
     }
 
-    return false;
+    markInteractionSuccess( node );
+    return true;
 }
 
 moveToAndUse( node )
