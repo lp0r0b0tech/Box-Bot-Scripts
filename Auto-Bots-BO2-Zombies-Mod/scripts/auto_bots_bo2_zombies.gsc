@@ -290,7 +290,8 @@ enforceBo2Bleedout()
 
     if ( self.abzmDowned )
     {
-        self notify( "bleed_out" );
+        self notify( "abzm_force_bleedout" );
+        self suicide();
     }
 }
 
@@ -780,14 +781,21 @@ tuneZombieForCurrentRound()
 
     if ( level.abzm.forceSpecialRound )
     {
+        self.abzmCrawler = false;
         self.abzmSpecialEnemy = true;
         health = int( health * ABZM_BO2_SPECIAL_HEALTH_SCALE );
         speed += ABZM_BO2_SPECIAL_SPEED_BONUS;
     }
     else if ( shouldMakeCrawler( roundNumber ) )
     {
+        self.abzmSpecialEnemy = false;
         speed = ABZM_BO2_CRAWLER_SPEED;
         self.abzmCrawler = true;
+    }
+    else
+    {
+        self.abzmSpecialEnemy = false;
+        self.abzmCrawler = false;
     }
 
     if ( isdefined( level.abzmInstakillActive ) && level.abzmInstakillActive )
@@ -1052,7 +1060,7 @@ moveToAndUse( node )
         return false;
     }
 
-    if ( isdefined( node.abzmLastUseTime ) && (gettime() - node.abzmLastUseTime) < 500 )
+    if ( isdefined( self.abzmLastInteractTarget ) && self.abzmLastInteractTarget == node && isdefined( self.abzmLastInteractTime ) && (gettime() - self.abzmLastInteractTime) < 500 )
     {
         return false;
     }
@@ -1060,12 +1068,19 @@ moveToAndUse( node )
     self setlookatpos( node.origin );
     self moveto( node.origin, 0.25 );
 
-    if ( distance( self.origin, node.origin ) > ABZM_INTERACT_RANGE )
+    interactStartTime = gettime();
+    while ( distance( self.origin, node.origin ) > ABZM_INTERACT_RANGE )
     {
-        return false;
+        if ( gettime() - interactStartTime >= 1000 )
+        {
+            return false;
+        }
+
+        wait 0.05;
     }
 
-    node.abzmLastUseTime = gettime();
+    self.abzmLastInteractTarget = node;
+    self.abzmLastInteractTime = gettime();
     node notify( "trigger", self );
     return true;
 }
