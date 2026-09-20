@@ -1,7 +1,12 @@
-combat training custom difficulty and campaign to
+S1x Advanced Warfare script packages
 
-EMZ/EMP zombies Nerf  
+## Exo Survival package
 
-atlas 45 upgrade similar to the cell 3 culterizer 
+- `Auto-Bots-Exo-Survival`
+  - AI teammates for **Exo Survival** (not Zombies)
+  - revives downed allies with claim timeout logic
+  - buys weapons/ammo/upgrades when affordable
+  - uses Exo abilities, equipment, and scorestreaks contextually
+  - regroups with teammates, unsticks, and retreats when overwhelmed
 
-place the folder in s1 thats it
+Install by copying `Auto-Bots-Exo-Survival` into `/s1x/`.
