@@ -1056,8 +1056,7 @@ attemptPurchase( node, cost )
 
     if ( cost <= 0 )
     {
-        markInteractionSuccess( node );
-        return true;
+        return false;
     }
 
     if ( !isdefined( self.score ) )
@@ -1397,7 +1396,7 @@ isTeammateEntity( player, other )
         return player.team == other.team;
     }
 
-    return true;
+    return false;
 }
 
 clearActiveReviveClaim()
