@@ -1058,6 +1058,16 @@ remapRoundRangeFloat( sourceRound, sourceStart, sourceEnd, targetStart, targetEn
         return targetEnd;
     }
 
+    if ( sourceRound <= sourceStart )
+    {
+        return targetStart;
+    }
+
+    if ( sourceRound >= sourceEnd )
+    {
+        return targetEnd;
+    }
+
     sourceProgress = (sourceRound - sourceStart) / ((sourceEnd - sourceStart) * 1.0);
     if ( sourceProgress < 0 )
     {
