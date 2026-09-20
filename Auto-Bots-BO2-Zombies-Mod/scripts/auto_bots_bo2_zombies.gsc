@@ -187,6 +187,7 @@ trackDownedState()
         if ( level.abzm.bo2Enabled )
         {
             self.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
+            self notify( "abzm_cancel_bleedout" );
             self thread enforceBo2Bleedout();
         }
 
@@ -200,6 +201,7 @@ enforceBo2Bleedout()
     self endon( "disconnect" );
     self endon( "revived" );
     self endon( "spawned_player" );
+    self endon( "abzm_cancel_bleedout" );
 
     wait ABZM_BO2_BLEEDOUT_TIME;
 
@@ -408,28 +410,47 @@ attemptBotRevive()
         return false;
     }
 
+    if ( isdefined( downed.abzmReviver ) && downed.abzmReviver != self )
+    {
+        return false;
+    }
+
+    downed.abzmReviver = self;
     self.abzmState = "reviving";
     self setlookatpos( downed.origin );
     self moveto( downed.origin, 0.35 );
 
-    reviveDeadline = gettime() + int( ABZM_BO2_REVIVE_TIME * 1000 );
-    while ( gettime() < reviveDeadline )
+    reviveProgress = 0.0;
+    while ( reviveProgress < ABZM_BO2_REVIVE_TIME )
     {
         if ( !isdefined( downed ) || !downed.abzmDowned )
         {
+            if ( isdefined( downed ) )
+            {
+                downed.abzmReviver = undefined;
+            }
             return false;
         }
 
-        if ( distance( self.origin, downed.origin ) <= ABZM_BO2_REVIVE_RANGE )
+        if ( distance( self.origin, downed.origin ) > ABZM_BO2_REVIVE_RANGE )
         {
-            downed notify( "revived" );
-            awardPlayerPoints( self, ABZM_BO2_REVIVE_POINTS );
-            return true;
+            downed.abzmReviver = undefined;
+            return false;
         }
 
         wait 0.05;
+        reviveProgress += 0.05;
     }
 
+    if ( downed.abzmDowned )
+    {
+        downed.abzmReviver = undefined;
+        downed notify( "revived" );
+        awardPlayerPoints( self, ABZM_BO2_REVIVE_POINTS );
+        return true;
+    }
+
+    downed.abzmReviver = undefined;
     return false;
 }
 
@@ -592,6 +613,11 @@ tuneZombieForCurrentRound()
         self.abzmCrawler = true;
     }
 
+    if ( isdefined( level.abzmInstakillActive ) && level.abzmInstakillActive )
+    {
+        health = 1;
+    }
+
     self.maxhealth = health;
     self.health = health;
     self walkspeed( speed );
@@ -622,7 +648,7 @@ monitorPowerupSpawns()
 
 tunePowerupDrop( powerup )
 {
-    type = chooseWeightedPowerup();
+    type = getPowerupType( powerup );
     powerup.abzmDropType = type;
 
     switch ( type )
@@ -641,6 +667,26 @@ tunePowerupDrop( powerup )
     }
 
     powerup thread handleTunedPowerup();
+}
+
+getPowerupType( powerup )
+{
+    if ( isdefined( powerup.abzmDropType ) )
+    {
+        return powerup.abzmDropType;
+    }
+
+    if ( isdefined( powerup.targetname ) )
+    {
+        return powerup.targetname;
+    }
+
+    if ( isdefined( powerup.script_noteworthy ) )
+    {
+        return powerup.script_noteworthy;
+    }
+
+    return "maxammo";
 }
 
 handleTunedPowerup()
@@ -982,21 +1028,33 @@ getActiveBotCount()
     return count;
 }
 
-hasEnoughPoints( player, amount )
+getTrackedPlayerPoints( player )
 {
-    if ( !isdefined( player.score ) )
+    total = 0;
+
+    if ( isdefined( player.score ) )
     {
-        return false;
+        total += player.score;
     }
 
-    return player.score >= amount;
+    if ( isdefined( player.abzmBonusPoints ) )
+    {
+        total += player.abzmBonusPoints;
+    }
+
+    return total;
+}
+
+hasEnoughPoints( player, amount )
+{
+    return getTrackedPlayerPoints( player ) >= amount;
 }
 
 awardPlayerPoints( player, amount )
 {
-    if ( !isdefined( player.score ) )
+    if ( !isdefined( player.abzmBonusPoints ) )
     {
-        player.score = 0;
+        player.abzmBonusPoints = 0;
     }
 
     if ( isdefined( level.abzmDoublePointsActive ) && level.abzmDoublePointsActive )
@@ -1004,7 +1062,7 @@ awardPlayerPoints( player, amount )
         amount *= 2;
     }
 
-    player.score += amount;
+    player.abzmBonusPoints += amount;
 }
 
 isBotEntity( player )

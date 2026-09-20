@@ -35,8 +35,8 @@ When `scr_zm_bo2_enable` is enabled, the script applies BO2-inspired tuning for:
 - zombie health growth with easy-to-edit coefficients at the top of the GSC file;
 - sprint round threshold and crawler chance;
 - periodic special-wave logic that speeds up and lightens zombies on configured rounds;
-- power-up weighting plus in-script insta-kill, double-points, and delayed nuke handling;
-- revive/bleed-out pacing and BO2-style point reward constants.
+- in-script handling for common power-up types such as insta-kill, double points, and delayed nuke timing;
+- revive/bleed-out pacing plus BO2-style scripted point/reward constants for bot economy tuning.
 
 ## Dvars / settings
 
@@ -73,6 +73,6 @@ The main gameplay constants are intentionally grouped at the top of `auto_bots_b
 
 ## Known limitations
 
-- This repository does not include the game runtime or stock AW/S1x script set, so the script is provided as a self-contained source package and may need small hook-name adjustments if your modtools build uses different zombie/player/power-up notifies.
+- This repository does not include the game runtime or stock AW/S1x script set, so the script is provided as a self-contained source package and may need small hook-name adjustments if your modtools build uses different zombie/player/power-up notifies. Scripted bonus-point tracking is kept separate from stock HUD/persistence unless you wire it into your exact S1x runtime APIs.
 - Auto bots are implemented as a lightweight scripted behavior layer intended as a starting point for S1x modders, not as a replacement for a full engine-native navigation system.
 - Because there is no local GSC compiler or Exo Zombies runtime in this repository, validation for this contribution is limited to source review and folder/package correctness.
