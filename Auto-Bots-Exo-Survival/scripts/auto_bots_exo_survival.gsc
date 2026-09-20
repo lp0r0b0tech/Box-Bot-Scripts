@@ -190,6 +190,11 @@ abesIsExoSurvivalContext()
         return true;
     }
 
+    if ( isdefined( level.survivalMode ) && level.survivalMode )
+    {
+        return true;
+    }
+
     if ( hasExoSurvivalToken( getdvar( "ui_gametype" ) ) || hasExoSurvivalToken( getdvar( "g_gametype" ) ) || hasExoSurvivalToken( getdvar( "ui_mapname" ) ) )
     {
         return true;
@@ -521,6 +526,12 @@ attemptBotRevive()
         reviveProgress += 0.05;
     }
 
+    if ( !downed.abesDowned )
+    {
+        releaseReviveClaim( downed );
+        return true;
+    }
+
     if ( downed.abesDowned )
     {
         if ( tryUseReviveInteraction( downed ) )
@@ -551,20 +562,28 @@ claimReviveTarget( downed )
 
     downed.abesClaimLock = true;
 
-    claimAge = 999999;
-    if ( isdefined( downed.abesReviveClaimTime ) )
+    if ( isdefined( downed.abesReviveClaimant ) && downed.abesReviveClaimant != self )
     {
-        claimAge = (gettime() - downed.abesReviveClaimTime) / 1000.0;
-    }
+        claimAge = 999999;
+        if ( isdefined( downed.abesReviveClaimTime ) )
+        {
+            claimAge = (gettime() - downed.abesReviveClaimTime) / 1000.0;
+        }
 
-    if ( isdefined( downed.abesReviveClaimant ) && downed.abesReviveClaimant != self && claimAge < ABES_REVIVE_CLAIM_TIMEOUT_SEC )
-    {
-        downed.abesClaimLock = false;
-        return false;
+        if ( claimAge < ABES_REVIVE_CLAIM_TIMEOUT_SEC )
+        {
+            downed.abesClaimLock = false;
+            return false;
+        }
     }
 
     downed.abesReviveClaimant = self;
     downed.abesReviveClaimTime = gettime();
+    if ( !isdefined( downed.abesReviveClaimant ) || downed.abesReviveClaimant != self )
+    {
+        downed.abesClaimLock = false;
+        return false;
+    }
     downed.abesClaimLock = false;
     return true;
 }
@@ -1048,8 +1067,7 @@ attemptPurchase( node, cost )
 
     if ( cost <= 0 )
     {
-        markInteractionSuccess( node );
-        return true;
+        return false;
     }
 
     if ( !isdefined( self.score ) )
