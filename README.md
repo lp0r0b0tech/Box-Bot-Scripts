@@ -9,4 +9,4 @@ S1x Advanced Warfare script packages
   - uses Exo abilities, equipment, and scorestreaks contextually
   - regroups with teammates, unsticks, and retreats when overwhelmed
 
-Install by copying `Auto-Bots-Exo-Survival` into `/s1x/`.
+Install by copying `Auto-Bots-Exo-Survival` into `/s1x/` so the script path is `/s1x/Auto-Bots-Exo-Survival/scripts/auto_bots_exo_survival.gsc`.

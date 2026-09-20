@@ -116,6 +116,7 @@ buildModState()
 
 initDvars()
 {
+    setdvarifuninitialized( "scr_es_autobots_enabled", ABES_DEFAULT_AUTOBOTS_ENABLED );
     setdvarifuninitialized( "scr_es_autobots_enable", ABES_DEFAULT_AUTOBOTS_ENABLED );
     setdvarifuninitialized( "scr_es_autobots_count", ABES_DEFAULT_BOT_COUNT );
     setdvarifuninitialized( "scr_es_autobots_skill", ABES_DEFAULT_BOT_SKILL );
@@ -139,7 +140,7 @@ initDvars()
 
 refreshRuntimeConfig()
 {
-    level.abes.autoBotsEnabled = getdvarint( "scr_es_autobots_enable" ) > 0;
+    level.abes.autoBotsEnabled = getdvarint( "scr_es_autobots_enabled" ) > 0 || getdvarint( "scr_es_autobots_enable" ) > 0;
     level.abes.botCount = abesClamp( getdvarint( "scr_es_autobots_count" ), 0, ABES_MAX_BOTS );
     level.abes.botSkill = abesClamp( getdvarfloat( "scr_es_autobots_skill" ), 0.25, 3.0 );
 
@@ -214,7 +215,7 @@ monitorPlayerConnections()
     for ( ;; )
     {
         level waittill( "connected", player );
-        player thread onPlayerConnected();
+        registerPlayerConnectionHandler( player );
     }
 }
 
@@ -227,21 +228,30 @@ initializeExistingPlayers()
         player = players[i];
         if ( isdefined( player ) )
         {
-            player thread onPlayerConnected();
+            registerPlayerConnectionHandler( player );
         }
     }
+}
+
+registerPlayerConnectionHandler( player )
+{
+    if ( !isdefined( player ) )
+    {
+        return;
+    }
+
+    if ( isdefined( player.abesConnectedHandlerStarted ) && player.abesConnectedHandlerStarted )
+    {
+        return;
+    }
+
+    player.abesConnectedHandlerStarted = true;
+    player thread onPlayerConnected();
 }
 
 onPlayerConnected()
 {
     self endon( "disconnect" );
-
-    if ( isdefined( self.abesConnectedHandlerStarted ) && self.abesConnectedHandlerStarted )
-    {
-        return;
-    }
-
-    self.abesConnectedHandlerStarted = true;
 
     if ( !isdefined( self.abesDownedTrackerStarted ) || !self.abesDownedTrackerStarted )
     {
@@ -538,7 +548,8 @@ claimReviveTarget( downed )
 
     downed.abesReviveClaimant = self;
     downed.abesReviveClaimTime = gettime();
-    return true;
+    wait 0;
+    return isdefined( downed.abesReviveClaimant ) && downed.abesReviveClaimant == self;
 }
 
 reviveClaimStillValid( downed )
@@ -1049,6 +1060,8 @@ moveToAndUse( node )
     self.abesLastInteractTarget = node;
     self.abesLastInteractTime = gettime();
     node notify( "trigger", self );
+    node notify( "use", self );
+    self notify( "+activate" );
     return true;
 }
 
