@@ -306,8 +306,7 @@ enforceBo2Bleedout()
 
     if ( self.abzmDowned )
     {
-        self notify( "abzm_force_bleedout" );
-        self suicide();
+        self notify( "bleed_out" );
     }
 }
 
@@ -1122,7 +1121,7 @@ attemptPurchase( node, cost )
 
     wait 0.05;
 
-    if ( isdefined( self.score ) && self.score <= (pointsBefore - cost) )
+    if ( isdefined( self.score ) && self.score < pointsBefore )
     {
         self.abzmWallet = self.score;
         return true;
@@ -1364,7 +1363,7 @@ isPotentialPowerup( entity )
         return false;
     }
 
-    return entityMatchesToken( entity, "instakill" ) || entityMatchesToken( entity, "doublepoints" ) || entityMatchesToken( entity, "nuke" ) || entityMatchesToken( entity, "maxammo" ) || entityMatchesToken( entity, "carpenter" ) || entityMatchesToken( entity, "powerup" );
+    return entityMatchesToken( entity, "instakill" ) || entityMatchesToken( entity, "doublepoints" ) || entityMatchesToken( entity, "double_points" ) || entityMatchesToken( entity, "nuke" ) || entityMatchesToken( entity, "maxammo" ) || entityMatchesToken( entity, "carpenter" ) || entityMatchesToken( entity, "powerup" );
 }
 
 canonicalPowerupType( powerup )

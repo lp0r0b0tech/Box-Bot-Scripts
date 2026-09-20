@@ -54,7 +54,7 @@ When `scr_zm_bo2_enable` is enabled, the script applies BO2-inspired tuning for:
 
 ### BO2 Feel Tuning
 
-These defaults are applied with `setdvarifuninitialized`, so existing S1x dvar values are preserved and only missing values are initialized by the script. After startup, the script re-reads these dvars during its runtime loops, so changing them later updates behavior without reinitializing defaults.
+These defaults are applied with `setdvarifuninitialized`, so existing S1x dvar values are preserved and only missing values are initialized by the script. After startup, the script re-reads these dvars during its runtime loops, so changing them later updates future bot logic immediately, while BO2 round-tuning changes fully settle on the next round retune or newly discovered zombie.
 
 - `scr_zm_bo2_enable` - `0/1`, master switch for BO2-style zombie tuning.
 - `scr_zm_bo2_sprint_round` - round where sprint behavior starts.
