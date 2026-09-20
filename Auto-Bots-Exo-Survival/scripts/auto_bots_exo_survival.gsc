@@ -185,27 +185,22 @@ abesIsExoSurvivalContext()
         return false;
     }
 
-    if ( isdefined( level.survivalMode ) && level.survivalMode )
+    if ( hasExoSurvivalToken( gt ) || hasExoSurvivalToken( pl ) || hasExoSurvivalToken( mn ) )
     {
         return true;
     }
 
-    if ( containsAny2( gt, "survival", "suv" ) )
-    {
-        return true;
-    }
-
-    if ( containsAny4( pl, "exo survival", "exo_survival", "survival", "coop" ) )
-    {
-        return true;
-    }
-
-    if ( containsAny3( mn, "survival", "cp_", "exo" ) )
+    if ( isdefined( level.survivalMode ) && level.survivalMode && (containsAny2( safeLower( getdvar( "ui_mapname" ) ), "exo", "survival" ) || containsAny2( mn, "exo", "survival" )) )
     {
         return true;
     }
 
     return false;
+}
+
+hasExoSurvivalToken( value )
+{
+    return stringContainsToken( value, "exo survival" ) || stringContainsToken( value, "exo_survival" );
 }
 
 monitorPlayerConnections()
@@ -341,7 +336,7 @@ spawnAutoBot( botIndex )
     bot.abesIsBot = true;
     bot.pers["isBot"] = true;
     bot.abesSkill = level.abes.botSkill;
-    bot thread onPlayerConnected();
+    registerPlayerConnectionHandler( bot );
     return true;
 }
 
@@ -471,9 +466,20 @@ attemptBotRevive()
     self moveto( downed.origin, 0.35 );
 
     reviveMoveStart = gettime();
-    while ( distance( self.origin, downed.origin ) > ABES_REVIVE_RANGE )
+    while ( true )
     {
-        if ( gettime() - reviveMoveStart >= ABES_REVIVE_MOVE_TIMEOUT_MS || !reviveClaimStillValid( downed ) )
+        if ( !isdefined( downed ) || !downed.abesDowned || !reviveClaimStillValid( downed ) )
+        {
+            releaseReviveClaim( downed );
+            return false;
+        }
+
+        if ( distance( self.origin, downed.origin ) <= ABES_REVIVE_RANGE )
+        {
+            break;
+        }
+
+        if ( gettime() - reviveMoveStart >= ABES_REVIVE_MOVE_TIMEOUT_MS )
         {
             releaseReviveClaim( downed );
             return false;
@@ -546,8 +552,7 @@ claimReviveTarget( downed )
 
     downed.abesReviveClaimant = self;
     downed.abesReviveClaimTime = gettime();
-    wait 0;
-    return isdefined( downed.abesReviveClaimant ) && downed.abesReviveClaimant == self;
+    return true;
 }
 
 reviveClaimStillValid( downed )
@@ -993,8 +998,15 @@ getClosestInteractable( kind )
 attemptPurchase( node, cost )
 {
     scoreBefore = undefined;
+    weaponBefore = undefined;
+    clipBefore = -1;
 
     if ( !isdefined( node ) )
+    {
+        return false;
+    }
+
+    if ( interactionOnCooldown( node ) )
     {
         return false;
     }
@@ -1009,6 +1021,12 @@ attemptPurchase( node, cost )
         scoreBefore = self.score;
     }
 
+    weaponBefore = self getcurrentweapon();
+    if ( isdefined( weaponBefore ) )
+    {
+        clipBefore = self getweaponammoclip( weaponBefore );
+    }
+
     if ( !moveToAndUse( node ) )
     {
         return false;
@@ -1016,6 +1034,7 @@ attemptPurchase( node, cost )
 
     if ( cost <= 0 )
     {
+        markInteractionSuccess( node );
         return true;
     }
 
@@ -1024,19 +1043,36 @@ attemptPurchase( node, cost )
         return false;
     }
 
-    wait 0.2;
+    for ( elapsed = 0.0; elapsed < 1.0; elapsed += 0.1 )
+    {
+        wait 0.1;
 
-    return isdefined( scoreBefore ) && isdefined( self.score ) && self.score < scoreBefore;
+        if ( isdefined( scoreBefore ) && isdefined( self.score ) && self.score < scoreBefore )
+        {
+            markInteractionSuccess( node );
+            return true;
+        }
+
+        weaponNow = self getcurrentweapon();
+        if ( isdefined( weaponBefore ) && isdefined( weaponNow ) && weaponNow != weaponBefore )
+        {
+            markInteractionSuccess( node );
+            return true;
+        }
+
+        if ( isdefined( weaponNow ) && clipBefore >= 0 && self getweaponammoclip( weaponNow ) > clipBefore )
+        {
+            markInteractionSuccess( node );
+            return true;
+        }
+    }
+
+    return false;
 }
 
 moveToAndUse( node )
 {
     if ( !isdefined( node ) )
-    {
-        return false;
-    }
-
-    if ( isdefined( self.abesLastInteractTarget ) && self.abesLastInteractTarget == node && isdefined( self.abesLastInteractTime ) && (gettime() - self.abesLastInteractTime) < 700 )
     {
         return false;
     }
@@ -1062,12 +1098,21 @@ moveToAndUse( node )
         wait 0.05;
     }
 
-    self.abesLastInteractTarget = node;
-    self.abesLastInteractTime = gettime();
     node notify( "trigger", self );
     node notify( "use", self );
     self notify( "+activate" );
     return true;
+}
+
+interactionOnCooldown( node )
+{
+    return isdefined( self.abesLastInteractTarget ) && self.abesLastInteractTarget == node && isdefined( self.abesLastInteractTime ) && (gettime() - self.abesLastInteractTime) < 700;
+}
+
+markInteractionSuccess( node )
+{
+    self.abesLastInteractTarget = node;
+    self.abesLastInteractTime = gettime();
 }
 
 getInteractableCandidates()
