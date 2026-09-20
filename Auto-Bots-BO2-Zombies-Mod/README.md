@@ -87,7 +87,7 @@ Normal zombie health is calculated in one shared path (`calculateBo2ZombieHealth
 3. actual rounds `ABZM_BO2_REPLAY_PHASE_START_ROUND` through `ABZM_BO2_REPLAY_PHASE_END_ROUND` then replay the original legacy growth pattern:
    - by default, actual rounds `56-100` replay legacy rounds `2-55`, using legacy round `2` as the baseline delta anchor
    - the replay growth is added on top of the easier round-55 baseline so the curve never drops between phases
-4. rounds after the replay window continue from the replay endpoint’s integer legacy round and then advance one-for-one through later legacy rounds, while `ABZM_BO2_HEALTH_CAP` remains the defensive ceiling.
+4. rounds after the replay window continue from the replay endpoint’s integer legacy round and then advance one-for-one through later legacy rounds as whole legacy-round steps (no interpolation past that boundary), while `ABZM_BO2_HEALTH_CAP` remains the defensive ceiling.
 
 Default remap values:
 
