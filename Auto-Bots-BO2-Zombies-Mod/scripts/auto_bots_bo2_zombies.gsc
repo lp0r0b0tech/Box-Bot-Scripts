@@ -558,11 +558,8 @@ attemptBotRevive()
     {
         downed.abzmReviver = undefined;
         self.abzmReviveTarget = undefined;
-        downed.abzmBleedoutTime = undefined;
-        downed notify( "trigger", self );
-        downed notify( "player_revived", self );
-        downed notify( "revived" );
-        level notify( "player_revived", downed, self );
+        downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
+        signalReviveSuccess( downed, self );
         awardPlayerPoints( self, ABZM_BO2_REVIVE_POINTS );
         return true;
     }
@@ -606,10 +603,7 @@ attemptPerkPurchase()
     }
 
     perkNode = getClosestInteractable( "perk" );
-    if ( isdefined( perkNode ) && moveToAndUse( perkNode ) )
-    {
-        spendPlayerPoints( self, 2000 );
-    }
+    attemptPurchase( perkNode, 2000 );
 }
 
 attemptUtilityPurchase()
@@ -617,9 +611,8 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, 5000 ) )
     {
         papNode = getClosestInteractable( "packapunch" );
-        if ( isdefined( papNode ) && moveToAndUse( papNode ) )
+        if ( attemptPurchase( papNode, 5000 ) )
         {
-            spendPlayerPoints( self, 5000 );
             return;
         }
     }
@@ -627,9 +620,8 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, 1250 ) )
     {
         doorNode = getClosestInteractable( "door" );
-        if ( isdefined( doorNode ) && moveToAndUse( doorNode ) )
+        if ( attemptPurchase( doorNode, 1250 ) )
         {
-            spendPlayerPoints( self, 1250 );
             return;
         }
     }
@@ -637,9 +629,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, 2000 ) )
     {
         exoNode = getClosestInteractable( "exo" );
-        if ( isdefined( exoNode ) && moveToAndUse( exoNode ) )
+        if ( attemptPurchase( exoNode, 2000 ) )
         {
-            spendPlayerPoints( self, 2000 );
+            return;
         }
     }
 }
@@ -1115,6 +1107,30 @@ moveToAndUse( node )
     return true;
 }
 
+attemptPurchase( node, cost )
+{
+    pointsBefore = getTrackedPlayerPoints( self );
+    if ( isdefined( self.score ) )
+    {
+        pointsBefore = self.score;
+    }
+
+    if ( !isdefined( node ) || !moveToAndUse( node ) )
+    {
+        return false;
+    }
+
+    wait 0.05;
+
+    if ( isdefined( self.score ) && self.score <= (pointsBefore - cost) )
+    {
+        self.abzmWallet = self.score;
+        return true;
+    }
+
+    return false;
+}
+
 chooseTrainingAnchor()
 {
     closestZombie = getClosestZombie();
@@ -1282,6 +1298,12 @@ clearActiveReviveClaim()
     }
 
     self.abzmReviveTarget = undefined;
+}
+
+signalReviveSuccess( downed, reviver )
+{
+    downed notify( "revived", reviver );
+    level notify( "player_revived", downed, reviver );
 }
 
 isBotEntity( player )
