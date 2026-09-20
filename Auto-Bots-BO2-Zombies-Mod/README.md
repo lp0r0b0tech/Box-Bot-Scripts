@@ -61,7 +61,7 @@ These defaults are applied with `setdvarifuninitialized`, so existing S1x dvar v
 - `scr_zm_bo2_crawler_chance` - crawler spawn chance for later rounds.
 - `scr_zm_bo2_special_round_interval` - how often special rounds repeat.
 - `scr_zm_bo2_special_round_offset` - first special round number.
-- `scr_zm_bo2_powerups_enable` - `0/1`, whether BO2-style drop weighting is applied.
+- `scr_zm_bo2_powerups_enable` - `0/1`, whether BO2-style power-up metadata/duration tuning is applied to discovered pickups.
 
 ## Tunable constants
 

@@ -183,8 +183,8 @@ abzmBoot()
 refreshRuntimeConfig()
 {
     level.abzm.autoBotsEnabled = getdvarint( "scr_zm_autobots_enable" ) > 0;
-    level.abzm.botCount = clamp( getdvarint( "scr_zm_autobots_count" ), 0, 4 );
-    level.abzm.botSkill = clamp( getdvarfloat( "scr_zm_autobots_skill" ), 0.25, 3.0 );
+    level.abzm.botCount = abzmClamp( getdvarint( "scr_zm_autobots_count" ), 0, 4 );
+    level.abzm.botSkill = abzmClamp( getdvarfloat( "scr_zm_autobots_skill" ), 0.25, 3.0 );
     level.abzm.botsCanRevive = getdvarint( "scr_zm_autobots_revive" ) > 0;
     level.abzm.botsAutoBuyPerks = getdvarint( "scr_zm_autobots_auto_buy_perks" ) > 0;
     level.abzm.botsAutoBuyUpgrades = getdvarint( "scr_zm_autobots_auto_buy_upgrades" ) > 0;
@@ -192,7 +192,7 @@ refreshRuntimeConfig()
 
     level.abzm.bo2Enabled = getdvarint( "scr_zm_bo2_enable" ) > 0;
     level.abzm.sprintRound = max( 1, getdvarint( "scr_zm_bo2_sprint_round" ) );
-    level.abzm.crawlerChance = clamp( getdvarfloat( "scr_zm_bo2_crawler_chance" ), 0.0, 1.0 );
+    level.abzm.crawlerChance = abzmClamp( getdvarfloat( "scr_zm_bo2_crawler_chance" ), 0.0, 1.0 );
     level.abzm.specialRoundInterval = max( 0, getdvarint( "scr_zm_bo2_special_round_interval" ) );
     level.abzm.specialRoundOffset = max( 1, getdvarint( "scr_zm_bo2_special_round_offset" ) );
     level.abzm.bo2PowerupsEnabled = getdvarint( "scr_zm_bo2_powerups_enable" ) > 0;
@@ -541,7 +541,12 @@ attemptBotRevive()
     {
         downed.abzmReviver = undefined;
         self.abzmReviveTarget = undefined;
+        downed.abzmDowned = false;
+        downed.abzmBleedoutTime = undefined;
+        downed notify( "trigger", self );
+        downed notify( "player_revived", self );
         downed notify( "revived" );
+        level notify( "player_revived", downed, self );
         awardPlayerPoints( self, ABZM_BO2_REVIVE_POINTS );
         return true;
     }
@@ -1185,6 +1190,21 @@ awardPlayerPoints( player, amount )
     {
         player.score = player.abzmWallet;
     }
+}
+
+abzmClamp( value, minimum, maximum )
+{
+    if ( value < minimum )
+    {
+        return minimum;
+    }
+
+    if ( value > maximum )
+    {
+        return maximum;
+    }
+
+    return value;
 }
 
 clearActiveReviveClaim()
