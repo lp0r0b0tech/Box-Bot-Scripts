@@ -135,7 +135,7 @@ initDvars()
 
 refreshRuntimeConfig()
 {
-    level.abes.autoBotsEnabled = getdvarint( "scr_es_autobots_enable" ) > 0;
+    level.abes.autoBotsEnabled = getdvarint( "scr_es_autobots_enable" ) > 0 || getdvarint( "scr_es_autobots_enabled" ) > 0;
     level.abes.botCount = abesClamp( getdvarint( "scr_es_autobots_count" ), 0, ABES_MAX_BOTS );
     level.abes.botSkill = abesClamp( getdvarfloat( "scr_es_autobots_skill" ), 0.25, 3.0 );
 
@@ -1066,7 +1066,8 @@ attemptPurchase( node, cost )
 
         if ( isdefined( scoreBefore ) && isdefined( self.score ) && self.score < scoreBefore )
         {
-            return false;
+            markInteractionSuccess( node );
+            return true;
         }
 
         weaponNow = self getcurrentweapon();
@@ -1394,7 +1395,7 @@ isBotEntity( player )
         return false;
     }
 
-    if ( isdefined( player.pers["isBot"] ) && player.pers["isBot"] )
+    if ( isdefined( player.pers ) && isdefined( player.pers["isBot"] ) && player.pers["isBot"] )
     {
         return true;
     }
