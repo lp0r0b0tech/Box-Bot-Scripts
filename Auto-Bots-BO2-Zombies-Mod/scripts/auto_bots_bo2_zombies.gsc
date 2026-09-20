@@ -2,6 +2,11 @@
 //
 // Self-contained S1x entry script. Keep the constants grouped at the top so the
 // package can be tuned quickly without hunting through the logic below.
+//
+// Compatibility notes:
+// - Avoid relying on a custom GetMode() helper; use local zombies-context checks.
+// - Use polling fallbacks for zombies/power-ups because notify names can vary by build.
+// - Keep interactable matching token-driven so AW/S1x map trigger names are easy to retune.
 
 #define ABZM_DEFAULT_AUTOBOTS_ENABLED         0
 #define ABZM_DEFAULT_BOT_COUNT                3
@@ -49,9 +54,27 @@
 #define ABZM_BO2_DROP_WEIGHT_CARPENTER        6
 #define ABZM_BO2_DROP_WEIGHT_2XP              0
 
+main()
+{
+    init();
+}
+
 init()
 {
-    if ( GetMode() != "zombies" )
+    if ( isdefined( level.abzmInitStarted ) && level.abzmInitStarted )
+    {
+        return;
+    }
+
+    level.abzmInitStarted = true;
+    level thread abzmDeferredInit();
+}
+
+abzmDeferredInit()
+{
+    wait 0.25;
+
+    if ( !abzmIsZombieContext() )
     {
         return;
     }
@@ -59,6 +82,47 @@ init()
     level.abzm = buildModState();
     initDvars();
     level thread abzmBoot();
+}
+
+abzmIsZombieContext()
+{
+    if ( isdefined( level.zombiemode ) && level.zombiemode )
+    {
+        return true;
+    }
+
+    if ( isdefined( level.zombieMap ) && level.zombieMap )
+    {
+        return true;
+    }
+
+    if ( isdefined( level.gametype ) && stringContainsToken( level.gametype, "zom" ) )
+    {
+        return true;
+    }
+
+    if ( dvarContainsToken( "ui_gametype", "zom" ) || dvarContainsToken( "g_gametype", "zom" ) )
+    {
+        return true;
+    }
+
+    return dvarContainsToken( "mapname", "zm" ) || dvarContainsToken( "mapname", "zombie" );
+}
+
+dvarContainsToken( dvarName, token )
+{
+    value = getdvar( dvarName );
+    return stringContainsToken( value, token );
+}
+
+stringContainsToken( value, token )
+{
+    if ( !isdefined( value ) || !isdefined( token ) )
+    {
+        return false;
+    }
+
+    return issubstr( value, token );
 }
 
 buildModState()
@@ -112,6 +176,8 @@ abzmBoot()
     level thread maintainAutoBots();
     level thread monitorZombieSpawns();
     level thread monitorPowerupSpawns();
+    level thread periodicZombieRefresh();
+    level thread periodicPowerupRefresh();
 }
 
 refreshRuntimeConfig()
@@ -245,6 +311,8 @@ applyRoundTuning( roundNumber )
     {
         level.abzm.lastSpecialRound = roundNumber;
     }
+
+    retuneTrackedZombies();
 }
 
 shouldRunSpecialRound( roundNumber )
@@ -565,7 +633,51 @@ monitorZombieSpawns()
             continue;
         }
 
-        rememberZombie( zombie );
+        trackZombieEntity( zombie );
+    }
+}
+
+periodicZombieRefresh()
+{
+    level endon( "game_ended" );
+
+    for ( ;; )
+    {
+        if ( level.abzm.bo2Enabled )
+        {
+            scanForZombieEntities();
+        }
+
+        wait 0.5;
+    }
+}
+
+scanForZombieEntities()
+{
+    zombies = [];
+    appendEntArray( zombies, getentarray( "actor", "classname" ) );
+    appendEntArray( zombies, getentarray( "agent", "classname" ) );
+    appendEntArray( zombies, getentarray( "zombie", "classname" ) );
+
+    for ( i = 0; i < zombies.size; i++ )
+    {
+        zombie = zombies[i];
+        if ( isZombieEntity( zombie ) )
+        {
+            trackZombieEntity( zombie );
+        }
+    }
+}
+
+trackZombieEntity( zombie )
+{
+    if ( !isdefined( zombie ) || !isZombieEntity( zombie ) )
+    {
+        return;
+    }
+
+    if ( rememberZombie( zombie ) )
+    {
         zombie thread tuneZombieForCurrentRound();
         zombie thread awardZombieDeathPoints();
     }
@@ -575,10 +687,41 @@ rememberZombie( zombie )
 {
     if ( !isdefined( zombie ) )
     {
-        return;
+        return false;
     }
 
+    if ( isdefined( zombie.abzmTracked ) && zombie.abzmTracked )
+    {
+        return false;
+    }
+
+    zombie.abzmTracked = true;
     level.abzm.trackedZombies[level.abzm.trackedZombies.size] = zombie;
+    return true;
+}
+
+retuneTrackedZombies()
+{
+    zombies = getTrackedZombies();
+
+    for ( i = 0; i < zombies.size; i++ )
+    {
+        zombie = zombies[i];
+        if ( isdefined( zombie ) && isalive( zombie ) && ( !isdefined( zombie.abzmRetunePending ) || !zombie.abzmRetunePending ) )
+        {
+            zombie.abzmRetunePending = true;
+            zombie thread retuneActiveZombie();
+        }
+    }
+}
+
+retuneActiveZombie()
+{
+    self endon( "death" );
+
+    wait 0.05;
+    tuneZombieForCurrentRound();
+    self.abzmRetunePending = false;
 }
 
 awardZombieDeathPoints()
@@ -633,12 +776,17 @@ tuneZombieForCurrentRound()
 
     self.maxhealth = health;
     self.health = health;
-    self walkspeed( speed );
+    self.abzmDesiredSpeed = speed;
+    self.abzmDesiredWalkSpeed = speed;
+    self.abzmDesiredRunSpeed = speed;
+    self.runspeed = speed;
+    self.walkspeed = speed;
 
     if ( roundNumber >= level.abzm.sprintRound )
     {
         self.abzmCanSprint = true;
-        self runspeed( speed );
+        self.abzmDesiredRunSpeed = speed;
+        self.runspeed = speed;
     }
 }
 
@@ -659,8 +807,45 @@ monitorPowerupSpawns()
     }
 }
 
+periodicPowerupRefresh()
+{
+    level endon( "game_ended" );
+
+    for ( ;; )
+    {
+        if ( level.abzm.bo2Enabled && level.abzm.bo2PowerupsEnabled )
+        {
+            scanForPowerupEntities();
+        }
+
+        wait 0.5;
+    }
+}
+
+scanForPowerupEntities()
+{
+    powerups = [];
+    appendEntArray( powerups, getentarray( "item", "classname" ) );
+    appendEntArray( powerups, getentarray( "trigger", "classname" ) );
+    appendEntArray( powerups, getentarray( "script_model", "classname" ) );
+
+    for ( i = 0; i < powerups.size; i++ )
+    {
+        powerup = powerups[i];
+        if ( isPotentialPowerup( powerup ) )
+        {
+            tunePowerupDrop( powerup );
+        }
+    }
+}
+
 tunePowerupDrop( powerup )
 {
+    if ( isdefined( powerup.abzmPowerupTracked ) && powerup.abzmPowerupTracked )
+    {
+        return;
+    }
+
     type = "unknown";
     if ( isdefined( powerup.targetname ) )
     {
@@ -672,6 +857,7 @@ tunePowerupDrop( powerup )
     }
 
     powerup.abzmDropType = type;
+    powerup.abzmPowerupTracked = true;
 
     switch ( type )
     {
@@ -804,13 +990,23 @@ getClosestDownedTeammate()
 
 getClosestInteractable( kind )
 {
-    nodes = getentarray( kind, "targetname" );
+    nodes = [];
+    appendEntArray( nodes, getentarray( "trigger", "classname" ) );
+    appendEntArray( nodes, getentarray( "trigger_use", "classname" ) );
+    appendEntArray( nodes, getentarray( "script_model", "classname" ) );
+    appendEntArray( nodes, getentarray( "script_brushmodel", "classname" ) );
+
     best = undefined;
     bestDist = 999999;
 
     for ( i = 0; i < nodes.size; i++ )
     {
         node = nodes[i];
+        if ( !isDesiredInteractable( node, kind ) )
+        {
+            continue;
+        }
+
         dist = distance( self.origin, node.origin );
         if ( dist < bestDist )
         {
@@ -831,6 +1027,13 @@ moveToAndUse( node )
 
     self setlookatpos( node.origin );
     self moveto( node.origin, 0.25 );
+
+    if ( isdefined( node.abzmLastUseTime ) && (gettime() - node.abzmLastUseTime) < 500 )
+    {
+        return;
+    }
+
+    node.abzmLastUseTime = gettime();
     node notify( "trigger", self );
 }
 
@@ -951,6 +1154,10 @@ spendPlayerPoints( player, amount )
 {
     current = getTrackedPlayerPoints( player );
     player.abzmWallet = max( 0, current - amount );
+    if ( isdefined( player.score ) )
+    {
+        player.score = player.abzmWallet;
+    }
 }
 
 awardPlayerPoints( player, amount )
@@ -963,6 +1170,10 @@ awardPlayerPoints( player, amount )
     }
 
     player.abzmWallet = current + amount;
+    if ( isdefined( player.score ) )
+    {
+        player.score = player.abzmWallet;
+    }
 }
 
 isBotEntity( player )
@@ -978,6 +1189,112 @@ isBotEntity( player )
     }
 
     if ( isdefined( player.abzmIsBot ) && player.abzmIsBot )
+    {
+        return true;
+    }
+
+    return false;
+}
+
+appendEntArray( destination, source )
+{
+    if ( !isdefined( source ) )
+    {
+        return;
+    }
+
+    for ( i = 0; i < source.size; i++ )
+    {
+        if ( isdefined( source[i] ) )
+        {
+            destination[destination.size] = source[i];
+        }
+    }
+}
+
+isZombieEntity( entity )
+{
+    if ( !isdefined( entity ) )
+    {
+        return false;
+    }
+
+    if ( isdefined( entity.classname ) && entity.classname == "actor" )
+    {
+        return true;
+    }
+
+    return entityMatchesToken( entity, "zombie" ) || entityMatchesToken( entity, "exo_zm" ) || entityMatchesToken( entity, "infected" );
+}
+
+isPotentialPowerup( entity )
+{
+    if ( !isdefined( entity ) )
+    {
+        return false;
+    }
+
+    return entityMatchesToken( entity, "instakill" ) || entityMatchesToken( entity, "doublepoints" ) || entityMatchesToken( entity, "nuke" ) || entityMatchesToken( entity, "maxammo" ) || entityMatchesToken( entity, "carpenter" ) || entityMatchesToken( entity, "powerup" );
+}
+
+isDesiredInteractable( entity, kind )
+{
+    if ( !isdefined( entity ) )
+    {
+        return false;
+    }
+
+    switch ( kind )
+    {
+        case "perk":
+            return entityMatchesToken( entity, "perk" ) || entityMatchesToken( entity, "vending" ) || entityMatchesToken( entity, "perkacola" );
+
+        case "packapunch":
+            return entityMatchesToken( entity, "pack" ) || entityMatchesToken( entity, "pap" ) || entityMatchesToken( entity, "upgrade" );
+
+        case "door":
+            return entityMatchesToken( entity, "door" ) || entityMatchesToken( entity, "debris" ) || entityMatchesToken( entity, "gate" );
+
+        case "exo":
+            return entityMatchesToken( entity, "exo" ) || entityMatchesToken( entity, "ability" ) || entityMatchesToken( entity, "boost" );
+    }
+
+    return false;
+}
+
+entityMatchesToken( entity, token )
+{
+    if ( !isdefined( entity ) || !isdefined( token ) )
+    {
+        return false;
+    }
+
+    if ( isdefined( entity.targetname ) && stringContainsToken( entity.targetname, token ) )
+    {
+        return true;
+    }
+
+    if ( isdefined( entity.script_noteworthy ) && stringContainsToken( entity.script_noteworthy, token ) )
+    {
+        return true;
+    }
+
+    if ( isdefined( entity.script_linkname ) && stringContainsToken( entity.script_linkname, token ) )
+    {
+        return true;
+    }
+
+    if ( isdefined( entity.script_string ) && stringContainsToken( entity.script_string, token ) )
+    {
+        return true;
+    }
+
+    if ( isdefined( entity.classname ) && stringContainsToken( entity.classname, token ) )
+    {
+        return true;
+    }
+
+    if ( isdefined( entity.model ) && stringContainsToken( entity.model, token ) )
     {
         return true;
     }

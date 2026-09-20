@@ -27,6 +27,7 @@ When `scr_zm_autobots_enable` is enabled, the script keeps a configurable number
 - buy nearby perks, doors, Pack-a-Punch, and exo utility when allowed by dvars;
 - use frag/tactical equipment when surrounded;
 - initialize S1x test clients directly from the script when auto-spawned so their bot loop does not rely only on a later connect notify.
+- search interactables by broad AW/S1x-friendly trigger/name tokens instead of assuming a single exact targetname per map.
 
 ### 2) BO2-style zombies feel
 
@@ -35,6 +36,7 @@ When `scr_zm_bo2_enable` is enabled, the script applies BO2-inspired tuning for:
 - zombie health growth with easy-to-edit coefficients at the top of the GSC file;
 - sprint round threshold and crawler chance;
 - periodic special-wave logic that speeds up and lightens zombies on configured rounds;
+- polling fallbacks that rescan likely zombie and power-up entities if your S1x build uses different spawn notifies;
 - power-up helper metadata/duration values grouped for build-specific S1x hook-up if you want to extend stock pickups;
 - revive/bleed-out pacing plus BO2-style scripted point/reward constants for bot economy tuning.
 
@@ -69,10 +71,12 @@ The main gameplay constants are intentionally grouped at the top of `auto_bots_b
 - walk/run/sprint/crawler movement speeds;
 - point rewards and bot wallet tuning;
 - revive and bleed-out timing;
+- simple token matching used to find AW/S1x perks, doors, PaP, exo stations, zombies, and power-ups;
 - power-up duration metadata.
 
 ## Known limitations
 
 - This repository does not include the game runtime or stock AW/S1x script set, so the script is provided as a self-contained source package and may need small hook-name adjustments if your modtools build uses different zombie/player/power-up notifies. Bot spending uses a script-side wallet in this source-only package; if you want stock HUD/persistence to match exactly, wire those point changes into your exact S1x runtime APIs.
+- The script now avoids a custom `GetMode()` dependency and instead uses local zombies-context checks plus polling fallbacks, but exact AW/S1x hook names can still vary between builds and may need light retuning.
 - Auto bots are implemented as a lightweight scripted behavior layer intended as a starting point for S1x modders, not as a replacement for a full engine-native navigation system.
 - Because there is no local GSC compiler or Exo Zombies runtime in this repository, validation for this contribution is limited to source review and folder/package correctness.
