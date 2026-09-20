@@ -36,6 +36,8 @@
 #define ABZM_BO2_REVIVE_TIME                  5
 #define ABZM_BO2_REVIVE_RANGE                 96
 #define ABZM_BO2_RUN_ROUND                    3
+#define ABZM_BO2_SPECIAL_HEALTH_SCALE          0.75
+#define ABZM_BO2_SPECIAL_SPEED_BONUS           20
 
 #define ABZM_BO2_INSTAKILL_DURATION           30
 #define ABZM_BO2_DOUBLEPOINTS_DURATION        30
@@ -185,10 +187,26 @@ trackDownedState()
         if ( level.abzm.bo2Enabled )
         {
             self.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
+            self thread enforceBo2Bleedout();
         }
 
         self waittill_any( "revived", "spawned_player" );
         self.abzmDowned = false;
+    }
+}
+
+enforceBo2Bleedout()
+{
+    self endon( "disconnect" );
+    self endon( "revived" );
+    self endon( "spawned_player" );
+
+    wait ABZM_BO2_BLEEDOUT_TIME;
+
+    if ( self.abzmDowned )
+    {
+        self notify( "bleed_out" );
+        self suicide();
     }
 }
 
@@ -393,13 +411,23 @@ attemptBotRevive()
     self.abzmState = "reviving";
     self setlookatpos( downed.origin );
     self moveto( downed.origin, 0.35 );
-    wait ABZM_BO2_REVIVE_TIME;
 
-    if ( isdefined( downed ) && isplayer( downed ) && downed.abzmDowned && distance( self.origin, downed.origin ) <= ABZM_BO2_REVIVE_RANGE )
+    reviveDeadline = gettime() + int( ABZM_BO2_REVIVE_TIME * 1000 );
+    while ( gettime() < reviveDeadline )
     {
-        downed notify( "revived" );
-        awardPlayerPoints( self, ABZM_BO2_REVIVE_POINTS );
-        return true;
+        if ( !isdefined( downed ) || !downed.abzmDowned )
+        {
+            return false;
+        }
+
+        if ( distance( self.origin, downed.origin ) <= ABZM_BO2_REVIVE_RANGE )
+        {
+            downed notify( "revived" );
+            awardPlayerPoints( self, ABZM_BO2_REVIVE_POINTS );
+            return true;
+        }
+
+        wait 0.05;
     }
 
     return false;
@@ -505,6 +533,7 @@ monitorZombieSpawns()
 
         rememberZombie( zombie );
         zombie thread tuneZombieForCurrentRound();
+        zombie thread awardZombieDeathPoints();
     }
 }
 
@@ -518,6 +547,31 @@ rememberZombie( zombie )
     level.abzm.trackedZombies[level.abzm.trackedZombies.size] = zombie;
 }
 
+awardZombieDeathPoints()
+{
+    self waittill( "death", attacker, inflictor, meansOfDeath, weapon, hitLoc );
+
+    if ( !isdefined( attacker ) || !isplayer( attacker ) )
+    {
+        return;
+    }
+
+    isHeadshot = isdefined( hitLoc ) && hitLoc == "head";
+    isMelee = isdefined( meansOfDeath ) && meansOfDeath == "MOD_MELEE";
+
+    if ( isMelee )
+    {
+        awardPlayerPoints( attacker, ABZM_BO2_MELEE_POINTS );
+        return;
+    }
+
+    awardPlayerPoints( attacker, ABZM_BO2_KILL_POINTS );
+    if ( isHeadshot )
+    {
+        awardPlayerPoints( attacker, ABZM_BO2_HEADSHOT_BONUS );
+    }
+}
+
 tuneZombieForCurrentRound()
 {
     self endon( "death" );
@@ -526,7 +580,13 @@ tuneZombieForCurrentRound()
     health = calculateBo2ZombieHealth( roundNumber );
     speed = calculateBo2ZombieSpeed( roundNumber );
 
-    if ( shouldMakeCrawler( roundNumber ) )
+    if ( level.abzm.forceSpecialRound )
+    {
+        self.abzmSpecialEnemy = true;
+        health = int( health * ABZM_BO2_SPECIAL_HEALTH_SCALE );
+        speed += ABZM_BO2_SPECIAL_SPEED_BONUS;
+    }
+    else if ( shouldMakeCrawler( roundNumber ) )
     {
         speed = ABZM_BO2_CRAWLER_SPEED;
         self.abzmCrawler = true;
@@ -540,11 +600,6 @@ tuneZombieForCurrentRound()
     {
         self.abzmCanSprint = true;
         self runspeed( speed );
-    }
-
-    if ( level.abzm.forceSpecialRound )
-    {
-        self.abzmSpecialEnemy = true;
     }
 }
 
@@ -583,6 +638,65 @@ tunePowerupDrop( powerup )
         case "nuke":
             powerup.abzmDelay = ABZM_BO2_NUKE_DELAY;
             break;
+    }
+
+    powerup thread handleTunedPowerup();
+}
+
+handleTunedPowerup()
+{
+    self endon( "death" );
+
+    self waittill_any( "trigger", "picked_up", "powerup_grab" );
+
+    switch ( self.abzmDropType )
+    {
+        case "instakill":
+            level thread activateInstakillWindow( self.abzmDuration );
+            break;
+
+        case "doublepoints":
+            level thread activateDoublePointsWindow( self.abzmDuration );
+            break;
+
+        case "nuke":
+            level thread triggerDelayedNuke( self.abzmDelay );
+            break;
+    }
+}
+
+activateInstakillWindow( duration )
+{
+    level.abzmInstakillActive = true;
+
+    zombies = getTrackedZombies();
+    for ( i = 0; i < zombies.size; i++ )
+    {
+        zombies[i].health = 1;
+    }
+
+    wait duration;
+    level.abzmInstakillActive = false;
+}
+
+activateDoublePointsWindow( duration )
+{
+    level.abzmDoublePointsActive = true;
+    wait duration;
+    level.abzmDoublePointsActive = false;
+}
+
+triggerDelayedNuke( delaySeconds )
+{
+    wait delaySeconds;
+
+    zombies = getTrackedZombies();
+    for ( i = 0; i < zombies.size; i++ )
+    {
+        if ( isdefined( zombies[i] ) && isalive( zombies[i] ) )
+        {
+            zombies[i] suicide();
+        }
     }
 }
 
@@ -883,6 +997,11 @@ awardPlayerPoints( player, amount )
     if ( !isdefined( player.score ) )
     {
         player.score = 0;
+    }
+
+    if ( isdefined( level.abzmDoublePointsActive ) && level.abzmDoublePointsActive )
+    {
+        amount *= 2;
     }
 
     player.score += amount;
