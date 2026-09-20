@@ -86,7 +86,7 @@ Normal zombie health is calculated in one shared path (`calculateBo2ZombieHealth
 3. after `ABZM_BO2_HEALTH_LEGACY_CURVE_END_ROUND`, the curve keeps scaling but eases toward `ABZM_BO2_HEALTH_SOFTCAP` by adding a bounded fraction of the remaining gap each round:
    - remaining gap `* ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE`
    - clamped between `ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP` and `ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP`
-4. `ABZM_BO2_HEALTH_CAP` remains the absolute defensive ceiling if you retune the constants.
+4. `ABZM_BO2_HEALTH_SOFTCAP` is the intended terminal late-round cap for this curve, while `ABZM_BO2_HEALTH_CAP` remains the defensive outer bound if you retune the soft cap above it or change the legacy exponential portion.
 
 Default late-round values:
 
