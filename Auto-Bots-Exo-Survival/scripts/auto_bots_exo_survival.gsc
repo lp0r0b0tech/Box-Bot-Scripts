@@ -135,16 +135,7 @@ initDvars()
 
 refreshRuntimeConfig()
 {
-    canonicalEnabled = getdvarint( "scr_es_autobots_enabled" );
-    legacyEnabled = getdvarint( "scr_es_autobots_enable" );
-    if ( canonicalEnabled != ABES_DEFAULT_AUTOBOTS_ENABLED )
-    {
-        level.abes.autoBotsEnabled = canonicalEnabled > 0;
-    }
-    else
-    {
-        level.abes.autoBotsEnabled = legacyEnabled > 0;
-    }
+    level.abes.autoBotsEnabled = getdvarint( "scr_es_autobots_enable" ) > 0;
     level.abes.botCount = abesClamp( getdvarint( "scr_es_autobots_count" ), 0, ABES_MAX_BOTS );
     level.abes.botSkill = abesClamp( getdvarfloat( "scr_es_autobots_skill" ), 0.25, 3.0 );
 
@@ -1069,19 +1060,13 @@ attemptPurchase( node, cost )
         return true;
     }
 
-    if ( !isdefined( self.score ) )
-    {
-        return false;
-    }
-
     for ( elapsed = 0.0; elapsed < 1.0; elapsed += 0.1 )
     {
         wait 0.1;
 
         if ( isdefined( scoreBefore ) && isdefined( self.score ) && self.score < scoreBefore )
         {
-            markInteractionSuccess( node );
-            return true;
+            return false;
         }
 
         weaponNow = self getcurrentweapon();

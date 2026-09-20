@@ -10,7 +10,7 @@ AI teammate package for **Call of Duty: Advanced Warfare Exo Survival** (not Zom
 
 ## Core dvars
 
-- `scr_es_autobots_enabled` (0/1) - enable Exo Survival bots (`scr_es_autobots_enable` is also accepted for compatibility)
+- `scr_es_autobots_enable` (0/1) - enable Exo Survival bots (`scr_es_autobots_enabled` is initialized as a compatibility alias)
 - `scr_es_autobots_count` (0-4) - desired bot count
 - `scr_es_autobots_skill` (0.25-3.0) - bot skill scalar
 - `scr_es_autobots_revive` (0/1) - revive downed allies
