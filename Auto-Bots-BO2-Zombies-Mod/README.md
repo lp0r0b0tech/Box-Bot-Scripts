@@ -96,7 +96,7 @@ Default late-round values:
 - `ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP 40`
 - `ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP 700`
 
-With those defaults, the curve stays unchanged through round `35`, normal zombies plateau at `15000` health by round `50`, and special rounds still apply `ABZM_BO2_SPECIAL_HEALTH_SCALE` on top of that base (`11250` health at round `100`). This package does not add separate round-based zombie damage scaling, so late-round survivability is governed mainly by the softened health curve plus the existing speed/special-round rules.
+With those defaults, the curve stays unchanged through round `35`, `calculateBo2ZombieHealth()` returns a normal-zombie base of `15000` from round `50` onward (including round `100`), and `tuneZombieForCurrentRound()` reduces special-round enemies to `11250` at round `100` by applying `ABZM_BO2_SPECIAL_HEALTH_SCALE` after that base health is calculated. This package does not add separate round-based zombie damage scaling, so late-round survivability is governed mainly by the softened health curve plus the existing speed/special-round rules.
 
 ## Known limitations
 
