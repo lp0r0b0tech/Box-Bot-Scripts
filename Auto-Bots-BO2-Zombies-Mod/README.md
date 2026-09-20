@@ -75,28 +75,30 @@ The main gameplay constants are intentionally grouped at the top of `auto_bots_b
 - simple token matching used to find AW/S1x perks, doors, PaP, exo stations, zombies, and power-ups;
 - power-up duration metadata.
 
-### Late-round health scaling
+### Round-remapped health scaling
 
 Normal zombie health is calculated in one shared path (`calculateBo2ZombieHealth`) that every tracked zombie spawn/retune route already uses:
 
-1. rounds `1` through `ABZM_BO2_HEALTH_CURVE_ROUND` use the existing linear curve:
-   - `ABZM_BO2_BASE_HEALTH + ((round - 1) * ABZM_BO2_HEALTH_INCREMENT)`
-2. rounds after that continue the existing BO2-feel exponential growth:
-   - previous round health `* ABZM_BO2_HEALTH_CURVE_MULTIPLIER`
-3. after `ABZM_BO2_HEALTH_LEGACY_CURVE_END_ROUND`, the curve keeps scaling but eases toward `ABZM_BO2_HEALTH_SOFTCAP` by adding a bounded fraction of the remaining gap each round:
-   - remaining gap `* ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE`
-   - clamped between `ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP` and `ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP`
-4. `ABZM_BO2_HEALTH_SOFTCAP` is the intended terminal late-round cap for this curve, while `ABZM_BO2_HEALTH_CAP` remains the defensive outer bound if you retune the soft cap above it or change the legacy exponential portion.
+1. the original BO2-style health function is preserved in `calculateLegacyBo2ZombieHealth`:
+   - rounds `1-10` use `ABZM_BO2_BASE_HEALTH + ((round - 1) * ABZM_BO2_HEALTH_INCREMENT)`
+   - later rounds keep the original `ABZM_BO2_HEALTH_CURVE_MULTIPLIER` exponential growth
+2. actual rounds `1` through `ABZM_BO2_EASY_PHASE_END_ROUND` are remapped onto an easier subset of those legacy rounds:
+   - actual round `1-55` is stretched across legacy rounds `1-20` by default
+3. actual rounds `ABZM_BO2_REPLAY_PHASE_START_ROUND` through `ABZM_BO2_REPLAY_PHASE_END_ROUND` then replay the original legacy growth pattern:
+   - by default, actual rounds `56-100` replay legacy rounds `1-55`
+   - the replay growth is added on top of the easier round-55 baseline so the curve never drops between phases
+4. rounds after the replay window continue advancing through later legacy rounds one-for-one, and `ABZM_BO2_HEALTH_CAP` remains the defensive ceiling.
 
-Default late-round values:
+Default remap values:
 
-- `ABZM_BO2_HEALTH_LEGACY_CURVE_END_ROUND 45`
-- `ABZM_BO2_HEALTH_SOFTCAP 32000`
-- `ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE 0.08`
-- `ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP 10`
-- `ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP 120`
+- `ABZM_BO2_EASY_PHASE_END_ROUND 55`
+- `ABZM_BO2_EASY_PHASE_TARGET_LEGACY_ROUND 20`
+- `ABZM_BO2_REPLAY_PHASE_START_ROUND 56`
+- `ABZM_BO2_REPLAY_PHASE_END_ROUND 100`
+- `ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND 1`
+- `ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND 55`
 
-With those defaults, the curve stays unchanged through round `45`, then rounds `46+` continue scaling on a slower late-round ramp instead of racing straight into the old `35000` cap. `calculateBo2ZombieHealth()` reaches `30584` at round `55` and snaps cleanly to the `32000` soft cap once it gets within the configured minimum step, so round `100` uses a `32000` normal-zombie base while `tuneZombieForCurrentRound()` reduces special-round enemies to `24000` at round `100` by applying `ABZM_BO2_SPECIAL_HEALTH_SCALE` after that base health is calculated. This package does not add separate round-based zombie damage scaling, so late-round survivability is governed mainly by the softened health curve plus the existing speed/special-round rules.
+With those defaults, rounds `1-55` are much easier than the old direct curve and round `55` lands at `2717` health instead of `35000`. After that, the later game replays the original round-1-through-55 scaling profile on top of that easier baseline, so `calculateBo2ZombieHealth()` reaches `4853` at round `70`, `26250` at round `90`, and hits the `35000` defensive cap by round `100`. `tuneZombieForCurrentRound()` still applies `ABZM_BO2_SPECIAL_HEALTH_SCALE` after the base health is calculated, so round-100 special enemies land at `26250`. This package does not add separate round-based zombie damage scaling, so survivability is driven mainly by this remapped health curve plus the existing speed/special-round rules.
 
 ## Known limitations
 

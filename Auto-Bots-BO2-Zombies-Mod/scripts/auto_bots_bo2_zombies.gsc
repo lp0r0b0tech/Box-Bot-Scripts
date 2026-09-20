@@ -27,11 +27,12 @@
 #define ABZM_BO2_HEALTH_CURVE_ROUND           10
 #define ABZM_BO2_HEALTH_CURVE_MULTIPLIER      1.10
 #define ABZM_BO2_HEALTH_CAP                   35000
-#define ABZM_BO2_HEALTH_LEGACY_CURVE_END_ROUND 45
-#define ABZM_BO2_HEALTH_SOFTCAP               32000
-#define ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE 0.08
-#define ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP      10
-#define ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP      120
+#define ABZM_BO2_EASY_PHASE_END_ROUND         55
+#define ABZM_BO2_EASY_PHASE_TARGET_LEGACY_ROUND 20
+#define ABZM_BO2_REPLAY_PHASE_START_ROUND     56
+#define ABZM_BO2_REPLAY_PHASE_END_ROUND       100
+#define ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND 1
+#define ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND 55
 
 #define ABZM_BO2_WALK_SPEED                   110
 #define ABZM_BO2_RUN_SPEED                    150
@@ -940,6 +941,86 @@ tunePowerupDrop( powerup )
 
 calculateBo2ZombieHealth( roundNumber )
 {
+    // Stretch the old early-game health ramp across rounds 1-55, then replay the
+    // original round-1-through-55 growth profile during the later game without
+    // ever letting the curve drop between phases.
+    if ( roundNumber <= ABZM_BO2_EASY_PHASE_END_ROUND )
+    {
+        return calculateBo2EasyPhaseZombieHealth( roundNumber );
+    }
+
+    easyPhaseBaseHealth = calculateBo2EasyPhaseZombieHealth( ABZM_BO2_EASY_PHASE_END_ROUND );
+    replayLegacyRound = calculateBo2ReplayLegacyRound( roundNumber );
+    replayHealth = calculateInterpolatedLegacyBo2ZombieHealth( replayLegacyRound, int( replayLegacyRound ) + 1 );
+    replayBaseHealth = calculateLegacyBo2ZombieHealth( ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND );
+    replayDelta = replayHealth - replayBaseHealth;
+    return min( ABZM_BO2_HEALTH_CAP, easyPhaseBaseHealth + replayDelta );
+}
+
+calculateBo2EasyPhaseZombieHealth( roundNumber )
+{
+    if ( roundNumber <= 1 )
+    {
+        return calculateLegacyBo2ZombieHealth( 1 );
+    }
+
+    easyLegacyRound = remapRoundRangeFloat(
+        roundNumber,
+        1,
+        ABZM_BO2_EASY_PHASE_END_ROUND,
+        1,
+        ABZM_BO2_EASY_PHASE_TARGET_LEGACY_ROUND
+    );
+
+    return calculateInterpolatedLegacyBo2ZombieHealth( easyLegacyRound, ABZM_BO2_EASY_PHASE_TARGET_LEGACY_ROUND );
+}
+
+calculateBo2ReplayLegacyRound( roundNumber )
+{
+    if ( roundNumber <= ABZM_BO2_REPLAY_PHASE_START_ROUND )
+    {
+        return ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND;
+    }
+
+    if ( roundNumber <= ABZM_BO2_REPLAY_PHASE_END_ROUND )
+    {
+        return remapRoundRangeFloat(
+            roundNumber,
+            ABZM_BO2_REPLAY_PHASE_START_ROUND,
+            ABZM_BO2_REPLAY_PHASE_END_ROUND,
+            ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND,
+            ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND
+        );
+    }
+
+    return ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND + (roundNumber - ABZM_BO2_REPLAY_PHASE_END_ROUND);
+}
+
+calculateInterpolatedLegacyBo2ZombieHealth( legacyRoundFloat, maximumLegacyRound )
+{
+    clampedLegacyRound = abzmClamp( legacyRoundFloat, 1.0, maximumLegacyRound );
+    lowerLegacyRound = int( clampedLegacyRound );
+
+    if ( lowerLegacyRound < 1 )
+    {
+        lowerLegacyRound = 1;
+    }
+
+    upperLegacyRound = lowerLegacyRound + 1;
+    if ( upperLegacyRound > maximumLegacyRound )
+    {
+        upperLegacyRound = maximumLegacyRound;
+    }
+
+    lowerLegacyHealth = calculateLegacyBo2ZombieHealth( lowerLegacyRound );
+    upperLegacyHealth = calculateLegacyBo2ZombieHealth( upperLegacyRound );
+    legacyBlend = clampedLegacyRound - lowerLegacyRound;
+
+    return int( lowerLegacyHealth + ((upperLegacyHealth - lowerLegacyHealth) * legacyBlend) );
+}
+
+calculateLegacyBo2ZombieHealth( roundNumber )
+{
     if ( roundNumber <= 1 )
     {
         return ABZM_BO2_BASE_HEALTH;
@@ -954,15 +1035,7 @@ calculateBo2ZombieHealth( roundNumber )
 
     for ( i = ABZM_BO2_HEALTH_CURVE_ROUND + 1; i <= roundNumber; i++ )
     {
-        if ( i <= ABZM_BO2_HEALTH_LEGACY_CURVE_END_ROUND )
-        {
-            health = min( ABZM_BO2_HEALTH_CAP, int( health * ABZM_BO2_HEALTH_CURVE_MULTIPLIER ) );
-        }
-        else
-        {
-            health = calculateBo2LateRoundZombieHealth( health );
-        }
-
+        health = min( ABZM_BO2_HEALTH_CAP, int( health * ABZM_BO2_HEALTH_CURVE_MULTIPLIER ) );
         if ( health >= ABZM_BO2_HEALTH_CAP )
         {
             return ABZM_BO2_HEALTH_CAP;
@@ -972,29 +1045,24 @@ calculateBo2ZombieHealth( roundNumber )
     return health;
 }
 
-calculateBo2LateRoundZombieHealth( previousHealth )
+remapRoundRangeFloat( sourceRound, sourceStart, sourceEnd, targetStart, targetEnd )
 {
-    // Preserve the existing BO2-feel curve through round 45, then keep rounds 46+
-    // scaling with a much gentler bounded ramp so rounds 55-100+ continue climbing
-    // without jumping straight into the old hard-cap wall. Special rounds still
-    // apply ABZM_BO2_SPECIAL_HEALTH_SCALE after this base value is set.
-    effectiveSoftcap = int( abzmClamp( ABZM_BO2_HEALTH_SOFTCAP, ABZM_BO2_BASE_HEALTH, ABZM_BO2_HEALTH_CAP ) );
-
-    if ( previousHealth >= effectiveSoftcap )
+    if ( sourceEnd <= sourceStart )
     {
-        return effectiveSoftcap;
+        return targetEnd;
     }
 
-    remainingHealth = effectiveSoftcap - previousHealth;
-    if ( remainingHealth <= ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP )
+    sourceProgress = (sourceRound - sourceStart) / ((sourceEnd - sourceStart) * 1.0);
+    if ( sourceProgress < 0 )
     {
-        return effectiveSoftcap;
+        sourceProgress = 0;
+    }
+    else if ( sourceProgress > 1 )
+    {
+        sourceProgress = 1;
     }
 
-    healthStep = remainingHealth * ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE;
-    healthStep = int( abzmClamp( healthStep, ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP, ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP ) );
-
-    return min( ABZM_BO2_HEALTH_CAP, min( effectiveSoftcap, previousHealth + healthStep ) );
+    return targetStart + ((targetEnd - targetStart) * sourceProgress);
 }
 
 calculateBo2ZombieSpeed( roundNumber )
