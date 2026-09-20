@@ -107,7 +107,7 @@ abzmIsZombieContext()
         return true;
     }
 
-    return dvarContainsToken( "mapname", "zm" ) || dvarContainsToken( "mapname", "zombie" );
+    return isKnownZombieMap( getdvar( "mapname" ) );
 }
 
 dvarContainsToken( dvarName, token )
@@ -126,6 +126,21 @@ stringContainsToken( value, token )
     return issubstr( value, token );
 }
 
+isKnownZombieMap( mapname )
+{
+    if ( !isdefined( mapname ) )
+    {
+        return false;
+    }
+
+    if ( strlen( mapname ) >= 3 && getsubstr( mapname, 0, 3 ) == "zm_" )
+    {
+        return true;
+    }
+
+    return mapname == "zombie_outbreak" || mapname == "zombie_infection" || mapname == "zombie_carrier" || mapname == "zombie_descent";
+}
+
 buildModState()
 {
     state = spawnstruct();
@@ -134,6 +149,7 @@ buildModState()
     state.lastSpecialRound = 0;
     state.forceSpecialRound = false;
     state.trackedZombies = [];
+    state.healthByRound = [];
     state.botNames = [];
     state.botNames[0] = "Atlas-1";
     state.botNames[1] = "Atlas-2";
@@ -542,7 +558,6 @@ attemptBotRevive()
     {
         downed.abzmReviver = undefined;
         self.abzmReviveTarget = undefined;
-        downed.abzmDowned = false;
         downed.abzmBleedoutTime = undefined;
         downed notify( "trigger", self );
         downed notify( "player_revived", self );
@@ -913,14 +928,19 @@ tunePowerupDrop( powerup )
 
 calculateBo2ZombieHealth( roundNumber )
 {
+    if ( isdefined( level.abzm ) && isdefined( level.abzm.healthByRound[roundNumber] ) )
+    {
+        return level.abzm.healthByRound[roundNumber];
+    }
+
     if ( roundNumber <= 1 )
     {
-        return ABZM_BO2_BASE_HEALTH;
+        return cacheBo2ZombieHealth( roundNumber, ABZM_BO2_BASE_HEALTH );
     }
 
     if ( roundNumber <= ABZM_BO2_HEALTH_CURVE_ROUND )
     {
-        return min( ABZM_BO2_HEALTH_CAP, ABZM_BO2_BASE_HEALTH + ((roundNumber - 1) * ABZM_BO2_HEALTH_INCREMENT) );
+        return cacheBo2ZombieHealth( roundNumber, min( ABZM_BO2_HEALTH_CAP, ABZM_BO2_BASE_HEALTH + ((roundNumber - 1) * ABZM_BO2_HEALTH_INCREMENT) ) );
     }
 
     health = ABZM_BO2_BASE_HEALTH + ((ABZM_BO2_HEALTH_CURVE_ROUND - 1) * ABZM_BO2_HEALTH_INCREMENT);
@@ -930,8 +950,18 @@ calculateBo2ZombieHealth( roundNumber )
         health = int( health * ABZM_BO2_HEALTH_CURVE_MULTIPLIER );
         if ( health >= ABZM_BO2_HEALTH_CAP )
         {
-            return ABZM_BO2_HEALTH_CAP;
+            return cacheBo2ZombieHealth( roundNumber, ABZM_BO2_HEALTH_CAP );
         }
+    }
+
+    return cacheBo2ZombieHealth( roundNumber, health );
+}
+
+cacheBo2ZombieHealth( roundNumber, health )
+{
+    if ( isdefined( level.abzm ) )
+    {
+        level.abzm.healthByRound[roundNumber] = health;
     }
 
     return health;

@@ -1,4 +1,4 @@
-combat training custom difficulty and campaign to
+S1x Advanced Warfare script packages for Exo Zombies and gameplay tweaks
 
 EMZ/EMP zombies Nerf  
 
