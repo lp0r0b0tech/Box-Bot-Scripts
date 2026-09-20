@@ -166,6 +166,15 @@ onPlayerConnected()
     {
         self waittill( "spawned_player" );
 
+        if ( !isdefined( self.abzmWallet ) )
+        {
+            self.abzmWallet = 0;
+            if ( isdefined( self.score ) )
+            {
+                self.abzmWallet = self.score;
+            }
+        }
+
         if ( self.abzmIsBot && ( !isdefined( self.abzmLifeLoopStarted ) || !self.abzmLifeLoopStarted ) )
         {
             self.abzmLifeLoopStarted = true;
@@ -491,6 +500,7 @@ attemptPerkPurchase()
     if ( isdefined( perkNode ) )
     {
         moveToAndUse( perkNode );
+        spendPlayerPoints( self, 2000 );
     }
 }
 
@@ -502,6 +512,7 @@ attemptUtilityPurchase()
         if ( isdefined( papNode ) )
         {
             moveToAndUse( papNode );
+            spendPlayerPoints( self, 5000 );
             return;
         }
     }
@@ -512,6 +523,7 @@ attemptUtilityPurchase()
         if ( isdefined( doorNode ) )
         {
             moveToAndUse( doorNode );
+            spendPlayerPoints( self, 1250 );
             return;
         }
     }
@@ -522,6 +534,7 @@ attemptUtilityPurchase()
         if ( isdefined( exoNode ) )
         {
             moveToAndUse( exoNode );
+            spendPlayerPoints( self, 2000 );
         }
     }
 }
@@ -648,7 +661,16 @@ monitorPowerupSpawns()
 
 tunePowerupDrop( powerup )
 {
-    type = getPowerupType( powerup );
+    type = "unknown";
+    if ( isdefined( powerup.targetname ) )
+    {
+        type = powerup.targetname;
+    }
+    else if ( isdefined( powerup.script_noteworthy ) )
+    {
+        type = powerup.script_noteworthy;
+    }
+
     powerup.abzmDropType = type;
 
     switch ( type )
@@ -666,128 +688,6 @@ tunePowerupDrop( powerup )
             break;
     }
 
-    powerup thread handleTunedPowerup();
-}
-
-getPowerupType( powerup )
-{
-    if ( isdefined( powerup.abzmDropType ) )
-    {
-        return powerup.abzmDropType;
-    }
-
-    if ( isdefined( powerup.targetname ) )
-    {
-        return powerup.targetname;
-    }
-
-    if ( isdefined( powerup.script_noteworthy ) )
-    {
-        return powerup.script_noteworthy;
-    }
-
-    return "maxammo";
-}
-
-handleTunedPowerup()
-{
-    self endon( "death" );
-
-    self waittill_any( "trigger", "picked_up", "powerup_grab" );
-
-    switch ( self.abzmDropType )
-    {
-        case "instakill":
-            level thread activateInstakillWindow( self.abzmDuration );
-            break;
-
-        case "doublepoints":
-            level thread activateDoublePointsWindow( self.abzmDuration );
-            break;
-
-        case "nuke":
-            level thread triggerDelayedNuke( self.abzmDelay );
-            break;
-    }
-}
-
-activateInstakillWindow( duration )
-{
-    level.abzmInstakillActive = true;
-
-    zombies = getTrackedZombies();
-    for ( i = 0; i < zombies.size; i++ )
-    {
-        zombies[i].health = 1;
-    }
-
-    wait duration;
-    level.abzmInstakillActive = false;
-}
-
-activateDoublePointsWindow( duration )
-{
-    level.abzmDoublePointsActive = true;
-    wait duration;
-    level.abzmDoublePointsActive = false;
-}
-
-triggerDelayedNuke( delaySeconds )
-{
-    wait delaySeconds;
-
-    zombies = getTrackedZombies();
-    for ( i = 0; i < zombies.size; i++ )
-    {
-        if ( isdefined( zombies[i] ) && isalive( zombies[i] ) )
-        {
-            zombies[i] suicide();
-        }
-    }
-}
-
-chooseWeightedPowerup()
-{
-    weights = [];
-    weights[0] = spawnWeightedEntry( "instakill", ABZM_BO2_DROP_WEIGHT_INSTAKILL );
-    weights[1] = spawnWeightedEntry( "doublepoints", ABZM_BO2_DROP_WEIGHT_DOUBLEPOINTS );
-    weights[2] = spawnWeightedEntry( "nuke", ABZM_BO2_DROP_WEIGHT_NUKE );
-    weights[3] = spawnWeightedEntry( "maxammo", ABZM_BO2_DROP_WEIGHT_MAXAMMO );
-    weights[4] = spawnWeightedEntry( "carpenter", ABZM_BO2_DROP_WEIGHT_CARPENTER );
-    weights[5] = spawnWeightedEntry( "2xp", ABZM_BO2_DROP_WEIGHT_2XP );
-
-    total = 0;
-    for ( i = 0; i < weights.size; i++ )
-    {
-        total += weights[i].weight;
-    }
-
-    if ( total <= 0 )
-    {
-        return "maxammo";
-    }
-
-    roll = randomint( total );
-    running = 0;
-
-    for ( i = 0; i < weights.size; i++ )
-    {
-        running += weights[i].weight;
-        if ( roll < running )
-        {
-            return weights[i].name;
-        }
-    }
-
-    return "maxammo";
-}
-
-spawnWeightedEntry( name, weight )
-{
-    entry = spawnstruct();
-    entry.name = name;
-    entry.weight = weight;
-    return entry;
 }
 
 calculateBo2ZombieHealth( roundNumber )
@@ -1030,19 +930,16 @@ getActiveBotCount()
 
 getTrackedPlayerPoints( player )
 {
-    total = 0;
-
-    if ( isdefined( player.score ) )
+    if ( !isdefined( player.abzmWallet ) )
     {
-        total += player.score;
+        player.abzmWallet = 0;
+        if ( isdefined( player.score ) )
+        {
+            player.abzmWallet = player.score;
+        }
     }
 
-    if ( isdefined( player.abzmBonusPoints ) )
-    {
-        total += player.abzmBonusPoints;
-    }
-
-    return total;
+    return player.abzmWallet;
 }
 
 hasEnoughPoints( player, amount )
@@ -1050,19 +947,22 @@ hasEnoughPoints( player, amount )
     return getTrackedPlayerPoints( player ) >= amount;
 }
 
+spendPlayerPoints( player, amount )
+{
+    current = getTrackedPlayerPoints( player );
+    player.abzmWallet = max( 0, current - amount );
+}
+
 awardPlayerPoints( player, amount )
 {
-    if ( !isdefined( player.abzmBonusPoints ) )
-    {
-        player.abzmBonusPoints = 0;
-    }
+    current = getTrackedPlayerPoints( player );
 
     if ( isdefined( level.abzmDoublePointsActive ) && level.abzmDoublePointsActive )
     {
         amount *= 2;
     }
 
-    player.abzmBonusPoints += amount;
+    player.abzmWallet = current + amount;
 }
 
 isBotEntity( player )
