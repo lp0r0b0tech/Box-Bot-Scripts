@@ -1067,7 +1067,8 @@ attemptPurchase( node, cost )
 
     if ( cost <= 0 )
     {
-        return false;
+        markInteractionSuccess( node );
+        return true;
     }
 
     if ( !isdefined( self.score ) )
@@ -1081,8 +1082,7 @@ attemptPurchase( node, cost )
 
         if ( isdefined( scoreBefore ) && isdefined( self.score ) && self.score < scoreBefore )
         {
-            markInteractionSuccess( node );
-            return true;
+            return false;
         }
 
         weaponNow = self getcurrentweapon();
@@ -1187,7 +1187,7 @@ isDesiredInteractable( entity, kind )
             return entityMatchesToken( entity, "ammo" ) || entityMatchesToken( entity, "resupply" ) || entityMatchesToken( entity, "cache" );
 
         case "exo_upgrade":
-            return entityMatchesToken( entity, "exo" ) || entityMatchesToken( entity, "exo_upgrade" ) || entityMatchesToken( entity, "ability" ) || entityMatchesToken( entity, "boost" );
+            return entityMatchesToken( entity, "exo_upgrade" ) || entityMatchesToken( entity, "exo_station" ) || entityMatchesToken( entity, "ability_upgrade" ) || entityMatchesToken( entity, "boost_upgrade" );
 
         case "armor":
             return entityMatchesToken( entity, "armor" ) || entityMatchesToken( entity, "armour" ) || entityMatchesToken( entity, "health" ) || entityMatchesToken( entity, "med" );
