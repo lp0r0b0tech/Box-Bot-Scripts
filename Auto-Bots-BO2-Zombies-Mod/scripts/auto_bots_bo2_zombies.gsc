@@ -991,7 +991,7 @@ calculateBo2LateRoundZombieHealth( previousHealth )
         return effectiveSoftcap;
     }
 
-    healthStep = int( remainingHealth * ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE );
+    healthStep = remainingHealth * ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE;
     healthStep = int( abzmClamp( healthStep, ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP, ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP ) );
 
     return min( ABZM_BO2_HEALTH_CAP, min( effectiveSoftcap, previousHealth + healthStep ) );
