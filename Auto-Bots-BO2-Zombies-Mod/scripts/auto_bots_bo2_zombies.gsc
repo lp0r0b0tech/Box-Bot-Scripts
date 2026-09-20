@@ -258,6 +258,7 @@ trackDownedState()
         self waittill_any( "downed", "laststand", "bleed_out" );
         self.abzmDowned = true;
         self.abzmDownedAt = gettime();
+        clearActiveReviveClaim();
 
         if ( level.abzm.bo2Enabled )
         {
@@ -278,7 +279,13 @@ enforceBo2Bleedout()
     self endon( "spawned_player" );
     self endon( "abzm_cancel_bleedout" );
 
-    wait ABZM_BO2_BLEEDOUT_TIME;
+    bleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
+    if ( isdefined( self.abzmBleedoutTime ) )
+    {
+        bleedoutTime = self.abzmBleedoutTime;
+    }
+
+    wait bleedoutTime;
 
     if ( self.abzmDowned )
     {
@@ -428,6 +435,7 @@ botLifeLoop()
         }
 
         self waittill_any( "death", "downed", "disconnect" );
+        clearActiveReviveClaim();
         self notify( "abzm_stop_brain" );
         self.abzmBrainRunning = false;
         wait 0.25;
@@ -493,6 +501,7 @@ attemptBotRevive()
     }
 
     downed.abzmReviver = self;
+    self.abzmReviveTarget = downed;
     self.abzmState = "reviving";
     self setlookatpos( downed.origin );
     self moveto( downed.origin, 0.35 );
@@ -506,12 +515,21 @@ attemptBotRevive()
             {
                 downed.abzmReviver = undefined;
             }
+            self.abzmReviveTarget = undefined;
+            return false;
+        }
+
+        if ( !isalive( self ) || self.abzmDowned )
+        {
+            downed.abzmReviver = undefined;
+            self.abzmReviveTarget = undefined;
             return false;
         }
 
         if ( distance( self.origin, downed.origin ) > ABZM_BO2_REVIVE_RANGE )
         {
             downed.abzmReviver = undefined;
+            self.abzmReviveTarget = undefined;
             return false;
         }
 
@@ -522,12 +540,14 @@ attemptBotRevive()
     if ( downed.abzmDowned )
     {
         downed.abzmReviver = undefined;
+        self.abzmReviveTarget = undefined;
         downed notify( "revived" );
         awardPlayerPoints( self, ABZM_BO2_REVIVE_POINTS );
         return true;
     }
 
     downed.abzmReviver = undefined;
+    self.abzmReviveTarget = undefined;
     return false;
 }
 
@@ -846,16 +866,7 @@ tunePowerupDrop( powerup )
         return;
     }
 
-    type = "unknown";
-    if ( isdefined( powerup.targetname ) )
-    {
-        type = powerup.targetname;
-    }
-    else if ( isdefined( powerup.script_noteworthy ) )
-    {
-        type = powerup.script_noteworthy;
-    }
-
+    type = canonicalPowerupType( powerup );
     powerup.abzmDropType = type;
     powerup.abzmPowerupTracked = true;
 
@@ -1025,13 +1036,13 @@ moveToAndUse( node )
         return;
     }
 
-    self setlookatpos( node.origin );
-    self moveto( node.origin, 0.25 );
-
     if ( isdefined( node.abzmLastUseTime ) && (gettime() - node.abzmLastUseTime) < 500 )
     {
         return;
     }
+
+    self setlookatpos( node.origin );
+    self moveto( node.origin, 0.25 );
 
     node.abzmLastUseTime = gettime();
     node notify( "trigger", self );
@@ -1176,6 +1187,21 @@ awardPlayerPoints( player, amount )
     }
 }
 
+clearActiveReviveClaim()
+{
+    if ( !isdefined( self.abzmReviveTarget ) )
+    {
+        return;
+    }
+
+    if ( isdefined( self.abzmReviveTarget.abzmReviver ) && self.abzmReviveTarget.abzmReviver == self )
+    {
+        self.abzmReviveTarget.abzmReviver = undefined;
+    }
+
+    self.abzmReviveTarget = undefined;
+}
+
 isBotEntity( player )
 {
     if ( !isdefined( player ) )
@@ -1235,6 +1261,36 @@ isPotentialPowerup( entity )
     }
 
     return entityMatchesToken( entity, "instakill" ) || entityMatchesToken( entity, "doublepoints" ) || entityMatchesToken( entity, "nuke" ) || entityMatchesToken( entity, "maxammo" ) || entityMatchesToken( entity, "carpenter" ) || entityMatchesToken( entity, "powerup" );
+}
+
+canonicalPowerupType( powerup )
+{
+    if ( entityMatchesToken( powerup, "instakill" ) )
+    {
+        return "instakill";
+    }
+
+    if ( entityMatchesToken( powerup, "doublepoints" ) || entityMatchesToken( powerup, "double_points" ) )
+    {
+        return "doublepoints";
+    }
+
+    if ( entityMatchesToken( powerup, "nuke" ) )
+    {
+        return "nuke";
+    }
+
+    if ( entityMatchesToken( powerup, "maxammo" ) || entityMatchesToken( powerup, "max_ammo" ) )
+    {
+        return "maxammo";
+    }
+
+    if ( entityMatchesToken( powerup, "carpenter" ) )
+    {
+        return "carpenter";
+    }
+
+    return "unknown";
 }
 
 isDesiredInteractable( entity, kind )
