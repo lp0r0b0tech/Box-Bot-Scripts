@@ -34,6 +34,26 @@ main()
     init();
 }
 
+tryUseReviveInteraction( downed )
+{
+    if ( !isdefined( downed ) || !downed.abesDowned )
+    {
+        return false;
+    }
+
+    downed notify( "trigger", self );
+    downed notify( "use", self );
+    self notify( "+activate" );
+
+    start = gettime();
+    while ( isdefined( downed ) && downed.abesDowned && (gettime() - start) < 1000 )
+    {
+        wait 0.05;
+    }
+
+    return isdefined( downed ) && !downed.abesDowned;
+}
+
 init()
 {
     if ( isdefined( level.abesInitStarted ) && level.abesInitStarted )
@@ -70,6 +90,7 @@ abesBoot()
         return;
     }
 
+    initializeExistingPlayers();
     level thread monitorPlayerConnections();
     level thread maintainAutoBots();
     level thread periodicEnemyRefresh();
@@ -194,6 +215,20 @@ monitorPlayerConnections()
     {
         level waittill( "connected", player );
         player thread onPlayerConnected();
+    }
+}
+
+initializeExistingPlayers()
+{
+    players = getentarray( "player", "classname" );
+
+    for ( i = 0; i < players.size; i++ )
+    {
+        player = players[i];
+        if ( isdefined( player ) )
+        {
+            player thread onPlayerConnected();
+        }
     }
 }
 
@@ -469,9 +504,14 @@ attemptBotRevive()
 
     if ( downed.abesDowned )
     {
-        signalReviveSuccess( downed, self );
+        if ( tryUseReviveInteraction( downed ) )
+        {
+            releaseReviveClaim( downed );
+            return true;
+        }
+
         releaseReviveClaim( downed );
-        return true;
+        return false;
     }
 
     releaseReviveClaim( downed );
@@ -1124,6 +1164,11 @@ getClosestEnemy()
     for ( i = 0; i < enemies.size; i++ )
     {
         enemy = enemies[i];
+        if ( !isEnemyThreatForBot( enemy, self ) )
+        {
+            continue;
+        }
+
         dist = distance( self.origin, enemy.origin );
         if ( dist < bestDist )
         {
@@ -1143,6 +1188,11 @@ countNearbyEnemies( origin, radius )
     for ( i = 0; i < enemies.size; i++ )
     {
         enemy = enemies[i];
+        if ( !isEnemyThreatForBot( enemy, self ) )
+        {
+            continue;
+        }
+
         if ( distance( origin, enemy.origin ) <= radius )
         {
             count++;
@@ -1159,7 +1209,7 @@ isEnemyEntity( entity )
         return false;
     }
 
-    if ( entity == self )
+    if ( isplayer( entity ) )
     {
         return false;
     }
@@ -1170,6 +1220,21 @@ isEnemyEntity( entity )
     }
 
     return entityMatchesToken( entity, "enemy" ) || entityMatchesToken( entity, "soldier" ) || entityMatchesToken( entity, "kva" ) || entityMatchesToken( entity, "hostile" );
+}
+
+isEnemyThreatForBot( entity, bot )
+{
+    if ( !isdefined( entity ) || !isdefined( bot ) || !isalive( entity ) )
+    {
+        return false;
+    }
+
+    if ( entity == bot )
+    {
+        return false;
+    }
+
+    return isEnemyEntity( entity );
 }
 
 hasEnoughScore( player, amount )
@@ -1231,21 +1296,6 @@ isBotEntity( player )
         return true;
     }
 
-    g = safeLower( safeGetGuid( player ) );
-    if ( stringContainsToken( g, "bot" ) )
-    {
-        return true;
-    }
-
-    if ( isdefined( player.name ) )
-    {
-        n = safeLower( player.name );
-        if ( stringContainsToken( n, "bot " ) || stringContainsToken( n, "[bot]") )
-        {
-            return true;
-        }
-    }
-
     return false;
 }
 
@@ -1272,12 +1322,6 @@ clearActiveReviveClaim()
     }
 
     releaseReviveClaim( self.abesReviveTarget );
-}
-
-signalReviveSuccess( downed, reviver )
-{
-    downed notify( "revived", reviver );
-    level notify( "player_revived", downed, reviver );
 }
 
 appendEntArray( destination, source )
@@ -1380,22 +1424,6 @@ safeLower( value )
     }
 
     return toLower( value + "" );
-}
-
-safeGetGuid( entity )
-{
-    if ( !isdefined( entity ) )
-    {
-        return "";
-    }
-
-    g = entity getguid();
-    if ( !isdefined( g ) )
-    {
-        return "";
-    }
-
-    return g;
 }
 
 abesClamp( value, minimum, maximum )
