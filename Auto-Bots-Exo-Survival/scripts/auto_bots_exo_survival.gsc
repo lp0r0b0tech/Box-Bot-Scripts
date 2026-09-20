@@ -205,7 +205,7 @@ abesIsExoSurvivalContext()
         return true;
     }
 
-    return dvarContainsToken( "ui_gametype", "survival" ) || dvarContainsToken( "g_gametype", "survival" );
+    return false;
 }
 
 monitorPlayerConnections()
@@ -338,10 +338,8 @@ spawnAutoBot( botIndex )
         return false;
     }
 
-    nameIndex = botIndex % level.abes.botNames.size;
     bot.abesIsBot = true;
     bot.pers["isBot"] = true;
-    bot.name = level.abes.botNames[nameIndex];
     bot.abesSkill = level.abes.botSkill;
     bot thread onPlayerConnected();
     return true;
@@ -1044,7 +1042,14 @@ moveToAndUse( node )
     }
 
     self setlookatpos( node.origin );
-    self moveto( node.origin, 0.25 );
+    moveTarget = node.origin;
+    distToNode = distance( self.origin, node.origin );
+    if ( distToNode > ABES_INTERACT_RANGE )
+    {
+        towardNode = vectornormalize( node.origin - self.origin );
+        moveTarget = node.origin - (towardNode * (ABES_INTERACT_RANGE - 24));
+    }
+    self moveto( moveTarget, 0.25 );
 
     startTime = gettime();
     while ( distance( self.origin, node.origin ) > ABES_INTERACT_RANGE )
@@ -1104,7 +1109,7 @@ isDesiredInteractable( entity, kind )
             return entityMatchesToken( entity, "ammo" ) || entityMatchesToken( entity, "resupply" ) || entityMatchesToken( entity, "cache" );
 
         case "exo_upgrade":
-            return entityMatchesToken( entity, "exo" ) || entityMatchesToken( entity, "ability" ) || entityMatchesToken( entity, "boost" ) || entityMatchesToken( entity, "upgrade" );
+            return entityMatchesToken( entity, "exo" ) || entityMatchesToken( entity, "exo_upgrade" ) || entityMatchesToken( entity, "ability" ) || entityMatchesToken( entity, "boost" );
 
         case "armor":
             return entityMatchesToken( entity, "armor" ) || entityMatchesToken( entity, "armour" ) || entityMatchesToken( entity, "health" ) || entityMatchesToken( entity, "med" );
