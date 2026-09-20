@@ -150,6 +150,8 @@ buildModState()
     state.forceSpecialRound = false;
     state.trackedZombies = [];
     state.healthByRound = [];
+    state.interactableCandidates = [];
+    state.interactableCacheTime = 0;
     state.botNames = [];
     state.botNames[0] = "Atlas-1";
     state.botNames[1] = "Atlas-2";
@@ -934,9 +936,9 @@ calculateBo2ZombieHealth( roundNumber )
         return cacheBo2ZombieHealth( roundNumber, min( ABZM_BO2_HEALTH_CAP, ABZM_BO2_BASE_HEALTH + ((roundNumber - 1) * ABZM_BO2_HEALTH_INCREMENT) ) );
     }
 
-    health = ABZM_BO2_BASE_HEALTH + ((ABZM_BO2_HEALTH_CURVE_ROUND - 1) * ABZM_BO2_HEALTH_INCREMENT);
+    health = ABZM_BO2_BASE_HEALTH + ((ABZM_BO2_HEALTH_CURVE_ROUND - 2) * ABZM_BO2_HEALTH_INCREMENT);
 
-    for ( i = ABZM_BO2_HEALTH_CURVE_ROUND + 1; i <= roundNumber; i++ )
+    for ( i = ABZM_BO2_HEALTH_CURVE_ROUND; i <= roundNumber; i++ )
     {
         health = int( health * ABZM_BO2_HEALTH_CURVE_MULTIPLIER );
         if ( health >= ABZM_BO2_HEALTH_CAP )
@@ -1046,11 +1048,7 @@ getClosestDownedTeammate()
 
 getClosestInteractable( kind )
 {
-    nodes = [];
-    appendEntArray( nodes, getentarray( "trigger", "classname" ) );
-    appendEntArray( nodes, getentarray( "trigger_use", "classname" ) );
-    appendEntArray( nodes, getentarray( "script_model", "classname" ) );
-    appendEntArray( nodes, getentarray( "script_brushmodel", "classname" ) );
+    nodes = getInteractableCandidates();
 
     best = undefined;
     bestDist = 999999;
@@ -1127,7 +1125,37 @@ attemptPurchase( node, cost )
         return true;
     }
 
+    if ( !isdefined( self.score ) )
+    {
+        spendPlayerPoints( self, cost );
+        return true;
+    }
+
     return false;
+}
+
+getInteractableCandidates()
+{
+    if ( !isdefined( level.abzm ) )
+    {
+        nodes = [];
+        return nodes;
+    }
+
+    if ( (gettime() - level.abzm.interactableCacheTime) < 2000 && level.abzm.interactableCandidates.size > 0 )
+    {
+        return level.abzm.interactableCandidates;
+    }
+
+    nodes = [];
+    appendEntArray( nodes, getentarray( "trigger", "classname" ) );
+    appendEntArray( nodes, getentarray( "trigger_use", "classname" ) );
+    appendEntArray( nodes, getentarray( "script_model", "classname" ) );
+    appendEntArray( nodes, getentarray( "script_brushmodel", "classname" ) );
+
+    level.abzm.interactableCandidates = nodes;
+    level.abzm.interactableCacheTime = gettime();
+    return level.abzm.interactableCandidates;
 }
 
 chooseTrainingAnchor()
