@@ -260,7 +260,7 @@ trackDownedState()
         self.abzmDownedAt = gettime();
         clearActiveReviveClaim();
 
-        if ( level.abzm.bo2Enabled )
+        if ( isdefined( level.abzm ) && level.abzm.bo2Enabled )
         {
             self.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             self notify( "abzm_cancel_bleedout" );
@@ -590,9 +590,8 @@ attemptPerkPurchase()
     }
 
     perkNode = getClosestInteractable( "perk" );
-    if ( isdefined( perkNode ) )
+    if ( isdefined( perkNode ) && moveToAndUse( perkNode ) )
     {
-        moveToAndUse( perkNode );
         spendPlayerPoints( self, 2000 );
     }
 }
@@ -602,9 +601,8 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, 5000 ) )
     {
         papNode = getClosestInteractable( "packapunch" );
-        if ( isdefined( papNode ) )
+        if ( isdefined( papNode ) && moveToAndUse( papNode ) )
         {
-            moveToAndUse( papNode );
             spendPlayerPoints( self, 5000 );
             return;
         }
@@ -613,9 +611,8 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, 1250 ) )
     {
         doorNode = getClosestInteractable( "door" );
-        if ( isdefined( doorNode ) )
+        if ( isdefined( doorNode ) && moveToAndUse( doorNode ) )
         {
-            moveToAndUse( doorNode );
             spendPlayerPoints( self, 1250 );
             return;
         }
@@ -624,9 +621,8 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, 2000 ) )
     {
         exoNode = getClosestInteractable( "exo" );
-        if ( isdefined( exoNode ) )
+        if ( isdefined( exoNode ) && moveToAndUse( exoNode ) )
         {
-            moveToAndUse( exoNode );
             spendPlayerPoints( self, 2000 );
         }
     }
@@ -799,8 +795,23 @@ tuneZombieForCurrentRound()
         health = 1;
     }
 
+    previousHealth = health;
+    if ( isdefined( self.health ) )
+    {
+        previousHealth = self.health;
+    }
+
     self.maxhealth = health;
-    self.health = health;
+    if ( !isdefined( self.abzmZombieTuned ) || !self.abzmZombieTuned )
+    {
+        self.health = health;
+    }
+    else
+    {
+        self.health = min( previousHealth, health );
+    }
+
+    self.abzmZombieTuned = true;
     self.abzmDesiredSpeed = speed;
     self.abzmDesiredWalkSpeed = speed;
     self.abzmDesiredRunSpeed = speed;
@@ -1038,12 +1049,12 @@ moveToAndUse( node )
 {
     if ( !isdefined( node ) )
     {
-        return;
+        return false;
     }
 
     if ( isdefined( node.abzmLastUseTime ) && (gettime() - node.abzmLastUseTime) < 500 )
     {
-        return;
+        return false;
     }
 
     self setlookatpos( node.origin );
@@ -1051,6 +1062,7 @@ moveToAndUse( node )
 
     node.abzmLastUseTime = gettime();
     node notify( "trigger", self );
+    return true;
 }
 
 chooseTrainingAnchor()
@@ -1361,11 +1373,6 @@ entityMatchesToken( entity, token )
     }
 
     if ( isdefined( entity.script_string ) && stringContainsToken( entity.script_string, token ) )
-    {
-        return true;
-    }
-
-    if ( isdefined( entity.classname ) && stringContainsToken( entity.classname, token ) )
     {
         return true;
     }
