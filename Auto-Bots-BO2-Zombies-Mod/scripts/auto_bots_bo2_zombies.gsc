@@ -1013,6 +1013,18 @@ calculateInterpolatedLegacyBo2ZombieHealth( legacyRoundFloat, maximumLegacyRound
         lowerLegacyRound = 1;
     }
 
+    legacyBlend = clampedLegacyRound - lowerLegacyRound;
+    if ( legacyBlend >= 0.9999 )
+    {
+        lowerLegacyRound++;
+        if ( lowerLegacyRound > maximumLegacyRound )
+        {
+            lowerLegacyRound = maximumLegacyRound;
+        }
+
+        legacyBlend = 0;
+    }
+
     upperLegacyRound = lowerLegacyRound + 1;
     if ( upperLegacyRound > maximumLegacyRound )
     {
@@ -1021,7 +1033,6 @@ calculateInterpolatedLegacyBo2ZombieHealth( legacyRoundFloat, maximumLegacyRound
 
     lowerLegacyHealth = calculateLegacyBo2ZombieHealth( lowerLegacyRound );
     upperLegacyHealth = calculateLegacyBo2ZombieHealth( upperLegacyRound );
-    legacyBlend = clampedLegacyRound - lowerLegacyRound;
 
     return int( lowerLegacyHealth + ((upperLegacyHealth - lowerLegacyHealth) * legacyBlend) );
 }
