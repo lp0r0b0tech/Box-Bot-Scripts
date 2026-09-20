@@ -180,7 +180,7 @@ abesIsExoSurvivalContext()
     mn = safeLower( level.mapname );
     pl = safeLower( level.playlist );
 
-    if ( containsAny3( gt, "zom", "zombie", "infect" ) || containsAny2( mn, "zm_", "zombie" ) || containsAny2( pl, "zom", "zombie" ) )
+    if ( containsAny2( gt, "zom", "zombie" ) || containsAny2( mn, "zm_", "zombie" ) || containsAny2( pl, "zom", "zombie" ) )
     {
         return false;
     }
@@ -190,7 +190,12 @@ abesIsExoSurvivalContext()
         return true;
     }
 
-    if ( isdefined( level.survivalMode ) && level.survivalMode && (containsAny2( safeLower( getdvar( "ui_mapname" ) ), "exo", "survival" ) || containsAny2( mn, "exo", "survival" )) )
+    if ( hasExoSurvivalToken( getdvar( "ui_gametype" ) ) || hasExoSurvivalToken( getdvar( "g_gametype" ) ) || hasExoSurvivalToken( getdvar( "ui_mapname" ) ) )
+    {
+        return true;
+    }
+
+    if ( isdefined( level.survivalMode ) && level.survivalMode && hasExoSurvivalToken( getdvar( "ui_gametype" ) ) )
     {
         return true;
     }
@@ -200,7 +205,7 @@ abesIsExoSurvivalContext()
 
 hasExoSurvivalToken( value )
 {
-    return stringContainsToken( value, "exo survival" ) || stringContainsToken( value, "exo_survival" );
+    return stringContainsToken( value, "exo survival" ) || stringContainsToken( value, "exo_survival" ) || stringContainsToken( value, "survival_exo" );
 }
 
 monitorPlayerConnections()
