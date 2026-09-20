@@ -288,6 +288,8 @@ trackDownedState()
 
         self waittill_any( "revived", "spawned_player" );
         self.abzmDowned = false;
+        self.abzmDownedAt = undefined;
+        self.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
     }
 }
 
@@ -523,6 +525,19 @@ attemptBotRevive()
     self.abzmState = "reviving";
     self setlookatpos( downed.origin );
     self moveto( downed.origin, 0.35 );
+
+    reviveMoveStart = gettime();
+    while ( distance( self.origin, downed.origin ) > ABZM_BO2_REVIVE_RANGE )
+    {
+        if ( gettime() - reviveMoveStart >= 1000 )
+        {
+            downed.abzmReviver = undefined;
+            self.abzmReviveTarget = undefined;
+            return false;
+        }
+
+        wait 0.05;
+    }
 
     reviveProgress = 0.0;
     while ( reviveProgress < ABZM_BO2_REVIVE_TIME )
@@ -936,9 +951,9 @@ calculateBo2ZombieHealth( roundNumber )
         return cacheBo2ZombieHealth( roundNumber, min( ABZM_BO2_HEALTH_CAP, ABZM_BO2_BASE_HEALTH + ((roundNumber - 1) * ABZM_BO2_HEALTH_INCREMENT) ) );
     }
 
-    health = ABZM_BO2_BASE_HEALTH + ((ABZM_BO2_HEALTH_CURVE_ROUND - 2) * ABZM_BO2_HEALTH_INCREMENT);
+    health = ABZM_BO2_BASE_HEALTH + ((ABZM_BO2_HEALTH_CURVE_ROUND - 1) * ABZM_BO2_HEALTH_INCREMENT);
 
-    for ( i = ABZM_BO2_HEALTH_CURVE_ROUND; i <= roundNumber; i++ )
+    for ( i = ABZM_BO2_HEALTH_CURVE_ROUND + 1; i <= roundNumber; i++ )
     {
         health = int( health * ABZM_BO2_HEALTH_CURVE_MULTIPLIER );
         if ( health >= ABZM_BO2_HEALTH_CAP )
@@ -1125,13 +1140,8 @@ attemptPurchase( node, cost )
         return true;
     }
 
-    if ( !isdefined( self.score ) )
-    {
-        spendPlayerPoints( self, cost );
-        return true;
-    }
-
-    return false;
+    spendPlayerPoints( self, cost );
+    return true;
 }
 
 getInteractableCandidates()
