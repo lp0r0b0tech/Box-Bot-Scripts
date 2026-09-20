@@ -954,7 +954,7 @@ calculateBo2ZombieHealth( roundNumber )
     replayLegacyMaximumRound = ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND;
     if ( roundNumber > ABZM_BO2_REPLAY_PHASE_END_ROUND )
     {
-        replayLegacyMaximumRound = int( replayLegacyRound ) + 1;
+        replayLegacyMaximumRound = int( replayLegacyRound );
     }
 
     replayHealth = calculateInterpolatedLegacyBo2ZombieHealth( replayLegacyRound, replayLegacyMaximumRound );
