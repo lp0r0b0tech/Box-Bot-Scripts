@@ -163,7 +163,6 @@ onPlayerConnected()
     for ( ;; )
     {
         self waittill( "spawned_player" );
-        self.abzmIsBot = isBotEntity( self );
 
         if ( self.abzmIsBot && ( !isdefined( self.abzmLifeLoopStarted ) || !self.abzmLifeLoopStarted ) )
         {
@@ -237,22 +236,27 @@ maintainAutoBots()
     {
         refreshRuntimeConfig();
 
+        targetBotCount = 0;
         if ( level.abzm.autoBotsEnabled )
         {
-            currentBots = getActiveBotCount();
-            while ( currentBots < level.abzm.botCount )
-            {
-                if ( spawnAutoBot( currentBots ) )
-                {
-                    currentBots++;
-                }
-                else
-                {
-                    wait 1.0;
-                }
+            targetBotCount = level.abzm.botCount;
+        }
 
-                wait 0.25;
+        trimAutoBots( targetBotCount );
+        currentBots = getActiveBotCount();
+
+        while ( currentBots < targetBotCount )
+        {
+            if ( spawnAutoBot( currentBots ) )
+            {
+                currentBots++;
             }
+            else
+            {
+                wait 1.0;
+            }
+
+            wait 0.25;
         }
 
         wait 2.0;
@@ -274,6 +278,38 @@ spawnAutoBot( botIndex )
     bot.abzmSkill = level.abzm.botSkill;
     bot thread onPlayerConnected();
     return true;
+}
+
+trimAutoBots( targetBotCount )
+{
+    bots = getBotPlayers();
+
+    while ( bots.size > targetBotCount )
+    {
+        bot = bots[bots.size - 1];
+        if ( isdefined( bot ) )
+        {
+            bot kick();
+        }
+
+        bots = getBotPlayers();
+    }
+}
+
+getBotPlayers()
+{
+    players = getentarray( "player", "classname" );
+    bots = [];
+
+    for ( i = 0; i < players.size; i++ )
+    {
+        if ( isBotEntity( players[i] ) )
+        {
+            bots[bots.size] = players[i];
+        }
+    }
+
+    return bots;
 }
 
 botLifeLoop()
@@ -363,9 +399,10 @@ attemptBotRevive()
     {
         downed notify( "revived" );
         awardPlayerPoints( self, ABZM_BO2_REVIVE_POINTS );
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 runTrainingMovement()
@@ -774,6 +811,7 @@ getTrackedZombies()
         }
     }
 
+    level.abzm.trackedZombies = liveZombies;
     return liveZombies;
 }
 

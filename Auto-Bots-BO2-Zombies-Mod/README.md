@@ -7,9 +7,7 @@ Source-only **S1x** Exo Zombies mod package that combines two ideas in one folde
 
 ## S1x installation
 
-Place the whole `Auto-Bots-BO2-Zombies-Mod` folder into your **S1x** scripts/mod folder location using the same simple drop-in workflow described by this repository's root README (`place the folder in s1 thats it`).
-
-A practical layout is:
+Place the whole `Auto-Bots-BO2-Zombies-Mod` folder directly in your **S1x** directory so the final script path is exactly:
 
 - `.../s1x/Auto-Bots-BO2-Zombies-Mod/scripts/auto_bots_bo2_zombies.gsc`
 
