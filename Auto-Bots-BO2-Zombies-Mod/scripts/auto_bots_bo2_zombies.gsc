@@ -40,6 +40,7 @@
 #define ABZM_BO2_BLEEDOUT_TIME                45
 #define ABZM_BO2_REVIVE_TIME                  5
 #define ABZM_BO2_REVIVE_RANGE                 96
+#define ABZM_INTERACT_RANGE                   96
 #define ABZM_BO2_RUN_ROUND                    3
 #define ABZM_BO2_SPECIAL_HEALTH_SCALE          0.75
 #define ABZM_BO2_SPECIAL_SPEED_BONUS           20
@@ -290,7 +291,6 @@ enforceBo2Bleedout()
     if ( self.abzmDowned )
     {
         self notify( "bleed_out" );
-        self suicide();
     }
 }
 
@@ -1060,6 +1060,11 @@ moveToAndUse( node )
     self setlookatpos( node.origin );
     self moveto( node.origin, 0.25 );
 
+    if ( distance( self.origin, node.origin ) > ABZM_INTERACT_RANGE )
+    {
+        return false;
+    }
+
     node.abzmLastUseTime = gettime();
     node notify( "trigger", self );
     return true;
@@ -1277,7 +1282,7 @@ isZombieEntity( entity )
         return false;
     }
 
-    if ( isdefined( entity.classname ) && entity.classname == "actor" )
+    if ( isdefined( entity.classname ) && entity.classname == "actor" && ( entityMatchesToken( entity, "zombie" ) || entityMatchesToken( entity, "exo_zm" ) || entityMatchesToken( entity, "infected" ) ) )
     {
         return true;
     }
