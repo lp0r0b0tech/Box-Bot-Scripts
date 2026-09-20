@@ -31,7 +31,7 @@
 #define ABZM_BO2_EASY_PHASE_TARGET_LEGACY_ROUND 20
 #define ABZM_BO2_REPLAY_PHASE_START_ROUND     56
 #define ABZM_BO2_REPLAY_PHASE_END_ROUND       100
-#define ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND 1
+#define ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND 2
 #define ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND 55
 
 #define ABZM_BO2_WALK_SPEED                   110
@@ -951,14 +951,15 @@ calculateBo2ZombieHealth( roundNumber )
 
     easyPhaseBaseHealth = calculateBo2EasyPhaseZombieHealth( ABZM_BO2_EASY_PHASE_END_ROUND );
     replayLegacyRound = calculateBo2ReplayLegacyRound( roundNumber );
-    replayLegacyMaximumRound = ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND;
     if ( roundNumber > ABZM_BO2_REPLAY_PHASE_END_ROUND )
     {
-        replayLegacyMaximumRound = int( replayLegacyRound ) + 1;
+        replayHealth = calculateLegacyBo2ZombieHealth( int( replayLegacyRound ) );
     }
-
-    replayHealth = calculateInterpolatedLegacyBo2ZombieHealth( replayLegacyRound, replayLegacyMaximumRound );
-    replayBaseHealth = calculateLegacyBo2ZombieHealth( ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND );
+    else
+    {
+        replayHealth = calculateInterpolatedLegacyBo2ZombieHealth( replayLegacyRound, ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND );
+    }
+    replayBaseHealth = calculateLegacyBo2ZombieHealth( ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND - 1 );
     replayDelta = replayHealth - replayBaseHealth;
     return min( ABZM_BO2_HEALTH_CAP, easyPhaseBaseHealth + replayDelta );
 }
@@ -983,7 +984,7 @@ calculateBo2EasyPhaseZombieHealth( roundNumber )
 
 calculateBo2ReplayLegacyRound( roundNumber )
 {
-    if ( roundNumber <= ABZM_BO2_REPLAY_PHASE_START_ROUND )
+    if ( roundNumber < ABZM_BO2_REPLAY_PHASE_START_ROUND )
     {
         return ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND;
     }
