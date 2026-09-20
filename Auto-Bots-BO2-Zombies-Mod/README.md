@@ -85,7 +85,7 @@ Normal zombie health is calculated in one shared path (`calculateBo2ZombieHealth
 2. actual rounds `1` through `ABZM_BO2_EASY_PHASE_END_ROUND` are remapped onto an easier subset of those legacy rounds:
    - actual round `1-55` is stretched across legacy rounds `1-20` by default
 3. actual rounds `ABZM_BO2_REPLAY_PHASE_START_ROUND` through `ABZM_BO2_REPLAY_PHASE_END_ROUND` then replay the original legacy growth pattern:
-   - by default, actual rounds `56-100` replay legacy rounds `2-55`, using legacy round `1` as the baseline delta anchor
+   - by default, actual rounds `56-100` replay legacy rounds `2-55`, using legacy round `2` as the baseline delta anchor
    - the replay growth is added on top of the easier round-55 baseline so the curve never drops between phases
 4. rounds after the replay window continue from the replay endpoint’s integer legacy round and then advance one-for-one through later legacy rounds, while `ABZM_BO2_HEALTH_CAP` remains the defensive ceiling.
 
@@ -98,7 +98,7 @@ Default remap values:
 - `ABZM_BO2_REPLAY_PHASE_LEGACY_START_ROUND 2`
 - `ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND 55`
 
-With those defaults, rounds `1-55` are much easier than the old direct curve and round `55` lands at `2717` health instead of `35000`. Round `56` immediately starts the replay climb at `2817`, and the later game then replays the original early growth profile on top of that easier baseline, so `calculateBo2ZombieHealth()` reaches `5006` at round `70`, `26751` at round `90`, and hits the `35000` defensive cap by round `100`. After that replay window closes, the script continues from the round-100 integer legacy endpoint and advances one legacy round per actual round. `tuneZombieForCurrentRound()` still applies `ABZM_BO2_SPECIAL_HEALTH_SCALE` after the base health is calculated, so round-100 special enemies land at `26250`. This package does not add separate round-based zombie damage scaling, so survivability is driven mainly by this remapped health curve plus the existing speed/special-round rules.
+With those defaults, rounds `1-55` are much easier than the old direct curve and round `55` lands at `2717` health instead of `35000`. Round `56` starts from that same `2717` baseline and the later game then replays the original early growth profile on top of it, so `calculateBo2ZombieHealth()` reaches `4906` at round `70`, `26651` at round `90`, and hits the `35000` defensive cap by round `100`. After that replay window closes, the script continues from the round-100 integer legacy endpoint and advances one legacy round per actual round. `tuneZombieForCurrentRound()` still applies `ABZM_BO2_SPECIAL_HEALTH_SCALE` after the base health is calculated, so round-100 special enemies land at `26250`. This package does not add separate round-based zombie damage scaling, so survivability is driven mainly by this remapped health curve plus the existing speed/special-round rules.
 
 ## Known limitations
 
