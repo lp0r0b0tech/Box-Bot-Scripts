@@ -106,11 +106,6 @@ buildModState()
     state.interactableCandidates = [];
     state.interactableCacheTime = 0;
     state.trackedEnemies = [];
-    state.botNames = [];
-    state.botNames[0] = "Atlas-1";
-    state.botNames[1] = "Atlas-2";
-    state.botNames[2] = "Atlas-3";
-    state.botNames[3] = "Atlas-4";
     return state;
 }
 
@@ -315,15 +310,9 @@ maintainAutoBots()
         }
 
         trimAutoBots( targetBotCount );
-        currentBots = getActiveBotCount();
-
-        while ( currentBots < targetBotCount )
+        while ( getActiveBotCount() < targetBotCount )
         {
-            if ( spawnAutoBot( currentBots ) )
-            {
-                currentBots++;
-            }
-            else
+            if ( !spawnAutoBot() )
             {
                 wait 1.0;
             }
@@ -335,7 +324,7 @@ maintainAutoBots()
     }
 }
 
-spawnAutoBot( botIndex )
+spawnAutoBot()
 {
     bot = addtestclient();
     if ( !isdefined( bot ) )
@@ -1082,7 +1071,8 @@ attemptPurchase( node, cost )
 
         if ( isdefined( scoreBefore ) && isdefined( self.score ) && self.score < scoreBefore )
         {
-            return false;
+            markInteractionSuccess( node );
+            return true;
         }
 
         weaponNow = self getcurrentweapon();
