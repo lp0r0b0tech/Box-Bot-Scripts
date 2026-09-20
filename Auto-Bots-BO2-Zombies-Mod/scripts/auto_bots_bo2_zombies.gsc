@@ -999,7 +999,7 @@ calculateBo2ReplayLegacyRound( roundNumber )
         );
     }
 
-    return ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND + (roundNumber - ABZM_BO2_REPLAY_PHASE_END_ROUND);
+    return (ABZM_BO2_REPLAY_PHASE_LEGACY_END_ROUND + 1) + (roundNumber - (ABZM_BO2_REPLAY_PHASE_END_ROUND + 1));
 }
 
 calculateInterpolatedLegacyBo2ZombieHealth( legacyRoundFloat, maximumLegacyRound )
