@@ -32,4 +32,4 @@ AI teammate package for **Call of Duty: Advanced Warfare Exo Survival** (not Zom
 - `scr_es_autobots_support_cost`
 - `scr_es_autobots_equipment_cost`
 
-Purchases are conservative: bots require affordability, attempt interaction, and only consider the purchase successful if score drops after interaction. The script never manually deducts score.
+Purchases are conservative: bots require affordability and attempt interaction. For positive-cost purchases, success is confirmed only when score drops after interaction; zero-cost interactions are treated as successful on interaction. The script never manually deducts score.

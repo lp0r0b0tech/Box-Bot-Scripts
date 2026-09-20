@@ -623,11 +623,6 @@ attemptAmmoRestock()
 attemptWeaponPurchase()
 {
     roundNumber = getCurrentSurvivalRound();
-    if ( roundNumber < 6 && !currentWeaponNeedsAmmo() )
-    {
-        return false;
-    }
-
     if ( roundNumber < 10 && !currentWeaponNeedsAmmo() )
     {
         return false;
@@ -1174,7 +1169,7 @@ isEnemyEntity( entity )
         return true;
     }
 
-    return entityMatchesToken( entity, "enemy" ) || entityMatchesToken( entity, "soldier" ) || entityMatchesToken( entity, "kva" ) || entityMatchesToken( entity, "atlas" );
+    return entityMatchesToken( entity, "enemy" ) || entityMatchesToken( entity, "soldier" ) || entityMatchesToken( entity, "kva" ) || entityMatchesToken( entity, "hostile" );
 }
 
 hasEnoughScore( player, amount )
