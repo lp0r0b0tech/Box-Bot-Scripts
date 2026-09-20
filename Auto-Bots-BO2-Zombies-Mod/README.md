@@ -1,13 +1,17 @@
 # Auto Bots + BO2 Feel Zombies Mod
 
-Source-only S1x Exo Zombies mod package that combines two ideas in one folder:
+Source-only **S1x** Exo Zombies mod package that combines two ideas in one folder:
 
 - **Auto Bots** for filling empty lobbies and helping in solo/co-op matches.
 - **Black Ops 2 feel tuning** for round pacing, zombie health/speed, power-ups, crawler odds, and revive pacing.
 
-## Folder layout
+## S1x installation
 
-Place the whole `Auto-Bots-BO2-Zombies-Mod` folder into your S1x mod scripts/mods location using the same simple drop-in workflow described by this repository's root README.
+Place the whole `Auto-Bots-BO2-Zombies-Mod` folder into your **S1x** scripts/mod folder location using the same simple drop-in workflow described by this repository's root README (`place the folder in s1 thats it`).
+
+A practical layout is:
+
+- `.../s1x/Auto-Bots-BO2-Zombies-Mod/scripts/zm/auto_bots_bo2_zombies.gsc`
 
 Included script path:
 
