@@ -83,20 +83,20 @@ Normal zombie health is calculated in one shared path (`calculateBo2ZombieHealth
    - `ABZM_BO2_BASE_HEALTH + ((round - 1) * ABZM_BO2_HEALTH_INCREMENT)`
 2. rounds after that continue the existing BO2-feel exponential growth:
    - previous round health `* ABZM_BO2_HEALTH_CURVE_MULTIPLIER`
-3. after `ABZM_BO2_HEALTH_SOFTCAP_START_ROUND`, the curve keeps scaling but eases toward `ABZM_BO2_HEALTH_SOFTCAP` by adding a bounded fraction of the remaining gap each round:
+3. after `ABZM_BO2_HEALTH_LEGACY_CURVE_END_ROUND`, the curve keeps scaling but eases toward `ABZM_BO2_HEALTH_SOFTCAP` by adding a bounded fraction of the remaining gap each round:
    - remaining gap `* ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE`
    - clamped between `ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP` and `ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP`
 4. `ABZM_BO2_HEALTH_CAP` remains the absolute defensive ceiling if you retune the constants.
 
 Default late-round values:
 
-- `ABZM_BO2_HEALTH_SOFTCAP_START_ROUND 45`
+- `ABZM_BO2_HEALTH_LEGACY_CURVE_END_ROUND 45`
 - `ABZM_BO2_HEALTH_SOFTCAP 32000`
 - `ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE 0.08`
 - `ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP 10`
 - `ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP 120`
 
-With those defaults, the curve stays unchanged through round `45`, then rounds `46+` continue scaling on a slower late-round ramp instead of racing straight into the old `35000` cap. `calculateBo2ZombieHealth()` reaches `30584` at round `55` and `32000` by round `100`, while `tuneZombieForCurrentRound()` reduces special-round enemies to `24000` at round `100` by applying `ABZM_BO2_SPECIAL_HEALTH_SCALE` after that base health is calculated. This package does not add separate round-based zombie damage scaling, so late-round survivability is governed mainly by the softened health curve plus the existing speed/special-round rules.
+With those defaults, the curve stays unchanged through round `45`, then rounds `46+` continue scaling on a slower late-round ramp instead of racing straight into the old `35000` cap. `calculateBo2ZombieHealth()` reaches `30584` at round `55` and snaps cleanly to the `32000` soft cap once it gets within the configured minimum step, so round `100` uses a `32000` normal-zombie base while `tuneZombieForCurrentRound()` reduces special-round enemies to `24000` at round `100` by applying `ABZM_BO2_SPECIAL_HEALTH_SCALE` after that base health is calculated. This package does not add separate round-based zombie damage scaling, so late-round survivability is governed mainly by the softened health curve plus the existing speed/special-round rules.
 
 ## Known limitations
 

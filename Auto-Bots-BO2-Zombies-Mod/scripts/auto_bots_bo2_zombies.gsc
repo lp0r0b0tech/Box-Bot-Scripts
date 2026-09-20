@@ -27,7 +27,7 @@
 #define ABZM_BO2_HEALTH_CURVE_ROUND           10
 #define ABZM_BO2_HEALTH_CURVE_MULTIPLIER      1.10
 #define ABZM_BO2_HEALTH_CAP                   35000
-#define ABZM_BO2_HEALTH_SOFTCAP_START_ROUND   45
+#define ABZM_BO2_HEALTH_LEGACY_CURVE_END_ROUND 45
 #define ABZM_BO2_HEALTH_SOFTCAP               32000
 #define ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE 0.08
 #define ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP      10
@@ -966,7 +966,7 @@ calculateBo2ZombieHealth( roundNumber )
 
 calculateBo2ZombieHealthForRoundStep( roundNumber, previousHealth )
 {
-    if ( roundNumber <= ABZM_BO2_HEALTH_SOFTCAP_START_ROUND )
+    if ( roundNumber <= ABZM_BO2_HEALTH_LEGACY_CURVE_END_ROUND )
     {
         return min( ABZM_BO2_HEALTH_CAP, int( previousHealth * ABZM_BO2_HEALTH_CURVE_MULTIPLIER ) );
     }
@@ -988,6 +988,11 @@ calculateBo2LateRoundZombieHealth( previousHealth )
     }
 
     remainingHealth = effectiveSoftcap - previousHealth;
+    if ( remainingHealth <= ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP )
+    {
+        return effectiveSoftcap;
+    }
+
     healthStep = int( remainingHealth * ABZM_BO2_HEALTH_SOFTCAP_APPROACH_RATE );
     healthStep = int( abzmClamp( healthStep, ABZM_BO2_HEALTH_SOFTCAP_MIN_STEP, ABZM_BO2_HEALTH_SOFTCAP_MAX_STEP ) );
 
