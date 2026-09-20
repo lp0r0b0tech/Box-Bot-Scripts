@@ -1056,7 +1056,8 @@ attemptPurchase( node, cost )
 
     if ( cost <= 0 )
     {
-        return false;
+        markInteractionSuccess( node );
+        return true;
     }
 
     if ( !isdefined( self.score ) )
@@ -1108,6 +1109,7 @@ moveToAndUse( node )
         moveTarget = node.origin - (towardNode * (ABES_INTERACT_RANGE - 24));
     }
     self moveto( moveTarget, 0.25 );
+    markInteractionAttempt( node );
 
     startTime = gettime();
     while ( distance( self.origin, node.origin ) > ABES_INTERACT_RANGE )
@@ -1131,10 +1133,16 @@ interactionOnCooldown( node )
     return isdefined( self.abesLastInteractTarget ) && self.abesLastInteractTarget == node && isdefined( self.abesLastInteractTime ) && (gettime() - self.abesLastInteractTime) < 700;
 }
 
-markInteractionSuccess( node )
+markInteractionAttempt( node )
 {
     self.abesLastInteractTarget = node;
     self.abesLastInteractTime = gettime();
+}
+
+markInteractionSuccess( node )
+{
+    markInteractionAttempt( node );
+    self.abesLastPurchaseSuccessTime = gettime();
 }
 
 getInteractableCandidates()
@@ -1144,17 +1152,38 @@ getInteractableCandidates()
         return level.abes.interactableCandidates;
     }
 
+    rawNodes = [];
+    appendEntArray( rawNodes, getentarray( "trigger", "classname" ) );
+    appendEntArray( rawNodes, getentarray( "trigger_use", "classname" ) );
+    appendEntArray( rawNodes, getentarray( "script_model", "classname" ) );
+    appendEntArray( rawNodes, getentarray( "script_brushmodel", "classname" ) );
+    appendEntArray( rawNodes, getentarray( "weapon", "classname" ) );
+    appendEntArray( rawNodes, getentarray( "item", "classname" ) );
+
     nodes = [];
-    appendEntArray( nodes, getentarray( "trigger", "classname" ) );
-    appendEntArray( nodes, getentarray( "trigger_use", "classname" ) );
-    appendEntArray( nodes, getentarray( "script_model", "classname" ) );
-    appendEntArray( nodes, getentarray( "script_brushmodel", "classname" ) );
-    appendEntArray( nodes, getentarray( "weapon", "classname" ) );
-    appendEntArray( nodes, getentarray( "item", "classname" ) );
+    for ( i = 0; i < rawNodes.size; i++ )
+    {
+        node = rawNodes[i];
+        if ( isPotentialInteractable( node ) )
+        {
+            nodes[nodes.size] = node;
+        }
+    }
 
     level.abes.interactableCandidates = nodes;
     level.abes.interactableCacheTime = gettime();
     return level.abes.interactableCandidates;
+}
+
+isPotentialInteractable( entity )
+{
+    return isDesiredInteractable( entity, "weapon" )
+        || isDesiredInteractable( entity, "mystery" )
+        || isDesiredInteractable( entity, "ammo" )
+        || isDesiredInteractable( entity, "exo_upgrade" )
+        || isDesiredInteractable( entity, "armor" )
+        || isDesiredInteractable( entity, "support" )
+        || isDesiredInteractable( entity, "equipment" );
 }
 
 isDesiredInteractable( entity, kind )
@@ -1394,6 +1423,11 @@ isTeammateEntity( player, other )
     if ( isdefined( player.team ) && isdefined( other.team ) )
     {
         return player.team == other.team;
+    }
+
+    if ( isplayer( player ) && isplayer( other ) && isdefined( level.abes ) )
+    {
+        return true;
     }
 
     return false;
