@@ -72,13 +72,6 @@ atlas45_register_damage_modifier()
         return;
     }
 
-    if(isdefined(level.exo_damage_curve_registered) &&
-       level.exo_damage_curve_registered)
-    {
-        level.exo_damage_curve_registering = false;
-        return;
-    }
-
     if(!isdefined(level.exo_damage_curve_previous_callbacks))
     {
         level.exo_damage_curve_previous_callbacks = [];
@@ -132,7 +125,8 @@ atlas45_register_damage_modifier()
 
         if(!hasDistinctAliasCallback &&
            (lowercaseWeaponName == weaponName ||
-            !isdefined(level.modifyweapondamage[lowercaseWeaponName])))
+            !isdefined(level.modifyweapondamage[lowercaseWeaponName]) ||
+            level.modifyweapondamage[lowercaseWeaponName] == previousCallback))
         {
             level.modifyweapondamage[lowercaseWeaponName] =
                 ::atlas45_modify_damage;
@@ -154,18 +148,15 @@ atlas45_register_damage_modifier()
     level.exo_damage_curve_registered = 1;
     println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".");
     level.exo_damage_curve_registering = false;
+    level thread atlas45_retry_register_damage_modifier();
 }
 
 atlas45_retry_register_damage_modifier()
 {
     level endon("game_ended");
 
-    wait 1;
-    if(!isdefined(level.exo_damage_curve_registered) ||
-       !level.exo_damage_curve_registered)
-    {
-        level thread atlas45_register_damage_modifier();
-    }
+    wait 5;
+    level thread atlas45_register_damage_modifier();
 }
 
 atlas45_registration_guard_watchdog()
@@ -433,7 +424,8 @@ atlas45_get_base_damage(mark)
     if(mark <= 20)
     {
         /*
-            +9 rounds division to the nearest integer.
+            Add +9 before division by 18 to round the Mk2-Mk20
+            interpolation result to the nearest integer.
         */
         return 2500 + int(((((mark - 2) * 7500) + 9) / 18));
     }
