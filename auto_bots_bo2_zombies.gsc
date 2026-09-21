@@ -930,7 +930,7 @@ attemptWeaponPurchase()
         return false;
     }
 
-    if ( attemptPurchase( weaponNode, level.abzm.weaponCost ) )
+    if ( isdefined( weaponNode ) && attemptPurchase( weaponNode, level.abzm.weaponCost ) )
     {
         markGenericPurchase();
         return true;
@@ -1014,7 +1014,7 @@ markPerkPurchase( node )
         addedNewPerk = true;
     }
 
-    shouldCountPerk = true;
+    shouldCountPerk = addedNewPerk || !isdefined( perkKey ) || perkKey == "";
     if ( shouldCountPerk && !isdefined( self.abzmPerkPurchases ) )
     {
         self.abzmPerkPurchases = 0;
@@ -1229,6 +1229,11 @@ getPerkPurchaseKey( node )
 
     if ( entityMatchesToken( node, "perk" ) || entityMatchesToken( node, "vending" ) || entityMatchesToken( node, "perkacola" ) )
     {
+        if ( isdefined( node.origin ) )
+        {
+            return "generic_perk_" + int( node.origin[0] ) + "_" + int( node.origin[1] ) + "_" + int( node.origin[2] );
+        }
+
         return "generic_perk";
     }
 
