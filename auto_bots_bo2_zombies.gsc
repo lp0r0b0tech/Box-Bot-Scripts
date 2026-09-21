@@ -1167,12 +1167,13 @@ attemptWeaponPurchase()
         mysteryNode = getClosestAvailableSharedInteractable( "mystery" );
         if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && reserveSharedPurchase( mysteryNode, "mystery" ) )
         {
-            previousMysteryStateKey = getWeaponPurchaseStateKey();
+            previousMysteryWeaponKey = getCurrentWeaponIdentityKey();
+            previousMysteryUpgradeLevel = getCurrentWeaponUpgradeLevel();
             if ( attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
             {
                 if ( !self.abzmLastPurchaseUsedFallback )
                 {
-                    if ( waitForWeaponPurchaseStateChange( previousMysteryStateKey, 1000 ) )
+                    if ( waitForWeaponUpgradeOrIdentityChange( previousMysteryWeaponKey, previousMysteryUpgradeLevel, 1000 ) )
                     {
                         markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
                         self.abzmLastWeaponPurchaseStateKey = "";
@@ -1382,6 +1383,22 @@ waitForWeaponPurchaseStateChange( previousStateKey, maxWaitMs )
     return shouldResetWeaponPurchaseStateKey( previousStateKey, getWeaponPurchaseStateKey() );
 }
 
+waitForWeaponUpgradeOrIdentityChange( previousWeaponKey, previousUpgradeLevel, maxWaitMs )
+{
+    start = gettime();
+    while ( (gettime() - start) < maxWaitMs )
+    {
+        if ( isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel ) )
+        {
+            return true;
+        }
+
+        wait 0.05;
+    }
+
+    return isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel );
+}
+
 markPackAPunchPurchase()
 {
     self initializeBotPurchaseState();
@@ -1392,26 +1409,22 @@ markPackAPunchPurchase()
     }
 
     observedUpgradeLevel = getCurrentWeaponUpgradeLevel();
+    entryIndex = findPackAPunchWeaponEntryIndex( currentWeaponKey );
     if ( observedUpgradeLevel > 0 )
     {
         trackedUpgradeLevel = observedUpgradeLevel;
     }
-    else if ( self.abzmLastPackAPunchWeaponKey == currentWeaponKey && self.abzmLastPackAPunchUpgradeLevel > 0 )
+    else if ( entryIndex >= 0 && isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel ) && self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel > 0 )
     {
-        trackedUpgradeLevel = min( self.abzmLastPackAPunchUpgradeLevel + 1, ABZM_MAX_PACKAPUNCH_LEVEL );
-    }
-    else if ( self.abzmLastPackAPunchWeaponKey != currentWeaponKey || self.abzmLastPackAPunchUpgradeLevel <= 0 )
-    {
-        trackedUpgradeLevel = 1;
+        trackedUpgradeLevel = min( self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel + 1, ABZM_MAX_PACKAPUNCH_LEVEL );
     }
     else
     {
-        trackedUpgradeLevel = self.abzmLastPackAPunchUpgradeLevel;
+        trackedUpgradeLevel = 1;
     }
 
     trackedUpgradeLevel = min( trackedUpgradeLevel, ABZM_MAX_PACKAPUNCH_LEVEL );
 
-    entryIndex = findPackAPunchWeaponEntryIndex( currentWeaponKey );
     if ( entryIndex >= 0 )
     {
         self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel = trackedUpgradeLevel;
@@ -1528,8 +1541,8 @@ markPerkPurchase( node )
     if ( shouldCountPerk )
     {
         self.abzmPerkPurchases++;
+        self.abzmLastPerkPurchaseTime = gettime();
     }
-    self.abzmLastPerkPurchaseTime = gettime();
     markGenericPurchase();
 }
 
