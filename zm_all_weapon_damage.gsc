@@ -127,7 +127,8 @@ awd_register_damage_key( weaponKey )
     }
 
     if ( !isdefined( level.awd_previous_damage_callbacks[weaponKey] ) &&
-         isdefined( level.modifyweapondamage[weaponKey] ) )
+         isdefined( level.modifyweapondamage[weaponKey] ) &&
+         level.modifyweapondamage[weaponKey] != ::awd_modify_damage )
     {
         level.awd_previous_damage_callbacks[weaponKey] =
             level.modifyweapondamage[weaponKey];
@@ -161,6 +162,11 @@ awd_apply_previous_damage_callback(
     }
 
     if ( !isdefined( callback ) )
+    {
+        return damage;
+    }
+
+    if ( callback == ::awd_modify_damage )
     {
         return damage;
     }
@@ -210,18 +216,6 @@ awd_modify_damage(
         return damage;
     }
 
-    damage = awd_apply_previous_damage_callback(
-        victim,
-        attacker,
-        damage,
-        meansOfDeath,
-        weapon,
-        point,
-        direction,
-        hitLocation,
-        baseWeaponName
-    );
-
     weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
         attacker,
         weapon
@@ -242,6 +236,18 @@ awd_modify_damage(
     {
         return damage;
     }
+
+    awd_apply_previous_damage_callback(
+        victim,
+        attacker,
+        damage,
+        meansOfDeath,
+        weapon,
+        point,
+        direction,
+        hitLocation,
+        baseWeaponName
+    );
 
     if ( weaponLevel > 25 )
     {
