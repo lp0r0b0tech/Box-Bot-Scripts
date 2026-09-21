@@ -250,6 +250,7 @@ runSelfTestsIfEnabled()
     runBotLifecycleSelfTests();
     runSharedPurchaseSelfTests();
     runPerkPurchaseSelfTests();
+    runCombatProfileSelfTests();
 }
 
 isDevelopmentModeEnabled()
@@ -335,6 +336,40 @@ runPerkPurchaseSelfTests()
 
     reportSelfTestResult( "perk_purchase_tracks_unique_node", firstPerkCount == 1 && firstPerkOwned );
     reportSelfTestResult( "perk_purchase_suppresses_duplicates", duplicatePerkCount == 1 );
+}
+
+runCombatProfileSelfTests()
+{
+    if ( !isdefined( level.abzm ) )
+    {
+        return;
+    }
+
+    previousBotDifficulty = level.abzm.botDifficulty;
+    previousBotAccuracy = level.abzm.botAccuracy;
+    previousBotReactionTime = level.abzm.botReactionTime;
+    previousBotMaxHealth = level.abzm.botMaxHealth;
+    previousBotAggression = level.abzm.botAggression;
+
+    bot = spawnstruct();
+    bot.abzmIsBot = true;
+    bot.pers["isBot"] = true;
+    bot.maxhealth = 1000;
+    bot.health = 500;
+    level.abzm.botDifficulty = "ultra";
+    level.abzm.botAccuracy = 9.99;
+    level.abzm.botReactionTime = 0.0;
+    level.abzm.botMaxHealth = 2000;
+    level.abzm.botAggression = 9.99;
+
+    bot applyBotCombatProfile();
+    reportSelfTestResult( "combat_profile_preserves_health_ratio", bot.health == 1000 );
+
+    level.abzm.botDifficulty = previousBotDifficulty;
+    level.abzm.botAccuracy = previousBotAccuracy;
+    level.abzm.botReactionTime = previousBotReactionTime;
+    level.abzm.botMaxHealth = previousBotMaxHealth;
+    level.abzm.botAggression = previousBotAggression;
 }
 
 runDeferredSelfTests()
@@ -1145,15 +1180,24 @@ attemptUtilityPurchase()
         papNode = getClosestAvailableSharedInteractable( "packapunch" );
         if ( isdefined( papNode ) && reserveSharedPurchase( papNode, "packapunch" ) )
         {
+            previousPapWeaponKey = getCurrentWeaponIdentityKey();
+            previousPapUpgradeLevel = getCurrentWeaponUpgradeLevel();
             if ( attemptPurchase( papNode, level.abzm.packapunchCost ) )
             {
-                markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
-                self.abzmLastWeaponPurchaseStateKey = "";
                 if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
                 {
-                    markPackAPunchPurchase();
+                    if ( isPackAPunchUpgradeConfirmed( previousPapWeaponKey, previousPapUpgradeLevel ) )
+                    {
+                        markSharedPurchase( papNode, "packapunch", false );
+                        self.abzmLastWeaponPurchaseStateKey = "";
+                        markPackAPunchPurchase();
+                        return true;
+                    }
                 }
-                return true;
+
+                clearSharedPurchaseReservation( papNode, "packapunch" );
+                markGenericPurchase();
+                return false;
             }
 
             clearSharedPurchaseReservation( papNode, "packapunch" );
@@ -1167,8 +1211,15 @@ attemptUtilityPurchase()
         {
             if ( attemptPurchase( doorNode, level.abzm.doorCost ) )
             {
-                markSharedPurchase( doorNode, "door", self.abzmLastPurchaseUsedFallback );
-                return true;
+                if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
+                {
+                    markSharedPurchase( doorNode, "door", false );
+                    return true;
+                }
+
+                clearSharedPurchaseReservation( doorNode, "door" );
+                markGenericPurchase();
+                return false;
             }
 
             clearSharedPurchaseReservation( doorNode, "door" );
@@ -1182,8 +1233,15 @@ attemptUtilityPurchase()
         {
             if ( attemptPurchase( exoNode, level.abzm.exoCost ) )
             {
-                markSharedPurchase( exoNode, "exo", self.abzmLastPurchaseUsedFallback );
-                return true;
+                if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
+                {
+                    markSharedPurchase( exoNode, "exo", false );
+                    return true;
+                }
+
+                clearSharedPurchaseReservation( exoNode, "exo" );
+                markGenericPurchase();
+                return false;
             }
 
             clearSharedPurchaseReservation( exoNode, "exo" );
@@ -1257,12 +1315,12 @@ markPackAPunchPurchase()
 
     if ( self.abzmLastPackAPunchWeaponKey == currentWeaponKey )
     {
-        self.abzmLastPackAPunchUpgradeLevel++;
+        self.abzmLastPackAPunchUpgradeLevel = max( self.abzmLastPackAPunchUpgradeLevel + 1, getCurrentWeaponUpgradeLevel() );
     }
     else
     {
         self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
-        self.abzmLastPackAPunchUpgradeLevel = 1;
+        self.abzmLastPackAPunchUpgradeLevel = max( 1, getCurrentWeaponUpgradeLevel() );
     }
 }
 
@@ -1286,7 +1344,23 @@ alreadyPackAPunchedCurrentWeapon()
         return false;
     }
 
-    return true;
+    return getCurrentWeaponUpgradeLevel() >= self.abzmLastPackAPunchUpgradeLevel;
+}
+
+isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel )
+{
+    currentWeaponKey = getCurrentWeaponIdentityKey();
+    if ( currentWeaponKey == "" )
+    {
+        return false;
+    }
+
+    if ( currentWeaponKey != previousWeaponKey )
+    {
+        return true;
+    }
+
+    return getCurrentWeaponUpgradeLevel() > previousUpgradeLevel;
 }
 
 markPerkPurchase( node )
@@ -2264,6 +2338,38 @@ getCurrentWeaponIdentityKey()
     }
 
     return toLower( weapon + "" );
+}
+
+getCurrentWeaponUpgradeLevel()
+{
+    weapon = self getcurrentweapon();
+    if ( !isdefined( weapon ) || !isdefined( self.weaponstate ) || !isdefined( self.weaponstate[weapon] ) )
+    {
+        return 0;
+    }
+
+    state = self.weaponstate[weapon];
+    if ( isdefined( state["pap_level"] ) )
+    {
+        return int( state["pap_level"] );
+    }
+
+    if ( isdefined( state["upgrade_level"] ) )
+    {
+        return int( state["upgrade_level"] );
+    }
+
+    if ( isdefined( state["weapon_level_increase"] ) )
+    {
+        return int( state["weapon_level_increase"] );
+    }
+
+    if ( isdefined( state["is_upgraded"] ) && state["is_upgraded"] )
+    {
+        return 1;
+    }
+
+    return 0;
 }
 
 isCurrentWeaponWeak()
