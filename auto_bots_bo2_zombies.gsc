@@ -739,25 +739,9 @@ attemptBotRevive()
                 return false;
             }
 
+            downed.abzmDowned = false;
             downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             signalReviveSuccess( downed, self );
-
-            fallbackStart = gettime();
-            while ( isdefined( downed ) && downed.abzmDowned && (gettime() - fallbackStart) < 500 )
-            {
-                wait 0.05;
-            }
-
-            if ( !isdefined( downed ) || downed.abzmDowned )
-            {
-                if ( isdefined( downed ) )
-                {
-                    downed.abzmReviver = undefined;
-                }
-
-                self.abzmReviveTarget = undefined;
-                return false;
-            }
         }
         else if ( reviveResult == 0 )
         {
@@ -1737,8 +1721,7 @@ attemptPurchase( node, cost )
         return true;
     }
 
-    spendPlayerPoints( self, cost );
-    return true;
+    return false;
 }
 
 getInteractableCandidates()
@@ -1760,8 +1743,24 @@ getInteractableCandidates()
     appendEntArray( nodes, getentarray( "script_model", "classname" ) );
     appendEntArray( nodes, getentarray( "script_brushmodel", "classname" ) );
 
+    rawPurchaseNodes = [];
+    appendEntArray( rawPurchaseNodes, getentarray( "weapon", "classname" ) );
+    appendEntArray( rawPurchaseNodes, getentarray( "item", "classname" ) );
+
+    purchaseNodes = [];
+    for ( i = 0; i < rawPurchaseNodes.size; i++ )
+    {
+        node = rawPurchaseNodes[i];
+        if ( isDesiredInteractable( node, "weapon" ) || isDesiredInteractable( node, "mystery" ) )
+        {
+            purchaseNodes[purchaseNodes.size] = node;
+        }
+    }
+
     level.abzm.interactableCandidates = nodes;
+    level.abzm.purchaseItemCandidates = purchaseNodes;
     level.abzm.interactableCacheTime = gettime();
+    level.abzm.purchaseItemCacheTime = level.abzm.interactableCacheTime;
     return level.abzm.interactableCandidates;
 }
 
@@ -1773,27 +1772,7 @@ getWeaponPurchaseCandidates()
         return nodes;
     }
 
-    if ( (gettime() - level.abzm.purchaseItemCacheTime) < 2000 )
-    {
-        return level.abzm.purchaseItemCandidates;
-    }
-
-    rawNodes = [];
-    appendEntArray( rawNodes, getentarray( "weapon", "classname" ) );
-    appendEntArray( rawNodes, getentarray( "item", "classname" ) );
-
-    nodes = [];
-    for ( i = 0; i < rawNodes.size; i++ )
-    {
-        node = rawNodes[i];
-        if ( isDesiredInteractable( node, "weapon" ) || isDesiredInteractable( node, "mystery" ) )
-        {
-            nodes[nodes.size] = node;
-        }
-    }
-
-    level.abzm.purchaseItemCandidates = nodes;
-    level.abzm.purchaseItemCacheTime = gettime();
+    getInteractableCandidates();
     return level.abzm.purchaseItemCandidates;
 }
 
