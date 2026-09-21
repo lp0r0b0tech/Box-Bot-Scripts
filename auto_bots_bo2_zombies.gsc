@@ -338,7 +338,7 @@ applyBotCombatProfile()
         self botsetdifficulty( desiredDifficulty );
     }
 
-    self.abzmSkill = level.abzm.botSkill;
+    self.abzmSkill = desiredDifficulty;
     self.botAccuracy = level.abzm.botAccuracy;
     self.reactionTime = level.abzm.botReactionTime;
     self.maxhealth = level.abzm.botMaxHealth;
@@ -564,7 +564,7 @@ spawnAutoBot( botIndex )
     bot.abzmIsBot = true;
     bot.pers["isBot"] = true;
     bot.name = level.abzm.botNames[nameIndex];
-    bot.abzmSkill = level.abzm.botSkill;
+    bot.abzmSkill = resolveBotSkillDifficulty( level.abzm.botDifficulty );
     bot thread applyBotPostSpawnSetup();
     bot thread onPlayerConnected();
     return true;
@@ -1065,7 +1065,7 @@ markSharedPurchase( node, kind )
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
     sharedEntry.expiresAt = -1;
-    if ( kind == "exo" || kind == "door" )
+    if ( kind == "exo" )
     {
         sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
     }
