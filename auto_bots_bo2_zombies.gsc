@@ -1641,7 +1641,7 @@ getClosestInteractable( kind )
 
     if ( kind == "weapon" || kind == "mystery" )
     {
-        appendEntArray( nodes, getWeaponPurchaseCandidates() );
+        appendUniqueEntArray( nodes, getWeaponPurchaseCandidates() );
     }
 
     best = undefined;
@@ -1989,6 +1989,42 @@ appendEntArray( destination, source )
             destination[destination.size] = source[i];
         }
     }
+
+    appendUniqueEntArray( destination, source )
+    {
+        if ( !isdefined( source ) )
+        {
+            return;
+        }
+
+        for ( i = 0; i < source.size; i++ )
+        {
+            if ( !isdefined( source[i] ) || entArrayContains( destination, source[i] ) )
+            {
+                continue;
+            }
+
+            destination[destination.size] = source[i];
+        }
+    }
+
+    entArrayContains( source, target )
+    {
+        if ( !isdefined( source ) || !isdefined( target ) )
+        {
+            return false;
+        }
+
+        for ( i = 0; i < source.size; i++ )
+        {
+            if ( isdefined( source[i] ) && source[i] == target )
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 isZombieEntity( entity )
@@ -2107,6 +2143,11 @@ getInteractableKey( entity )
     }
     if ( key == "" )
     {
+        if ( isdefined( entity.origin ) )
+        {
+            return "origin_" + int( entity.origin[0] ) + "_" + int( entity.origin[1] ) + "_" + int( entity.origin[2] );
+        }
+
         return "";
     }
 
