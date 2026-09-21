@@ -485,11 +485,7 @@ grantForcedBotLoadout()
         return false;
     }
 
-    currentWeapon = self getcurrentweapon();
-    if ( isdefined( currentWeapon ) && currentWeapon != "" && currentWeapon != ABES_FORCE_LOADOUT_PRIMARY && currentWeapon != ABES_FORCE_LOADOUT_SECONDARY && currentWeapon != ABES_FORCE_LOADOUT_LETHAL )
-    {
-        self takeweapon( currentWeapon );
-    }
+    removeNonForcedBotWeapons();
 
     self giveweapon( ABES_FORCE_LOADOUT_PRIMARY );
     self giveweapon( ABES_FORCE_LOADOUT_SECONDARY );
@@ -628,6 +624,34 @@ applyForcedBotUpgradeAlias( key, value )
     if ( !isdefined( self[key] ) || int( self[key] ) != int( value ) )
     {
         self[key] = value;
+    }
+}
+
+removeNonForcedBotWeapons()
+{
+    previousWeapon = "";
+
+    for ( i = 0; i < 8; i++ )
+    {
+        currentWeapon = self getcurrentweapon();
+        if ( !isdefined( currentWeapon ) || currentWeapon == "" )
+        {
+            return;
+        }
+
+        if ( currentWeapon == ABES_FORCE_LOADOUT_PRIMARY || currentWeapon == ABES_FORCE_LOADOUT_SECONDARY || currentWeapon == ABES_FORCE_LOADOUT_LETHAL )
+        {
+            return;
+        }
+
+        if ( currentWeapon == previousWeapon )
+        {
+            return;
+        }
+
+        previousWeapon = currentWeapon;
+        self takeweapon( currentWeapon );
+        wait 0.05;
     }
 }
 
