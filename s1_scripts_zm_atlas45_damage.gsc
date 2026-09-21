@@ -145,179 +145,35 @@ atlas45_modify_damage(
         weaponName
     );
 
-    /*
-        Prevent the stock weapon-level damage increase from being applied
-        in addition to this script's custom base-damage curve.
-
-        This does not alter normal magazine-size or reserve-ammo upgrades.
-    */
-    canSuppressStockLevelDamage =
-       isdefined(weaponLevel) && weaponLevel >= 2 &&
-       isdefined(attacker.weaponstate) &&
-       isdefined(attacker.weaponstate[weaponName]) &&
-       isdefined(attacker.weaponstate[weaponName]["weapon_level_increase"]);
-
-    if(canSuppressStockLevelDamage)
-    {
-        originalWeaponLevelIncrease =
-            attacker.weaponstate[weaponName]["weapon_level_increase"];
-        restoreNonce = atlas45_begin_temporary_weaponlevel_override(
-            attacker,
-            weaponName,
-            originalWeaponLevelIncrease
-        );
-        attacker.weaponstate[weaponName]
-            ["weapon_level_increase"] = 0;
-    }
-
-    damageAfterStockCallback = atlas45_apply_previous_damage_callback(
-        victim,
-        attacker,
-        damage,
-        meansOfDeath,
-        weapon,
-        weaponName,
-        point,
-        direction,
-        hitLocation
-    );
-
-    if(canSuppressStockLevelDamage)
-    {
-        atlas45_end_temporary_weaponlevel_override(
-            attacker,
-            restoreNonce
-        );
-    }
-
     if(!isdefined(weaponLevel) || weaponLevel < 2)
     {
         /*
             Keep Mk1 completely vanilla.
         */
-        finalDamage = damageAfterStockCallback;
-    }
-    else
-    {
-        if(weaponLevel > 25)
-        {
-            weaponLevel = 25;
-        }
-
-        /*
-            Do not process hitLocation here. This intentionally avoids custom
-            head/neck/helmet multipliers so the game can retain its normal
-            hit-location behavior.
-        */
-        finalDamage = atlas45_apply_callback_modifiers(
-            atlas45_get_base_damage(weaponLevel),
+        return atlas45_apply_previous_damage_callback(
+            victim,
+            attacker,
             damage,
-            damageAfterStockCallback
+            meansOfDeath,
+            weapon,
+            weaponName,
+            point,
+            direction,
+            hitLocation
         );
     }
 
-    return finalDamage;
-}
-
-atlas45_begin_temporary_weaponlevel_override(
-    attacker,
-    weaponName,
-    originalWeaponLevelIncrease
-)
-{
-    if(!isdefined(attacker.exo_damage_curve_restore_nonce))
+    if(weaponLevel > 25)
     {
-        attacker.exo_damage_curve_restore_nonce = 0;
+        weaponLevel = 25;
     }
 
-    if(!isdefined(attacker.exo_damage_curve_restore_entries))
-    {
-        attacker.exo_damage_curve_restore_entries = [];
-    }
-
-    attacker.exo_damage_curve_restore_nonce++;
-    nonce = attacker.exo_damage_curve_restore_nonce;
-
-    restoreEntry = spawnstruct();
-    restoreEntry.pending = true;
-    restoreEntry.weaponName = weaponName;
-    restoreEntry.originalWeaponLevelIncrease = originalWeaponLevelIncrease;
-
-    attacker.exo_damage_curve_restore_entries[nonce] = restoreEntry;
-    attacker thread atlas45_fail_safe_restore_weapon_level_increase(nonce);
-    return nonce;
-}
-
-atlas45_end_temporary_weaponlevel_override(attacker, nonce)
-{
-    if(!isdefined(attacker) ||
-       !isdefined(attacker.exo_damage_curve_restore_entries) ||
-       !isdefined(attacker.exo_damage_curve_restore_entries[nonce]))
-    {
-        return;
-    }
-
-    restoreEntry = attacker.exo_damage_curve_restore_entries[nonce];
-    if(!isdefined(restoreEntry.pending) || !restoreEntry.pending)
-    {
-        atlas45_clear_restore_entry(attacker, nonce);
-        return;
-    }
-
-    atlas45_restore_weapon_level_increase_from_entry(attacker, restoreEntry);
-    atlas45_clear_restore_entry(attacker, nonce);
-}
-
-atlas45_fail_safe_restore_weapon_level_increase(nonce)
-{
-    self endon("disconnect");
-
-    wait 0;
-
-    if(!isdefined(self.exo_damage_curve_restore_entries) ||
-       !isdefined(self.exo_damage_curve_restore_entries[nonce]))
-    {
-        return;
-    }
-
-    restoreEntry = self.exo_damage_curve_restore_entries[nonce];
-    if(!isdefined(restoreEntry.pending) || !restoreEntry.pending)
-    {
-        atlas45_clear_restore_entry(self, nonce);
-        return;
-    }
-
-    atlas45_restore_weapon_level_increase_from_entry(self, restoreEntry);
-    atlas45_clear_restore_entry(self, nonce);
-}
-
-atlas45_restore_weapon_level_increase_from_entry(attacker, restoreEntry)
-{
-    if(!isdefined(attacker) || !isdefined(restoreEntry) ||
-       !isdefined(restoreEntry.weaponName))
-    {
-        return;
-    }
-
-    weaponName = restoreEntry.weaponName;
-    if(isdefined(attacker.weaponstate) &&
-       isdefined(attacker.weaponstate[weaponName]))
-    {
-        attacker.weaponstate[weaponName]["weapon_level_increase"] =
-            restoreEntry.originalWeaponLevelIncrease;
-    }
-}
-
-atlas45_clear_restore_entry(attacker, nonce)
-{
-    if(!isdefined(attacker) ||
-       !isdefined(attacker.exo_damage_curve_restore_entries) ||
-       !isdefined(attacker.exo_damage_curve_restore_entries[nonce]))
-    {
-        return;
-    }
-
-    attacker.exo_damage_curve_restore_entries[nonce] = undefined;
+    /*
+        Do not process hitLocation here. This intentionally avoids custom
+        head/neck/helmet multipliers so the game can retain its normal
+        hit-location behavior.
+    */
+    return atlas45_get_base_damage(weaponLevel);
 }
 
 atlas45_apply_previous_damage_callback(
@@ -391,28 +247,6 @@ atlas45_resolve_registered_weapon_name(weapon)
     }
 
     return weaponName;
-}
-
-atlas45_apply_callback_modifiers(baseDamage, originalDamage, callbackDamage)
-{
-    if(!isdefined(baseDamage))
-    {
-        return originalDamage;
-    }
-
-    if(!isdefined(callbackDamage) || !isdefined(originalDamage) ||
-       originalDamage <= 0)
-    {
-        return baseDamage;
-    }
-
-    adjustedDamage = int((baseDamage * callbackDamage) / originalDamage);
-    if(adjustedDamage < 1)
-    {
-        adjustedDamage = 1;
-    }
-
-    return adjustedDamage;
 }
 
 /*
