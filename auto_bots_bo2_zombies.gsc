@@ -75,6 +75,7 @@
 #define ABZM_SHARED_PURCHASE_COOLDOWN_MS      15000
 #define ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS 2000
 #define ABZM_SHARED_PURCHASE_RESERVATION_MS   1500
+#define ABZM_MAX_PACKAPUNCH_LEVEL             2
 #define ABZM_PURCHASE_COOLDOWN_SEC            1.5
 #define ABZM_PERK_PURCHASE_COOLDOWN_SEC       5.0
 #define ABZM_BO2_RUN_ROUND                    3
@@ -251,6 +252,7 @@ runSelfTestsIfEnabled()
     runSharedPurchaseSelfTests();
     runPerkPurchaseSelfTests();
     runCombatProfileSelfTests();
+    runWeaponPurchaseRoutingSelfTests();
 }
 
 isDevelopmentModeEnabled()
@@ -384,6 +386,18 @@ runCombatProfileSelfTests()
     level.abzm.botMaxHealth = previousBotMaxHealth;
     level.abzm.botAggression = previousBotAggression;
     reportSelfTestResult( "combat_profile_preserves_health_ratio", preservesHealthRatio );
+}
+
+runWeaponPurchaseRoutingSelfTests()
+{
+    explicitWeaponNode = spawnstruct();
+    explicitWeaponNode.targetname = "weapon_wallbuy_test";
+
+    genericWeaponNode = spawnstruct();
+    genericWeaponNode.targetname = "buy_weapon_fallback_test";
+
+    reportSelfTestResult( "weapon_routing_explicit_marker_stays_weapon", isDesiredInteractable( explicitWeaponNode, "weapon" ) && !isDesiredInteractable( explicitWeaponNode, "generic_weapon_buy" ) );
+    reportSelfTestResult( "weapon_routing_generic_marker_stays_generic", !isDesiredInteractable( genericWeaponNode, "weapon" ) && isDesiredInteractable( genericWeaponNode, "generic_weapon_buy" ) );
 }
 
 runDeferredSelfTests()
@@ -1343,7 +1357,7 @@ markPackAPunchPurchase()
     }
     else if ( self.abzmLastPackAPunchWeaponKey == currentWeaponKey && self.abzmLastPackAPunchUpgradeLevel > 0 )
     {
-        trackedUpgradeLevel = self.abzmLastPackAPunchUpgradeLevel + 1;
+        trackedUpgradeLevel = min( self.abzmLastPackAPunchUpgradeLevel + 1, ABZM_MAX_PACKAPUNCH_LEVEL );
     }
     else if ( self.abzmLastPackAPunchWeaponKey != currentWeaponKey || self.abzmLastPackAPunchUpgradeLevel <= 0 )
     {
@@ -1353,6 +1367,8 @@ markPackAPunchPurchase()
     {
         trackedUpgradeLevel = self.abzmLastPackAPunchUpgradeLevel;
     }
+
+    trackedUpgradeLevel = min( trackedUpgradeLevel, ABZM_MAX_PACKAPUNCH_LEVEL );
 
     entryIndex = findPackAPunchWeaponEntryIndex( currentWeaponKey );
     if ( entryIndex >= 0 )
@@ -1532,20 +1548,31 @@ reserveSharedPurchase( node, kind )
         return true;
     }
 
-    sharedIndex = findSharedPurchaseIndex( purchaseKey );
-    if ( sharedIndex >= 0 )
+    claimedIndex = -1;
+    for ( i = 0; i < level.abzm.sharedPurchasedNodes.size; i++ )
     {
-        sharedEntry = level.abzm.sharedPurchasedNodes[sharedIndex];
-        if ( !isdefined( sharedEntry ) || !isdefined( sharedEntry.expiresAt ) || ( sharedEntry.expiresAt >= 0 && gettime() >= sharedEntry.expiresAt ) )
+        sharedEntry = level.abzm.sharedPurchasedNodes[i];
+        if ( !isdefined( sharedEntry ) || !isdefined( sharedEntry.key ) || sharedEntry.key == "" )
         {
-            level.abzm.sharedPurchasedNodes[sharedIndex] = undefined;
-            compactSharedPurchaseArray( sharedIndex );
-            sharedIndex = -1;
+            if ( claimedIndex < 0 )
+            {
+                claimedIndex = i;
+            }
+            continue;
         }
-        else
+
+        if ( sharedEntry.key != purchaseKey )
+        {
+            continue;
+        }
+
+        if ( !isdefined( sharedEntry.expiresAt ) || sharedEntry.expiresAt < 0 || gettime() < sharedEntry.expiresAt )
         {
             return false;
         }
+
+        claimedIndex = i;
+        break;
     }
 
     sharedEntry = spawnstruct();
@@ -1554,7 +1581,15 @@ reserveSharedPurchase( node, kind )
     sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RESERVATION_MS;
     sharedEntry.isReservation = true;
 
-    level.abzm.sharedPurchasedNodes[level.abzm.sharedPurchasedNodes.size] = sharedEntry;
+    if ( claimedIndex >= 0 )
+    {
+        level.abzm.sharedPurchasedNodes[claimedIndex] = sharedEntry;
+    }
+    else
+    {
+        level.abzm.sharedPurchasedNodes[level.abzm.sharedPurchasedNodes.size] = sharedEntry;
+    }
+
     return true;
 }
 
