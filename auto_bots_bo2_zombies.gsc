@@ -1248,7 +1248,11 @@ attemptPerkPurchase()
 
 attemptWeaponPurchase()
 {
-    roundNumber = max( 1, level.abzm.round );
+    roundNumber = 1;
+    if ( isdefined( level.abzm ) && isdefined( level.abzm.round ) )
+    {
+        roundNumber = max( 1, level.abzm.round );
+    }
     confirmedWeaponPurchase = false;
     weaponNode = getClosestPurchaseItemInteractable( "weapon" );
     if ( !isdefined( weaponNode ) )
@@ -1580,9 +1584,13 @@ alreadyPackAPunchedCurrentWeapon()
         liveWeaponKey = getCurrentWeaponIdentityKey();
         if ( liveWeaponKey == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey )
         {
-            updateTrackedPackAPunchWeaponLevel( entryIndex, currentUpgradeLevel );
-            trackedUpgradeLevel = self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel;
-            return currentUpgradeLevel >= trackedUpgradeLevel;
+            if ( currentUpgradeLevel >= trackedUpgradeLevel )
+            {
+                updateTrackedPackAPunchWeaponLevel( entryIndex, currentUpgradeLevel );
+                return true;
+            }
+
+            return false;
         }
 
         return false;
