@@ -131,9 +131,13 @@ atlas45_register_damage_modifier()
         level.exo_damage_curve_registered_weapons[weaponName] = true;
 
         lowercaseWeaponName = tolower(weaponName + "");
-        level.modifyweapondamage[lowercaseWeaponName] =
-            ::atlas45_modify_damage;
-        level.exo_damage_curve_registered_weapons[lowercaseWeaponName] = true;
+        if(lowercaseWeaponName == weaponName ||
+           !isdefined(level.modifyweapondamage[lowercaseWeaponName]))
+        {
+            level.modifyweapondamage[lowercaseWeaponName] =
+                ::atlas45_modify_damage;
+            level.exo_damage_curve_registered_weapons[lowercaseWeaponName] = true;
+        }
 
         registeredCount++;
     }
