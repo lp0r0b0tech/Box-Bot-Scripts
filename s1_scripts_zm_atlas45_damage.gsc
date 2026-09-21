@@ -42,19 +42,14 @@ atlas45_register_damage_modifier()
 {
     level endon("game_ended");
 
-    now = 0;
-    if(isdefined(level.time))
-    {
-        now = level.time;
-    }
-
-    if(isdefined(level.exo_damage_curve_registering_until) &&
-       level.exo_damage_curve_registering_until > now)
+    if(isdefined(level.exo_damage_curve_registering) &&
+       level.exo_damage_curve_registering)
     {
         return;
     }
 
-    level.exo_damage_curve_registering_until = now + 35000;
+    level.exo_damage_curve_registering = true;
+    level thread atlas45_registration_guard_watchdog();
 
     /*
         Wait for the Zombies gametype to initialize the weapon-damage
@@ -73,14 +68,14 @@ atlas45_register_damage_modifier()
     if(!isdefined(level.modifyweapondamage))
     {
         println("ExoWeaponDamage: ERROR - level.modifyweapondamage was never initialized.");
-        level.exo_damage_curve_registering_until = 0;
+        level.exo_damage_curve_registering = false;
         return;
     }
 
     if(isdefined(level.exo_damage_curve_registered) &&
        level.exo_damage_curve_registered)
     {
-        level.exo_damage_curve_registering_until = 0;
+        level.exo_damage_curve_registering = false;
         return;
     }
 
@@ -146,13 +141,25 @@ atlas45_register_damage_modifier()
     {
         println("ExoWeaponDamage: no eligible zombie weapon callbacks found yet; registration will retry on next initialization attempt.");
         level.exo_damage_curve_registered = false;
-        level.exo_damage_curve_registering_until = 0;
+        level.exo_damage_curve_registering = false;
         return;
     }
 
     level.exo_damage_curve_registered = 1;
     println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".");
-    level.exo_damage_curve_registering_until = 0;
+    level.exo_damage_curve_registering = false;
+}
+
+atlas45_registration_guard_watchdog()
+{
+    level endon("game_ended");
+
+    wait 35;
+    if(isdefined(level.exo_damage_curve_registering) &&
+       level.exo_damage_curve_registering)
+    {
+        level.exo_damage_curve_registering = false;
+    }
 }
 
 atlas45_should_register_weapon(weaponName)
