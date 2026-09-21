@@ -366,6 +366,15 @@ runSharedPurchaseSelfTests()
     reservationBlocksButIsNotBought = isSharedPurchaseBlocked( node, "door" ) && !alreadyBoughtSharedNode( node, "door" );
     level.abzm.sharedPurchasedNodes = previousSharedNodes;
     reportSelfTestResult( "shared_purchase_reservation_stays_separate", reservationBlocksButIsNotBought );
+
+    previousSharedNodes = level.abzm.sharedPurchasedNodes;
+    level.abzm.sharedPurchasedNodes = [];
+    reserveSharedPurchase( node, "packapunch" );
+    bot markSharedPurchase( node, "packapunch", false );
+    clearSharedPurchaseReservation( node, "packapunch" );
+    packAPunchPurchaseSurvivesReservationCleanup = alreadyBoughtSharedNode( node, "packapunch" );
+    level.abzm.sharedPurchasedNodes = previousSharedNodes;
+    reportSelfTestResult( "shared_purchase_packapunch_cleanup_preserves_confirmed_entry", packAPunchPurchaseSurvivesReservationCleanup );
 }
 
 runPerkPurchaseSelfTests()
@@ -1512,24 +1521,26 @@ alreadyPackAPunchedCurrentWeapon()
         return false;
     }
 
+    confirmationActive = isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt ) && (gettime() - self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt) <= ABZM_PACKAPUNCH_CONFIRMATION_FALLBACK_MS;
+    confirmationKeyMatches = isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey ) && self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey == getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
     currentUpgradeLevel = getCurrentWeaponUpgradeLevel();
-    if ( currentUpgradeLevel > 0 )
+    if ( currentUpgradeLevel > 0 && confirmationActive && confirmationKeyMatches )
     {
         liveWeaponKey = getCurrentWeaponIdentityKey();
         return liveWeaponKey == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey && currentUpgradeLevel >= trackedUpgradeLevel;
     }
 
-    if ( !isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey ) || self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey == "" )
+    if ( !confirmationKeyMatches )
     {
         return false;
     }
 
-    if ( !isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt ) || (gettime() - self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt) > ABZM_PACKAPUNCH_CONFIRMATION_FALLBACK_MS )
+    if ( !confirmationActive )
     {
         return false;
     }
 
-    return self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey == getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
+    return true;
 }
 
 isMysteryBoxRewardConfirmedForState( previousWeaponKey, previousUpgradeLevel, currentWeaponKey, currentUpgradeLevel )
@@ -1765,7 +1776,11 @@ clearSharedPurchaseReservation( node, kind )
     sharedIndex = findSharedPurchaseIndex( purchaseKey );
     if ( sharedIndex >= 0 )
     {
-        compactSharedPurchaseArray( sharedIndex );
+        sharedEntry = level.abzm.sharedPurchasedNodes[sharedIndex];
+        if ( isdefined( sharedEntry ) && isdefined( sharedEntry.isReservation ) && sharedEntry.isReservation )
+        {
+            compactSharedPurchaseArray( sharedIndex );
+        }
     }
 }
 
