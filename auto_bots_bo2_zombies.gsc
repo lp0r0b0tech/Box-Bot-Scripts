@@ -58,7 +58,6 @@
 #define ABZM_BO2_REVIVE_TIME                  5
 #define ABZM_BO2_REVIVE_RANGE                 96
 #define ABZM_INTERACT_RANGE                   96
-#define ABZM_REVIVE_INTERACT_TIMEOUT_MS       750
 #define ABZM_SHARED_PURCHASE_COOLDOWN_MS      15000
 #define ABZM_PURCHASE_COOLDOWN_SEC            1.5
 #define ABZM_PERK_PURCHASE_COOLDOWN_SEC       5.0
@@ -787,13 +786,7 @@ tryUseReviveInteraction( downed )
 
     reviveNode notify( "trigger", self );
     reviveNode notify( "use", self );
-
-    start = gettime();
-    maxWaitMs = ABZM_REVIVE_INTERACT_TIMEOUT_MS;
-    while ( isdefined( downed ) && downed.abzmDowned && (gettime() - start) < maxWaitMs )
-    {
-        wait 0.05;
-    }
+    wait 0.05;
 
     if ( isdefined( downed ) && !downed.abzmDowned )
     {
@@ -1070,19 +1063,13 @@ shouldPersistSharedPurchaseNode( node, kind )
 {
     if ( !isdefined( node ) )
     {
-        return true;
+        return false;
     }
 
     if ( isdefined( node.abzmSharedCooldownUntil ) && gettime() < node.abzmSharedCooldownUntil )
     {
         return true;
     }
-
-    if ( !isDesiredInteractable( node, kind ) )
-    {
-        return true;
-    }
-
     return false;
 }
 
