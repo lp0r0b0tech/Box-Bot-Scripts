@@ -72,9 +72,14 @@ atlas45_register_damage_modifier()
     {
         level.exo_damage_curve_previous_callbacks = [];
     }
+    if(!isdefined(level.exo_damage_curve_registered_weapons))
+    {
+        level.exo_damage_curve_registered_weapons = [];
+    }
 
     registeredCount = 0;
     delegatedCount = 0;
+    skippedCount = 0;
     weaponNames = getarraykeys(level.modifyweapondamage);
 
     for(i = 0; i < weaponNames.size; i++)
@@ -86,21 +91,25 @@ atlas45_register_damage_modifier()
         }
 
         previousCallback = level.modifyweapondamage[weaponName];
-        if(isdefined(previousCallback) &&
-           previousCallback != ::atlas45_modify_damage)
+        if(!isdefined(previousCallback) ||
+           previousCallback == ::atlas45_modify_damage)
         {
-            level.exo_damage_curve_previous_callbacks[weaponName] =
-                previousCallback;
-            delegatedCount++;
+            skippedCount++;
+            continue;
         }
+
+        level.exo_damage_curve_previous_callbacks[weaponName] =
+            previousCallback;
+        delegatedCount++;
 
         level.modifyweapondamage[weaponName] =
             ::atlas45_modify_damage;
+        level.exo_damage_curve_registered_weapons[weaponName] = true;
 
         registeredCount++;
     }
 
-    println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated compatible callbacks: " + delegatedCount + ".");
+    println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated compatible callbacks: " + delegatedCount + ", skipped incompatible callbacks: " + skippedCount + ".");
 }
 
 atlas45_should_register_weapon(weaponName)
@@ -145,6 +154,12 @@ atlas45_modify_damage(
     }
     weaponName = atlas45_resolve_registered_weapon_name(weapon);
     if(!isdefined(weaponName) || weaponName == "")
+    {
+        return damage;
+    }
+    if(!isdefined(level.exo_damage_curve_registered_weapons) ||
+       !isdefined(level.exo_damage_curve_registered_weapons[weaponName]) ||
+       !level.exo_damage_curve_registered_weapons[weaponName])
     {
         return damage;
     }
