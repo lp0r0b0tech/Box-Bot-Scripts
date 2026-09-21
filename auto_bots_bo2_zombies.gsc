@@ -1364,7 +1364,7 @@ getPerkPurchaseKey( node )
         return perkType;
     }
 
-    return getStableInteractableKey( node, "perk" );
+    return "unknown_perk";
 }
 
 useEquipmentIfNeeded()
@@ -1943,7 +1943,7 @@ getClosestInteractableFromCandidates( nodes, kind, skipSharedPurchases )
     for ( i = 0; i < nodes.size; i++ )
     {
         node = nodes[i];
-        if ( !isDesiredInteractable( node, kind ) )
+        if ( !isDesiredInteractable( node, kind ) && !( kind == "weapon" && isGenericWeaponPurchaseMarker( node ) ) )
         {
             continue;
         }
@@ -2047,8 +2047,6 @@ getInteractableCandidates()
 
     level.abzm.interactableCandidates = nodes;
     level.abzm.interactableCacheTime = gettime();
-    level.abzm.purchaseItemCacheTime = -999999;
-    level.abzm.purchaseItemSourceCacheTime = -999999;
     return level.abzm.interactableCandidates;
 }
 
