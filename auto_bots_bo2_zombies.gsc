@@ -740,7 +740,7 @@ attemptBotRevive()
             return true;
         }
 
-        if ( reviveResult <= 0 )
+        if ( reviveResult < 0 )
         {
             if ( !isdefined( downed ) )
             {
@@ -1045,6 +1045,11 @@ markSharedPurchase( node, kind )
 
 alreadyBoughtPerkNode( node )
 {
+    if ( !isdefined( self.abzmPurchasedPerkNodes ) )
+    {
+        return false;
+    }
+
     return nodeArrayContains( self.abzmPurchasedPerkNodes, node );
 }
 
