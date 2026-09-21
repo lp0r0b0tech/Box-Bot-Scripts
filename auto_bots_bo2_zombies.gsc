@@ -1027,12 +1027,13 @@ markPerkPurchase( node )
         addedNewPerk = true;
     }
 
-    if ( addedNewPerk && !isdefined( self.abzmPerkPurchases ) )
+    shouldCountPerk = addedNewPerk || !isdefined( perkKey ) || perkKey == "";
+    if ( shouldCountPerk && !isdefined( self.abzmPerkPurchases ) )
     {
         self.abzmPerkPurchases = 0;
     }
 
-    if ( addedNewPerk )
+    if ( shouldCountPerk )
     {
         self.abzmPerkPurchases++;
     }
@@ -1118,7 +1119,7 @@ shouldPersistSharedPurchaseNode( node, kind )
 
     if ( !isDesiredInteractable( node, kind ) )
     {
-        return false;
+        return true;
     }
     return false;
 }
