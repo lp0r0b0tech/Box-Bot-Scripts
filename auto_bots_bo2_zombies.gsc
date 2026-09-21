@@ -1597,6 +1597,11 @@ alreadyPackAPunchedCurrentWeapon()
         liveWeaponKey = getCurrentWeaponIdentityKey();
         if ( liveWeaponKey == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey )
         {
+            if ( isCurrentWeaponUpgradeLevelApproximate() )
+            {
+                return true;
+            }
+
             if ( currentUpgradeLevel >= confirmedUpgradeLevel )
             {
                 updateTrackedPackAPunchWeaponLevel( entryIndex, currentUpgradeLevel );
@@ -1841,9 +1846,17 @@ reserveSharedPurchase( node, kind )
     if ( finalIndex >= 0 )
     {
         finalEntry = level.abzm.sharedPurchasedNodes[finalIndex];
-        if ( isdefined( finalEntry ) && isdefined( finalEntry.expiresAt ) && gettime() < finalEntry.expiresAt && finalIndex != claimedIndex )
+        if ( isdefined( finalEntry ) && isdefined( finalEntry.expiresAt ) && gettime() < finalEntry.expiresAt )
         {
-            return false;
+            if ( !isdefined( finalEntry.isReservation ) || !finalEntry.isReservation )
+            {
+                return false;
+            }
+
+            if ( finalIndex != claimedIndex )
+            {
+                return false;
+            }
         }
 
         claimedIndex = finalIndex;
@@ -2842,10 +2855,27 @@ getCurrentWeaponUpgradeLevel()
 
     if ( isdefined( state["is_upgraded"] ) && state["is_upgraded"] )
     {
-        return 0;
+        return 1;
     }
 
     return 0;
+}
+
+isCurrentWeaponUpgradeLevelApproximate()
+{
+    weapon = self getcurrentweapon();
+    if ( !isdefined( weapon ) || !isdefined( self.weaponstate ) || !isdefined( self.weaponstate[weapon] ) )
+    {
+        return false;
+    }
+
+    state = self.weaponstate[weapon];
+    if ( isdefined( state["pap_level"] ) || isdefined( state["upgrade_level"] ) || isdefined( state["weapon_level_increase"] ) )
+    {
+        return false;
+    }
+
+    return isdefined( state["is_upgraded"] ) && state["is_upgraded"];
 }
 
 isCurrentWeaponWeak()
