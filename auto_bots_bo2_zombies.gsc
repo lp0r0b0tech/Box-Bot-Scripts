@@ -1213,7 +1213,6 @@ applyBotPostSpawnSetup()
 
         initializeBotPurchaseState();
         applyBotCombatProfile();
-        grantForcedBotLoadout();
     }
 }
 
@@ -1661,6 +1660,7 @@ attemptUtilityPurchase()
     if ( level.abzm.forceLoadoutEnabled )
     {
         maintainForcedBotPackAPunchTracking();
+        return false;
     }
 
     if ( !botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC ) )
@@ -2049,12 +2049,29 @@ isMysteryBoxRewardConfirmed( previousWeaponKey, previousUpgradeLevel )
 
 isPackAPunchUpgradeConfirmedForState( previousWeaponKey, previousUpgradeLevel, currentWeaponKey, currentUpgradeLevel )
 {
-    if ( !isdefined( currentWeaponKey ) || currentWeaponKey == "" )
+    if ( !doPackAPunchWeaponKeysMatch( previousWeaponKey, currentWeaponKey ) )
     {
         return false;
     }
 
     return currentUpgradeLevel > previousUpgradeLevel;
+}
+
+doPackAPunchWeaponKeysMatch( previousWeaponKey, currentWeaponKey )
+{
+    if ( !isdefined( previousWeaponKey ) || previousWeaponKey == "" || !isdefined( currentWeaponKey ) || currentWeaponKey == "" )
+    {
+        return false;
+    }
+
+    previousWeaponKey = toLower( previousWeaponKey + "" );
+    currentWeaponKey = toLower( currentWeaponKey + "" );
+    if ( previousWeaponKey == currentWeaponKey )
+    {
+        return true;
+    }
+
+    return issubstr( currentWeaponKey, previousWeaponKey ) || issubstr( previousWeaponKey, currentWeaponKey );
 }
 
 isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel )
@@ -2155,6 +2172,18 @@ markSharedPurchase( node, kind, usedFallback )
     }
 
     sharedIndex = findSharedPurchaseIndex( purchaseKey );
+    if ( sharedIndex >= 0 )
+    {
+        existingEntry = level.abzm.sharedPurchasedNodes[sharedIndex];
+        if ( isdefined( existingEntry ) && isdefined( existingEntry.isReservation ) && existingEntry.isReservation && isSharedPurchaseEntryActive( existingEntry ) )
+        {
+            if ( !isdefined( existingEntry.owner ) || existingEntry.owner != self )
+            {
+                return;
+            }
+        }
+    }
+
     sharedEntry = spawnstruct();
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
@@ -2240,6 +2269,7 @@ reserveSharedPurchase( node, kind )
     sharedEntry.kind = kind;
     sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RESERVATION_MS;
     sharedEntry.isReservation = true;
+    sharedEntry.owner = self;
 
     finalIndex = findSharedPurchaseIndex( purchaseKey );
     if ( finalIndex >= 0 )
@@ -2248,6 +2278,11 @@ reserveSharedPurchase( node, kind )
         if ( isSharedPurchaseEntryActive( finalEntry ) )
         {
             if ( !isdefined( finalEntry.isReservation ) || !finalEntry.isReservation )
+            {
+                return false;
+            }
+
+            if ( isdefined( finalEntry.owner ) && finalEntry.owner != self )
             {
                 return false;
             }
@@ -2291,7 +2326,7 @@ clearSharedPurchaseReservation( node, kind )
     if ( sharedIndex >= 0 )
     {
         sharedEntry = level.abzm.sharedPurchasedNodes[sharedIndex];
-        if ( isdefined( sharedEntry ) && isdefined( sharedEntry.isReservation ) && sharedEntry.isReservation )
+        if ( isdefined( sharedEntry ) && isdefined( sharedEntry.isReservation ) && sharedEntry.isReservation && isdefined( sharedEntry.owner ) && sharedEntry.owner == self )
         {
             compactSharedPurchaseArray( sharedIndex );
         }
