@@ -7,6 +7,7 @@
     Damage progression for every weapon:
         Mk1  = stock / vanilla damage
         Mk2+ = Cell 3 Cauterizer-style level scaling
+        Mk25 = highest supported mark for this script
 
     Curve:
         finalDamage = baseDamage + (baseDamage * 0.2 * (mark - 1))
