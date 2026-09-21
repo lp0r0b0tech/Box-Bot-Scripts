@@ -8,7 +8,7 @@
 // - Use polling fallbacks for zombies/power-ups because notify names can vary by build.
 // - Keep interactable matching token-driven so AW/S1x map trigger names are easy to retune.
 
-#define ABZM_DEFAULT_AUTOBOTS_ENABLED         1
+#define ABZM_DEFAULT_AUTOBOTS_ENABLED         0
 #define ABZM_DEFAULT_BOT_COUNT                3
 #define ABZM_DEFAULT_BOT_SKILL                1.0
 #define ABZM_DEFAULT_BOTS_CAN_REVIVE          1
@@ -211,11 +211,14 @@ initDvars()
     setdvarifuninitialized( "scr_zm_autobots_auto_buy_perks", ABZM_DEFAULT_BOTS_AUTO_BUY_PERKS );
     setdvarifuninitialized( "scr_zm_autobots_auto_buy_upgrades", ABZM_DEFAULT_BOTS_AUTO_BUY_UPGRADES );
     setdvarifuninitialized( "scr_zm_autobots_use_equipment", ABZM_DEFAULT_BOTS_USE_EQUIPMENT );
+    // Teammate-only combat profile overrides. Difficulty accepts engine strings such as recruit/regular/hardened/veteran/ultra.
+    // Accuracy and aggression are scalar multipliers, reaction_time is the bot think delay in seconds, and max_health is applied per spawn.
     setdvarifuninitialized( "scr_zm_autobots_difficulty", "ultra" );
     setdvarifuninitialized( "scr_zm_autobots_accuracy", ABZM_DEFAULT_BOT_ACCURACY );
     setdvarifuninitialized( "scr_zm_autobots_reaction_time", ABZM_DEFAULT_BOT_REACTION_TIME );
     setdvarifuninitialized( "scr_zm_autobots_max_health", ABZM_DEFAULT_BOT_MAX_HEALTH );
     setdvarifuninitialized( "scr_zm_autobots_aggression", ABZM_DEFAULT_BOT_AGGRESSION );
+    // Purchase thresholds are point requirements checked before bots attempt each buy type; max_perks caps unique perk keys per bot.
     setdvarifuninitialized( "scr_zm_autobots_perk_cost", ABZM_DEFAULT_PERK_COST );
     setdvarifuninitialized( "scr_zm_autobots_weapon_cost", ABZM_DEFAULT_WEAPON_COST );
     setdvarifuninitialized( "scr_zm_autobots_mystery_cost", ABZM_DEFAULT_MYSTERY_COST );
@@ -354,16 +357,8 @@ applyBotCombatProfile()
 
 initializeBotPurchaseState()
 {
-    if ( !isdefined( self.abzmPerkPurchases ) )
-    {
-        self.abzmPerkPurchases = 0;
-    }
-
-    if ( !isdefined( self.abzmPurchasedPerkNodes ) )
-    {
-        self.abzmPurchasedPerkNodes = [];
-    }
-
+    self.abzmPerkPurchases = 0;
+    self.abzmPurchasedPerkNodes = [];
 }
 
 monitorPlayerConnections()
@@ -909,7 +904,7 @@ attemptPerkPurchase()
 attemptWeaponPurchase()
 {
     roundNumber = max( 1, level.abzm.round );
-    weaponNode = getClosestInteractable( "weapon" );
+    weaponNode = getClosestPurchaseItemInteractable( "weapon" );
 
     if ( roundNumber < 5 && !currentWeaponNeedsAmmo() && !isCurrentWeaponWeak() )
     {
@@ -928,7 +923,7 @@ attemptWeaponPurchase()
 
     if ( roundNumber >= 7 )
     {
-        mysteryNode = getClosestInteractable( "mystery" );
+        mysteryNode = getClosestPurchaseItemInteractable( "mystery" );
         if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
         {
             markGenericPurchase();
@@ -964,8 +959,8 @@ attemptUtilityPurchase()
 
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
-        exoNode = getClosestInteractable( "exo" );
-        if ( !alreadyBoughtSharedNode( exoNode, "exo" ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        exoNode = getClosestAvailableSharedInteractable( "exo" );
+        if ( attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
             markSharedPurchase( exoNode, "exo" );
             return true;
@@ -974,8 +969,8 @@ attemptUtilityPurchase()
 
     if ( hasEnoughPoints( self, level.abzm.doorCost ) )
     {
-        doorNode = getClosestInteractable( "door" );
-        if ( !alreadyBoughtSharedNode( doorNode, "door" ) && attemptPurchase( doorNode, level.abzm.doorCost ) )
+        doorNode = getClosestAvailableSharedInteractable( "door" );
+        if ( attemptPurchase( doorNode, level.abzm.doorCost ) )
         {
             markSharedPurchase( doorNode, "door" );
             return true;
@@ -1020,7 +1015,7 @@ markPerkPurchase( node )
         addedNewPerk = true;
     }
 
-    shouldCountPerk = addedNewPerk || !isdefined( perkKey ) || perkKey == "";
+    shouldCountPerk = addedNewPerk;
     if ( shouldCountPerk && !isdefined( self.abzmPerkPurchases ) )
     {
         self.abzmPerkPurchases = 0;
@@ -1167,7 +1162,7 @@ compactSharedPurchaseArray( purchaseIndex )
     level.abzm.sharedPurchasedNodes = newArray;
 }
 
-getSharedPurchaseKey( node, kind )
+getStableInteractableKey( node, fallbackPrefix )
 {
     if ( !isdefined( node ) )
     {
@@ -1202,7 +1197,7 @@ getSharedPurchaseKey( node, kind )
 
     if ( keyPart == "" )
     {
-        return "";
+        keyPart = toLower( fallbackPrefix + "" );
     }
 
     originKey = "0_0_0";
@@ -1211,7 +1206,17 @@ getSharedPurchaseKey( node, kind )
         originKey = int( node.origin[0] ) + "_" + int( node.origin[1] ) + "_" + int( node.origin[2] );
     }
 
-    return toLower( kind + "" ) + "|" + keyPart + "|" + originKey;
+    return keyPart + "|" + originKey;
+}
+
+getSharedPurchaseKey( node, kind )
+{
+    if ( !isdefined( node ) )
+    {
+        return "";
+    }
+
+    return toLower( kind + "" ) + "|" + getStableInteractableKey( node, "generic_" + toLower( kind + "" ) );
 }
 
 getBestPerkInteractable()
@@ -1305,15 +1310,10 @@ getPerkPurchaseKey( node )
 
     if ( entityMatchesToken( node, "perk" ) || entityMatchesToken( node, "vending" ) || entityMatchesToken( node, "perkacola" ) )
     {
-        if ( isdefined( node.origin ) )
-        {
-            return "generic_perk_" + int( node.origin[0] ) + "_" + int( node.origin[1] ) + "_" + int( node.origin[2] );
-        }
-
-        return "generic_perk";
+        return getStableInteractableKey( node, "generic_perk" );
     }
 
-    return "";
+    return getStableInteractableKey( node, "perk" );
 }
 
 useEquipmentIfNeeded()
@@ -1866,13 +1866,24 @@ getClosestDownedTeammate()
 
 getClosestInteractable( kind )
 {
-    if ( kind == "weapon" || kind == "mystery" )
+    return getClosestInteractableFromCandidates( getInteractableCandidates(), kind, false );
+}
+
+getClosestPurchaseItemInteractable( kind )
+{
+    return getClosestInteractableFromCandidates( getWeaponPurchaseCandidates(), kind, false );
+}
+
+getClosestAvailableSharedInteractable( kind )
+{
+    return getClosestInteractableFromCandidates( getInteractableCandidates(), kind, true );
+}
+
+getClosestInteractableFromCandidates( nodes, kind, skipSharedPurchases )
+{
+    if ( !isdefined( nodes ) )
     {
-        nodes = getWeaponPurchaseCandidates();
-    }
-    else
-    {
-        nodes = getInteractableCandidates();
+        return undefined;
     }
 
     best = undefined;
@@ -1882,6 +1893,11 @@ getClosestInteractable( kind )
     {
         node = nodes[i];
         if ( !isDesiredInteractable( node, kind ) )
+        {
+            continue;
+        }
+
+        if ( skipSharedPurchases && alreadyBoughtSharedNode( node, kind ) )
         {
             continue;
         }
