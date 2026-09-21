@@ -625,13 +625,7 @@ applyForcedBotUpgradeAlias( key, value )
         return;
     }
 
-    existingValue = 0;
-    if ( isdefined( self[key] ) )
-    {
-        existingValue = int( self[key] );
-    }
-
-    if ( value > existingValue )
+    if ( !isdefined( self[key] ) || int( self[key] ) != int( value ) )
     {
         self[key] = value;
     }
