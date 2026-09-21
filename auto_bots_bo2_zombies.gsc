@@ -373,17 +373,16 @@ onPlayerConnected()
             }
         }
 
+        if ( self.abzmIsBot )
+        {
+            resetBotPurchaseState();
+            applyBotCombatProfile();
+        }
+
         if ( self.abzmIsBot && ( !isdefined( self.abzmLifeLoopStarted ) || !self.abzmLifeLoopStarted ) )
         {
-            resetBotPurchaseState();
-            applyBotCombatProfile();
             self.abzmLifeLoopStarted = true;
             self thread botLifeLoop();
-        }
-        else if ( self.abzmIsBot )
-        {
-            resetBotPurchaseState();
-            applyBotCombatProfile();
         }
     }
 }
@@ -716,10 +715,20 @@ attemptBotRevive()
 
     if ( downed.abzmDowned )
     {
+        if ( !tryUseReviveInteraction( downed ) )
+        {
+            if ( !isdefined( downed ) )
+            {
+                self.abzmReviveTarget = undefined;
+                return false;
+            }
+
+            downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
+            signalReviveSuccess( downed, self );
+        }
+
         downed.abzmReviver = undefined;
         self.abzmReviveTarget = undefined;
-        downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
-        signalReviveSuccess( downed, self );
         awardPlayerPoints( self, ABZM_BO2_REVIVE_POINTS );
         return true;
     }
@@ -727,6 +736,25 @@ attemptBotRevive()
     downed.abzmReviver = undefined;
     self.abzmReviveTarget = undefined;
     return false;
+}
+
+tryUseReviveInteraction( downed )
+{
+    if ( !isdefined( downed ) || !downed.abzmDowned )
+    {
+        return false;
+    }
+
+    downed notify( "trigger", self );
+    downed notify( "use", self );
+
+    start = gettime();
+    while ( isdefined( downed ) && downed.abzmDowned && (gettime() - start) < 750 )
+    {
+        wait 0.05;
+    }
+
+    return isdefined( downed ) && !downed.abzmDowned;
 }
 
 runTrainingMovement()
@@ -1578,7 +1606,6 @@ moveToAndUse( node )
     self.abzmLastInteractTime = gettime();
     node notify( "trigger", self );
     node notify( "use", self );
-    self notify( "+activate" );
     return true;
 }
 
@@ -1937,37 +1964,44 @@ getInteractableKey( entity )
         return "";
     }
 
+    key = "";
+
     if ( isdefined( entity.targetname ) && entity.targetname != "" )
     {
-        return entity.targetname;
+        key = entity.targetname;
     }
-
-    if ( isdefined( entity.script_noteworthy ) && entity.script_noteworthy != "" )
+    else if ( isdefined( entity.script_noteworthy ) && entity.script_noteworthy != "" )
     {
-        return entity.script_noteworthy;
+        key = entity.script_noteworthy;
     }
-
-    if ( isdefined( entity.script_linkname ) && entity.script_linkname != "" )
+    else if ( isdefined( entity.script_linkname ) && entity.script_linkname != "" )
     {
-        return entity.script_linkname;
+        key = entity.script_linkname;
     }
-
-    if ( isdefined( entity.script_string ) && entity.script_string != "" )
+    else if ( isdefined( entity.script_string ) && entity.script_string != "" )
     {
-        return entity.script_string;
+        key = entity.script_string;
     }
-
-    if ( isdefined( entity.model ) && entity.model != "" )
+    else if ( isdefined( entity.model ) && entity.model != "" )
     {
-        return entity.model;
+        key = entity.model;
     }
-
-    if ( isdefined( entity.classname ) && entity.classname != "" )
+    else if ( isdefined( entity.classname ) && entity.classname != "" )
     {
-        return entity.classname;
+        key = entity.classname;
     }
 
-    return "";
+    if ( key == "" )
+    {
+        return "";
+    }
+
+    if ( isdefined( entity.origin ) )
+    {
+        key += "_" + int( entity.origin[0] ) + "_" + int( entity.origin[1] ) + "_" + int( entity.origin[2] );
+    }
+
+    return key;
 }
 
 entityMatchesToken( entity, token )
