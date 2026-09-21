@@ -73,6 +73,7 @@
 #define ABZM_BO2_REVIVE_RANGE                 96
 #define ABZM_INTERACT_RANGE                   96
 #define ABZM_SHARED_PURCHASE_COOLDOWN_MS      15000
+#define ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS 2000
 #define ABZM_PURCHASE_COOLDOWN_SEC            1.5
 #define ABZM_PERK_PURCHASE_COOLDOWN_SEC       5.0
 #define ABZM_BO2_RUN_ROUND                    3
@@ -823,6 +824,11 @@ tryUseReviveInteraction( downed )
         wait 0.05;
     }
 
+    if ( !isdefined( downed ) )
+    {
+        return ABZM_REVIVE_STATUS_SUCCESS;
+    }
+
     if ( isdefined( downed ) && !downed.abzmDowned )
     {
         return ABZM_REVIVE_STATUS_SUCCESS;
@@ -1065,7 +1071,13 @@ markSharedPurchase( node, kind )
     sharedEntry.expiresAt = -1;
     if ( kind == "exo" || kind == "door" )
     {
-        sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
+        sharedCooldown = ABZM_SHARED_PURCHASE_COOLDOWN_MS;
+        if ( isdefined( self.abzmLastPurchaseUsedFallback ) && self.abzmLastPurchaseUsedFallback )
+        {
+            sharedCooldown = ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS;
+        }
+
+        sharedEntry.expiresAt = gettime() + sharedCooldown;
     }
 
     if ( sharedIndex >= 0 )
@@ -1344,7 +1356,7 @@ isQuickRevivePerkNode( node )
         return true;
     }
 
-    return entityMatchesToken( node, "revive" ) && ( entityMatchesToken( node, "perk" ) || entityMatchesToken( node, "vending" ) || entityMatchesToken( node, "perkacola" ) );
+    return hasReviveInteractableToken( node ) && isPerkInteractable( node );
 }
 
 getPerkPurchaseKey( node )
@@ -1999,6 +2011,8 @@ moveToAndUse( node )
 
 attemptPurchase( node, cost )
 {
+    self.abzmLastPurchaseUsedFallback = false;
+
     if ( !hasEnoughPoints( self, cost ) )
     {
         return false;
@@ -2023,6 +2037,7 @@ attemptPurchase( node, cost )
         return true;
     }
 
+    self.abzmLastPurchaseUsedFallback = true;
     spendPlayerPoints( self, cost );
     return true;
 }
@@ -2390,10 +2405,10 @@ isDesiredInteractable( entity, kind )
             return entityMatchesToken( entity, "mystery" ) || entityMatchesToken( entity, "printer" );
 
         case "revive":
-            return ( entityMatchesToken( entity, "revive" ) || entityMatchesToken( entity, "laststand" ) || entityMatchesToken( entity, "downed" ) ) && !entityMatchesToken( entity, "perk" ) && !entityMatchesToken( entity, "vending" ) && !entityMatchesToken( entity, "perkacola" );
+            return hasReviveInteractableToken( entity ) && !isPerkInteractable( entity );
 
         case "perk":
-            return entityMatchesToken( entity, "perk" ) || entityMatchesToken( entity, "vending" ) || entityMatchesToken( entity, "perkacola" );
+            return isPerkInteractable( entity );
 
         case "packapunch":
             return entityMatchesToken( entity, "pack" ) || entityMatchesToken( entity, "pap" ) || entityMatchesToken( entity, "upgrade" );
@@ -2406,6 +2421,16 @@ isDesiredInteractable( entity, kind )
     }
 
     return false;
+}
+
+hasReviveInteractableToken( entity )
+{
+    return entityMatchesToken( entity, "revive" ) || entityMatchesToken( entity, "laststand" ) || entityMatchesToken( entity, "downed" );
+}
+
+isPerkInteractable( entity )
+{
+    return entityMatchesToken( entity, "perk" ) || entityMatchesToken( entity, "vending" ) || entityMatchesToken( entity, "perkacola" );
 }
 
 entityMatchesToken( entity, token )
