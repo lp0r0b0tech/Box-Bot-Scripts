@@ -20,6 +20,9 @@
         head, neck, helmet, and body multipliers.
 */
 
+#define AWD_CAUTERIZER_LEVEL_MULTIPLIER           0.2
+#define AWD_MAX_WEAPON_LEVEL                      25
+
 main()
 {
     if ( isdefined( level.awd_started ) )
@@ -159,13 +162,6 @@ awd_modify_damage(
         return damage;
     }
 
-    baseWeaponName = getweaponbasename( weapon );
-
-    if ( !isdefined( baseWeaponName ) || baseWeaponName == "" )
-    {
-        return damage;
-    }
-
     weaponLevel = undefined;
 
     if ( isdefined( attacker.weaponstate[weapon] ) &&
@@ -174,7 +170,11 @@ awd_modify_damage(
         weaponLevel = attacker.weaponstate[weapon]["level"];
     }
 
+    baseWeaponName = getweaponbasename( weapon );
+
     if ( ( !isdefined( weaponLevel ) || weaponLevel < 2 ) &&
+         isdefined( baseWeaponName ) &&
+         baseWeaponName != "" &&
          isdefined( attacker.weaponstate[baseWeaponName] ) &&
          isdefined( attacker.weaponstate[baseWeaponName]["level"] ) )
     {
@@ -186,9 +186,9 @@ awd_modify_damage(
         return damage;
     }
 
-    if ( weaponLevel > 25 )
+    if ( weaponLevel > AWD_MAX_WEAPON_LEVEL )
     {
-        weaponLevel = 25;
+        weaponLevel = AWD_MAX_WEAPON_LEVEL;
     }
 
     return awd_get_cauterizer_damage( damage, weaponLevel );
@@ -201,10 +201,10 @@ awd_get_cauterizer_damage( baseDamage, mark )
         return baseDamage;
     }
 
-    if ( mark > 25 )
+    if ( mark > AWD_MAX_WEAPON_LEVEL )
     {
-        mark = 25;
+        mark = AWD_MAX_WEAPON_LEVEL;
     }
 
-    return int( baseDamage + ( baseDamage * 0.2 * ( mark - 1 ) ) );
+    return int( baseDamage + ( baseDamage * AWD_CAUTERIZER_LEVEL_MULTIPLIER * ( mark - 1 ) ) );
 }
