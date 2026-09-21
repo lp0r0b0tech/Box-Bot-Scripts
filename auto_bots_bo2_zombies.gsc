@@ -749,9 +749,25 @@ attemptBotRevive()
                 return false;
             }
 
-            downed.abzmDowned = false;
             downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             signalReviveSuccess( downed, self );
+
+            fallbackStart = gettime();
+            while ( isdefined( downed ) && downed.abzmDowned && (gettime() - fallbackStart) < 500 )
+            {
+                wait 0.05;
+            }
+
+            if ( !isdefined( downed ) || downed.abzmDowned )
+            {
+                if ( isdefined( downed ) )
+                {
+                    downed.abzmReviver = undefined;
+                }
+
+                self.abzmReviveTarget = undefined;
+                return false;
+            }
         }
         else if ( reviveResult == 0 )
         {
@@ -1785,6 +1801,11 @@ getWeaponPurchaseCandidates()
     {
         nodes = [];
         return nodes;
+    }
+
+    if ( (gettime() - level.abzm.purchaseItemCacheTime) < 2000 )
+    {
+        return level.abzm.purchaseItemCandidates;
     }
 
     getInteractableCandidates();
