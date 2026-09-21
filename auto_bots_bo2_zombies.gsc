@@ -359,6 +359,13 @@ runSharedPurchaseSelfTests()
     fallbackSharedCooldownMs = level.abzm.sharedPurchasedNodes[0].expiresAt - gettime();
     level.abzm.sharedPurchasedNodes = previousSharedNodes;
     reportSelfTestResult( "shared_purchase_fallback_uses_retry_cooldown", fallbackSharedCooldownMs <= ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS && fallbackSharedCooldownMs > 0 );
+
+    previousSharedNodes = level.abzm.sharedPurchasedNodes;
+    level.abzm.sharedPurchasedNodes = [];
+    reserveSharedPurchase( node, "door" );
+    reservationBlocksButIsNotBought = isSharedPurchaseBlocked( node, "door" ) && !alreadyBoughtSharedNode( node, "door" );
+    level.abzm.sharedPurchasedNodes = previousSharedNodes;
+    reportSelfTestResult( "shared_purchase_reservation_stays_separate", reservationBlocksButIsNotBought );
 }
 
 runPerkPurchaseSelfTests()
@@ -425,6 +432,8 @@ runWeaponPurchaseRoutingSelfTests()
     reportSelfTestResult( "weapon_routing_explicit_marker_stays_weapon", isDesiredInteractable( explicitWeaponNode, "weapon" ) && !isDesiredInteractable( explicitWeaponNode, "generic_weapon_buy" ) );
     reportSelfTestResult( "weapon_routing_generic_marker_stays_generic", !isDesiredInteractable( genericWeaponNode, "weapon" ) && isDesiredInteractable( genericWeaponNode, "generic_weapon_buy" ) );
     reportSelfTestResult( "weapon_routing_state_change_reopens_purchase", shouldResetWeaponPurchaseStateKey( "starter|true|true", "starter|false|false" ) );
+    reportSelfTestResult( "weapon_routing_weak_weapon_token_matches", isWeakWeaponName( "atlas45_pistol_mp" ) );
+    reportSelfTestResult( "weapon_routing_strong_weapon_stays_strong", !isWeakWeaponName( "bal27_ar" ) );
 }
 
 runPurchaseConfirmationSelfTests()
@@ -601,15 +610,6 @@ initializeBotPurchaseState()
         self.abzmPackAPunchWeaponEntries = [];
     }
 
-    if ( !isdefined( self.abzmLastConfirmedPackAPunchStateKey ) )
-    {
-        self.abzmLastConfirmedPackAPunchStateKey = "";
-    }
-
-    if ( !isdefined( self.abzmLastConfirmedPackAPunchTime ) )
-    {
-        self.abzmLastConfirmedPackAPunchTime = 0;
-    }
 }
 
 clearBotPurchaseState()
@@ -622,8 +622,6 @@ clearBotPurchaseState()
     self.abzmLastPackAPunchWeaponKey = "";
     self.abzmLastPackAPunchUpgradeLevel = 0;
     self.abzmPackAPunchWeaponEntries = [];
-    self.abzmLastConfirmedPackAPunchStateKey = "";
-    self.abzmLastConfirmedPackAPunchTime = 0;
 }
 
 monitorPlayerConnections()
@@ -1478,19 +1476,21 @@ markPackAPunchPurchase( weaponKey, previousUpgradeLevel )
     if ( entryIndex >= 0 )
     {
         self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel = trackedUpgradeLevel;
+        self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey = getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
+        self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt = gettime();
     }
     else
     {
         entry = spawnstruct();
         entry.weaponKey = currentWeaponKey;
         entry.upgradeLevel = trackedUpgradeLevel;
+        entry.confirmedStateKey = getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
+        entry.confirmedAt = gettime();
         self.abzmPackAPunchWeaponEntries[self.abzmPackAPunchWeaponEntries.size] = entry;
     }
 
     self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
     self.abzmLastPackAPunchUpgradeLevel = trackedUpgradeLevel;
-    self.abzmLastConfirmedPackAPunchStateKey = getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
-    self.abzmLastConfirmedPackAPunchTime = gettime();
 }
 
 alreadyPackAPunchedCurrentWeapon()
@@ -1519,17 +1519,17 @@ alreadyPackAPunchedCurrentWeapon()
         return currentUpgradeLevel >= trackedUpgradeLevel;
     }
 
-    if ( !isdefined( self.abzmLastConfirmedPackAPunchStateKey ) || self.abzmLastConfirmedPackAPunchStateKey == "" )
+    if ( !isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey ) || self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey == "" )
     {
         return false;
     }
 
-    if ( !isdefined( self.abzmLastConfirmedPackAPunchTime ) || (gettime() - self.abzmLastConfirmedPackAPunchTime) > ABZM_PACKAPUNCH_CONFIRMATION_FALLBACK_MS )
+    if ( !isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt ) || (gettime() - self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt) > ABZM_PACKAPUNCH_CONFIRMATION_FALLBACK_MS )
     {
         return false;
     }
 
-    return self.abzmLastConfirmedPackAPunchStateKey == getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
+    return self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey == getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
 }
 
 isMysteryBoxRewardConfirmedForState( previousWeaponKey, previousUpgradeLevel, currentWeaponKey, currentUpgradeLevel )
@@ -1807,6 +1807,49 @@ alreadyBoughtSharedNode( node, kind )
     if ( !isdefined( sharedEntry ) )
     {
         return invalidateSharedPurchaseEntry( sharedIndex );
+    }
+
+    if ( !isdefined( sharedEntry.expiresAt ) )
+    {
+        return invalidateSharedPurchaseEntry( sharedIndex );
+    }
+
+    if ( sharedEntry.expiresAt < 0 || gettime() < sharedEntry.expiresAt )
+    {
+        return !isdefined( sharedEntry.isReservation ) || !sharedEntry.isReservation;
+    }
+
+    return invalidateSharedPurchaseEntry( sharedIndex );
+}
+
+isSharedPurchaseBlocked( node, kind )
+{
+    if ( alreadyBoughtSharedNode( node, kind ) )
+    {
+        return true;
+    }
+
+    if ( !isdefined( level.abzm ) || !isdefined( level.abzm.sharedPurchasedNodes ) )
+    {
+        return false;
+    }
+
+    purchaseKey = getSharedPurchaseKey( node, kind );
+    if ( !isdefined( purchaseKey ) || purchaseKey == "" )
+    {
+        return false;
+    }
+
+    sharedIndex = findSharedPurchaseIndex( purchaseKey );
+    if ( sharedIndex < 0 )
+    {
+        return false;
+    }
+
+    sharedEntry = level.abzm.sharedPurchasedNodes[sharedIndex];
+    if ( !isdefined( sharedEntry ) || !isdefined( sharedEntry.isReservation ) || !sharedEntry.isReservation )
+    {
+        return false;
     }
 
     if ( !isdefined( sharedEntry.expiresAt ) )
@@ -2654,6 +2697,17 @@ isCurrentWeaponWeak()
     }
 
     weapon = toLower( weapon + "" );
+    return isWeakWeaponName( weapon );
+}
+
+isWeakWeaponName( weapon )
+{
+    if ( !isdefined( weapon ) )
+    {
+        return true;
+    }
+
+    weapon = toLower( weapon + "" );
     if ( !isdefined( level.abzm ) || !isdefined( level.abzm.weakWeaponTokens ) )
     {
         return false;
@@ -2734,7 +2788,7 @@ getClosestInteractableFromCandidates( nodes, kind, skipSharedPurchases )
             continue;
         }
 
-        if ( skipSharedPurchases && alreadyBoughtSharedNode( node, kind ) )
+        if ( skipSharedPurchases && isSharedPurchaseBlocked( node, kind ) )
         {
             continue;
         }
