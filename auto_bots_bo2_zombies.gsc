@@ -787,7 +787,7 @@ tryUseReviveInteraction( downed )
     self moveto( reviveNode.origin, 0.2 );
 
     moveStart = gettime();
-    while ( distance( self.origin, reviveNode.origin ) > ABZM_BO2_REVIVE_RANGE )
+    while ( distance( self.origin, reviveNode.origin ) > 48 )
     {
         if ( gettime() - moveStart >= 1000 )
         {
@@ -1113,14 +1113,14 @@ shouldPersistSharedPurchaseNode( node, kind )
         return true;
     }
 
-    if ( !isDesiredInteractable( node, kind ) )
+    if ( isdefined( node.abzmSharedCooldownUntil ) && gettime() < node.abzmSharedCooldownUntil )
     {
         return true;
     }
 
-    if ( isdefined( node.abzmSharedCooldownUntil ) && gettime() < node.abzmSharedCooldownUntil )
+    if ( !isDesiredInteractable( node, kind ) )
     {
-        return true;
+        return false;
     }
     return false;
 }
