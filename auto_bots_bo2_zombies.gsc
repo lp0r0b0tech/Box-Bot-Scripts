@@ -27,6 +27,12 @@
 #define ABZM_DEFAULT_DOOR_COST                1250
 #define ABZM_DEFAULT_EXO_COST                 2000
 #define ABZM_DEFAULT_PERK_LIMIT               6
+#define ABZM_PERK_PRIORITY_QUICK_REVIVE       10
+#define ABZM_PERK_PRIORITY_HEALTH             9
+#define ABZM_PERK_PRIORITY_SPEED              8
+#define ABZM_PERK_PRIORITY_DAMAGE             7
+#define ABZM_PERK_PRIORITY_STAMINA            6
+#define ABZM_PERK_PRIORITY_DEFAULT            5
 #define ABZM_DEFAULT_SPRINT_ROUND             6
 #define ABZM_DEFAULT_CRAWLER_CHANCE           0.10
 #define ABZM_DEFAULT_SPECIAL_ROUND_INTERVAL   5
@@ -1001,9 +1007,10 @@ markGenericPurchase()
 
 markPerkPurchase( node )
 {
-    if ( isdefined( node ) && !nodeArrayContains( self.abzmPurchasedPerkNodes, node ) )
+    perkKey = getPerkPurchaseKey( node );
+    if ( isdefined( perkKey ) && perkKey != "" && !nodeArrayContains( self.abzmPurchasedPerkNodes, perkKey ) )
     {
-        self.abzmPurchasedPerkNodes[self.abzmPurchasedPerkNodes.size] = node;
+        self.abzmPurchasedPerkNodes[self.abzmPurchasedPerkNodes.size] = perkKey;
     }
 
     if ( !isdefined( self.abzmPerkPurchases ) )
@@ -1050,7 +1057,13 @@ alreadyBoughtPerkNode( node )
         return false;
     }
 
-    return nodeArrayContains( self.abzmPurchasedPerkNodes, node );
+    perkKey = getPerkPurchaseKey( node );
+    if ( !isdefined( perkKey ) || perkKey == "" )
+    {
+        return false;
+    }
+
+    return nodeArrayContains( self.abzmPurchasedPerkNodes, perkKey );
 }
 
 alreadyBoughtSharedNode( node, kind )
@@ -1076,7 +1089,7 @@ alreadyBoughtSharedNode( node, kind )
 
 shouldPersistSharedPurchaseNode( node, kind )
 {
-    if ( kind == "door" || kind == "exo" )
+    if ( kind == "door" )
     {
         return true;
     }
@@ -1151,30 +1164,70 @@ perkPriorityForEntity( node )
 {
     if ( entityMatchesToken( node, "quick" ) || ( entityMatchesToken( node, "revive" ) && isDesiredInteractable( node, "perk" ) ) )
     {
-        return 10;
+        return ABZM_PERK_PRIORITY_QUICK_REVIVE;
     }
 
     if ( entityMatchesToken( node, "health" ) || entityMatchesToken( node, "jug" ) || entityMatchesToken( node, "tough" ) )
     {
-        return 9;
+        return ABZM_PERK_PRIORITY_HEALTH;
     }
 
     if ( entityMatchesToken( node, "speed" ) || entityMatchesToken( node, "reload" ) )
     {
-        return 8;
+        return ABZM_PERK_PRIORITY_SPEED;
     }
 
     if ( entityMatchesToken( node, "damage" ) || entityMatchesToken( node, "tap" ) || entityMatchesToken( node, "multishot" ) )
     {
-        return 7;
+        return ABZM_PERK_PRIORITY_DAMAGE;
     }
 
     if ( entityMatchesToken( node, "stamina" ) || entityMatchesToken( node, "move" ) || entityMatchesToken( node, "sprint" ) )
     {
-        return 6;
+        return ABZM_PERK_PRIORITY_STAMINA;
     }
 
-    return 5;
+    return ABZM_PERK_PRIORITY_DEFAULT;
+}
+
+getPerkPurchaseKey( node )
+{
+    if ( !isdefined( node ) )
+    {
+        return "";
+    }
+
+    if ( entityMatchesToken( node, "quick" ) || entityMatchesToken( node, "revive" ) )
+    {
+        return "quick_revive";
+    }
+
+    if ( entityMatchesToken( node, "health" ) || entityMatchesToken( node, "jug" ) || entityMatchesToken( node, "tough" ) )
+    {
+        return "health";
+    }
+
+    if ( entityMatchesToken( node, "speed" ) || entityMatchesToken( node, "reload" ) )
+    {
+        return "speed";
+    }
+
+    if ( entityMatchesToken( node, "damage" ) || entityMatchesToken( node, "tap" ) || entityMatchesToken( node, "multishot" ) )
+    {
+        return "damage";
+    }
+
+    if ( entityMatchesToken( node, "stamina" ) || entityMatchesToken( node, "move" ) || entityMatchesToken( node, "sprint" ) )
+    {
+        return "stamina";
+    }
+
+    if ( entityMatchesToken( node, "perk" ) || entityMatchesToken( node, "vending" ) || entityMatchesToken( node, "perkacola" ) )
+    {
+        return "generic_perk";
+    }
+
+    return "";
 }
 
 useEquipmentIfNeeded()
