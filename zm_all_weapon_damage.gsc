@@ -27,7 +27,6 @@ main()
     }
 
     level.awd_started = 1;
-    level.awd_registered_damage_keys = [];
     level.awd_previous_damage_callbacks = [];
 
     println( "AllWeaponDamage: Zombies script initialized." );
@@ -127,19 +126,14 @@ awd_register_damage_key( weaponKey )
         return;
     }
 
-    if ( isdefined( level.awd_registered_damage_keys[weaponKey] ) )
-    {
-        return;
-    }
-
-    if ( isdefined( level.modifyweapondamage[weaponKey] ) )
+    if ( !isdefined( level.awd_previous_damage_callbacks[weaponKey] ) &&
+         isdefined( level.modifyweapondamage[weaponKey] ) )
     {
         level.awd_previous_damage_callbacks[weaponKey] =
             level.modifyweapondamage[weaponKey];
     }
 
     level.modifyweapondamage[weaponKey] = ::awd_modify_damage;
-    level.awd_registered_damage_keys[weaponKey] = 1;
 }
 
 awd_apply_previous_damage_callback(
