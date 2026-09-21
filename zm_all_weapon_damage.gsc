@@ -43,7 +43,7 @@ awd_register_damage_modifiers()
 {
     level endon( "game_ended" );
 
-    for ( ;; )
+    for ( i = 0; i < 2400; i++ )
     {
         if ( isdefined( level.modifyweapondamage ) )
         {
@@ -51,6 +51,12 @@ awd_register_damage_modifiers()
         }
 
         wait 0.05;
+    }
+
+    if ( !isdefined( level.modifyweapondamage ) )
+    {
+        println( "AllWeaponDamage: ERROR - level.modifyweapondamage was never initialized." );
+        return;
     }
 
     println( "AllWeaponDamage: watching player weapon states." );
@@ -186,8 +192,9 @@ awd_modify_damage(
 
     weaponLevel = undefined;
     exactWeaponLevelDefined = false;
+    exactWeaponStateDefined = isdefined( attacker.weaponstate[weapon] );
 
-    if ( isdefined( attacker.weaponstate[weapon] ) &&
+    if ( exactWeaponStateDefined &&
          isdefined( attacker.weaponstate[weapon]["level"] ) )
     {
         weaponLevel = attacker.weaponstate[weapon]["level"];
@@ -196,7 +203,7 @@ awd_modify_damage(
 
     baseWeaponName = getweaponbasename( weapon );
 
-    if ( !exactWeaponLevelDefined &&
+    if ( !exactWeaponStateDefined &&
          isdefined( baseWeaponName ) &&
          baseWeaponName != "" &&
          isdefined( attacker.weaponstate[baseWeaponName] ) &&
