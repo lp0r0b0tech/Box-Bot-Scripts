@@ -1341,6 +1341,10 @@ markPackAPunchPurchase()
     {
         trackedUpgradeLevel = observedUpgradeLevel;
     }
+    else if ( self.abzmLastPackAPunchWeaponKey == currentWeaponKey && self.abzmLastPackAPunchUpgradeLevel > 0 )
+    {
+        trackedUpgradeLevel = self.abzmLastPackAPunchUpgradeLevel + 1;
+    }
     else if ( self.abzmLastPackAPunchWeaponKey != currentWeaponKey || self.abzmLastPackAPunchUpgradeLevel <= 0 )
     {
         trackedUpgradeLevel = 1;
