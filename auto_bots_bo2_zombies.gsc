@@ -261,7 +261,7 @@ runReviveOutcomeSelfTests()
     downed = spawnstruct();
     downed.abzmDowned = false;
     reportSelfTestResult( "revive_interaction_cleared_downed", getReviveInteractionCompletionStatus( downed ) == ABZM_REVIVE_STATUS_SUCCESS );
-        reportSelfTestResult( "revive_interaction_missing_entity", getReviveInteractionCompletionStatus( undefined ) == ABZM_REVIVE_STATUS_FALLBACK );
+    reportSelfTestResult( "revive_interaction_missing_entity", getReviveInteractionCompletionStatus( undefined ) == ABZM_REVIVE_STATUS_FALLBACK );
 
     downed = spawnstruct();
     downed.abzmDowned = true;
@@ -1055,7 +1055,7 @@ attemptWeaponPurchase()
     if ( level.abzm.botsAutoBuyUpgrades && !isCurrentWeaponWeak() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
         papNode = getClosestAvailableSharedInteractable( "packapunch" );
-        if ( attemptPurchase( papNode, level.abzm.packapunchCost ) )
+        if ( isdefined( papNode ) && attemptPurchase( papNode, level.abzm.packapunchCost ) )
         {
             markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
             return true;
@@ -1082,7 +1082,7 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestAvailableSharedInteractable( "exo" );
-        if ( attemptPurchase( exoNode, level.abzm.exoCost ) )
+        if ( isdefined( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
             markSharedPurchase( exoNode, "exo", self.abzmLastPurchaseUsedFallback );
             return true;
@@ -1092,7 +1092,7 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.doorCost ) )
     {
         doorNode = getClosestAvailableSharedInteractable( "door" );
-        if ( attemptPurchase( doorNode, level.abzm.doorCost ) )
+        if ( isdefined( doorNode ) && attemptPurchase( doorNode, level.abzm.doorCost ) )
         {
             markSharedPurchase( doorNode, "door", self.abzmLastPurchaseUsedFallback );
             return true;
@@ -1220,6 +1220,7 @@ markSharedPurchase( node, kind, usedFallback )
         level.abzm.sharedPurchasedNodes[level.abzm.sharedPurchasedNodes.size] = sharedEntry;
     }
 
+    self.abzmLastWeaponPurchaseStateKey = "";
     markGenericPurchase();
 }
 
