@@ -1254,8 +1254,7 @@ attemptWeaponPurchase()
             return false;
         }
 
-        postPurchaseStateKey = getWeaponPurchaseStateKey();
-        if ( postPurchaseStateKey != prePurchaseStateKey )
+        if ( waitForWeaponPurchaseStateChange( prePurchaseStateKey, 250 ) )
         {
             markWeaponPurchase( prePurchaseStateKey );
             return true;
@@ -1516,7 +1515,8 @@ alreadyPackAPunchedCurrentWeapon()
     currentUpgradeLevel = getCurrentWeaponUpgradeLevel();
     if ( currentUpgradeLevel > 0 )
     {
-        return currentUpgradeLevel >= trackedUpgradeLevel;
+        liveWeaponKey = getCurrentWeaponIdentityKey();
+        return liveWeaponKey == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey && currentUpgradeLevel >= trackedUpgradeLevel;
     }
 
     if ( !isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey ) || self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey == "" )
@@ -1716,7 +1716,13 @@ reserveSharedPurchase( node, kind )
             continue;
         }
 
-        if ( !isdefined( sharedEntry.expiresAt ) || sharedEntry.expiresAt < 0 || gettime() < sharedEntry.expiresAt )
+        if ( !isdefined( sharedEntry.expiresAt ) )
+        {
+            claimedIndex = i;
+            break;
+        }
+
+        if ( gettime() < sharedEntry.expiresAt )
         {
             return false;
         }
