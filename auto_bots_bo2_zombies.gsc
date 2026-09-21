@@ -1499,7 +1499,7 @@ tryUseReviveInteraction( downed )
     reviveNode = getReviveInteractableForPlayer( downed );
     if ( !isdefined( reviveNode ) )
     {
-        return ABZM_REVIVE_STATUS_FAILED;
+        return ABZM_REVIVE_STATUS_FALLBACK;
     }
 
     if ( !moveToAndUse( reviveNode ) )
@@ -1718,7 +1718,7 @@ attemptWeaponPurchase()
 
 attemptUtilityPurchase()
 {
-    if ( level.abzm.forceLoadoutEnabled )
+    if ( isdefined( level.abzm ) && level.abzm.forceLoadoutEnabled )
     {
         maintainForcedBotPackAPunchTracking();
         return false;
