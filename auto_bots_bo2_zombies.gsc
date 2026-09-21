@@ -493,6 +493,16 @@ runPurchaseConfirmationSelfTests()
     bot.abzmPackAPunchWeaponEntries[0] = entry;
     bot updateTrackedPackAPunchWeaponLevel( 0, 20 );
     reportSelfTestResult( "pap_tracking_preserves_highest_existing_level", bot.abzmPackAPunchWeaponEntries[0].upgradeLevel == 25 );
+    entry.confirmedStateKey = getPackAPunchConfirmationKey( "weapon_a", 25 );
+    entry.confirmedAt = gettime() - (ABZM_PACKAPUNCH_CONFIRMATION_FALLBACK_MS + 1);
+    bot setCurrentWeaponSelfTestState( "weapon_a", 0 );
+    reportSelfTestResult( "pap_fallback_expires_without_live_upgrade", !bot alreadyPackAPunchedCurrentWeapon() );
+}
+
+setCurrentWeaponSelfTestState( weaponKey, upgradeLevel )
+{
+    self.abzmSelfTestWeaponKey = weaponKey;
+    self.abzmSelfTestUpgradeLevel = upgradeLevel;
 }
 
 runDeferredSelfTests()
@@ -1294,9 +1304,9 @@ attemptWeaponPurchase()
         }
     }
 
-    if ( !needsStandardWeaponPurchase )
+    if ( confirmedWeaponPurchase )
     {
-        return confirmedWeaponPurchase;
+        return true;
     }
 
     prePurchaseStateKey = getWeaponPurchaseStateKey();
@@ -1578,12 +1588,7 @@ alreadyPackAPunchedCurrentWeapon()
         return false;
     }
 
-    if ( confirmationKeyMatches && confirmationActive )
-    {
-        return getCurrentWeaponIdentityKey() == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey;
-    }
-
-    return getCurrentWeaponIdentityKey() == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey;
+    return confirmationKeyMatches && confirmationActive && getCurrentWeaponIdentityKey() == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey;
 }
 
 updateTrackedPackAPunchWeaponLevel( entryIndex, observedUpgradeLevel )
@@ -2741,6 +2746,11 @@ getWeaponPurchaseStateKey()
 
 getCurrentWeaponIdentityKey()
 {
+    if ( isdefined( self.abzmSelfTestWeaponKey ) )
+    {
+        return toLower( self.abzmSelfTestWeaponKey + "" );
+    }
+
     weapon = self getcurrentweapon();
     if ( !isdefined( weapon ) )
     {
@@ -2752,6 +2762,11 @@ getCurrentWeaponIdentityKey()
 
 getCurrentWeaponUpgradeLevel()
 {
+    if ( isdefined( self.abzmSelfTestUpgradeLevel ) )
+    {
+        return int( self.abzmSelfTestUpgradeLevel );
+    }
+
     weapon = self getcurrentweapon();
     if ( !isdefined( weapon ) || !isdefined( self.weaponstate ) || !isdefined( self.weaponstate[weapon] ) )
     {
