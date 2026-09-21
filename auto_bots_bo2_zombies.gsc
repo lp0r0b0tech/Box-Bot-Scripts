@@ -1540,7 +1540,7 @@ alreadyPackAPunchedCurrentWeapon()
         return false;
     }
 
-    return true;
+    return getCurrentWeaponIdentityKey() == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey;
 }
 
 isMysteryBoxRewardConfirmedForState( previousWeaponKey, previousUpgradeLevel, currentWeaponKey, currentUpgradeLevel )
