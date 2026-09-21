@@ -479,6 +479,7 @@ grantForcedBotLoadout()
         return false;
     }
 
+    self takeallweapons();
     self giveweapon( ABES_FORCE_LOADOUT_PRIMARY );
     self giveweapon( ABES_FORCE_LOADOUT_SECONDARY );
     self giveweapon( ABES_FORCE_LOADOUT_LETHAL );
