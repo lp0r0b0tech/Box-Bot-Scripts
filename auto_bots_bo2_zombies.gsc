@@ -137,11 +137,6 @@ doesPackAPunchConfirmationSequenceSucceed( previousWeaponKey, previousUpgradeLev
         return false;
     }
 
-    shouldAttemptMysteryBoxPurchase( roundNumber, needsStandardWeaponPurchase )
-    {
-        return roundNumber >= 7 && !needsStandardWeaponPurchase;
-    }
-
     steps = weaponKeys.size;
     if ( upgradeLevels.size < steps )
     {
@@ -157,6 +152,11 @@ doesPackAPunchConfirmationSequenceSucceed( previousWeaponKey, previousUpgradeLev
     }
 
     return false;
+}
+
+shouldAttemptMysteryBoxPurchase( roundNumber, needsStandardWeaponPurchase )
+{
+    return roundNumber >= 7 && !needsStandardWeaponPurchase;
 }
 
 init()
