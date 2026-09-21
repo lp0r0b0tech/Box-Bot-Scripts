@@ -97,7 +97,7 @@ atlas45_register_damage_modifier()
 
         previousCallback = level.modifyweapondamage[weaponName];
         if(!isdefined(previousCallback) ||
-           previousCallback == ::atlas45_modify_damage)
+           atlas45_is_self_reference_callback(previousCallback))
         {
             skippedCount++;
             continue;
@@ -271,7 +271,8 @@ atlas45_apply_compatible_previous_callback(
     }
 
     previousCallback = level.exo_damage_curve_previous_callbacks[resolvedWeaponName];
-    if(!isdefined(previousCallback))
+    if(!isdefined(previousCallback) ||
+       atlas45_is_self_reference_callback(previousCallback))
     {
         return damage;
     }
@@ -286,6 +287,17 @@ atlas45_apply_compatible_previous_callback(
         direction,
         hitLocation
     );
+}
+
+atlas45_is_self_reference_callback(callbackValue)
+{
+    if(!isdefined(callbackValue))
+    {
+        return true;
+    }
+
+    return callbackValue == ::atlas45_modify_damage ||
+           callbackValue == ::atlas45_apply_compatible_previous_callback;
 }
 
 atlas45_resolve_registered_weapon_name(weapon)
