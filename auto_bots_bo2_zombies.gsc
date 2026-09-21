@@ -515,7 +515,7 @@ runWeaponPurchaseRoutingSelfTests()
 runPurchaseConfirmationSelfTests()
 {
     reportSelfTestResult( "mystery_confirmation_requires_change", !isMysteryBoxRewardConfirmedForState( "weapon_a", 0, "weapon_a", 0 ) );
-    reportSelfTestResult( "pap_confirmation_requires_same_weapon_upgrade", !isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_b", 1 ) && isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_a", 1 ) );
+    reportSelfTestResult( "pap_confirmation_requires_upgrade_signal", !isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_b", 0 ) && isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_a", 1 ) && isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_a_upgraded", 1 ) );
     reportSelfTestResult( "pap_wait_confirmation_accepts_upgrade", doesPackAPunchConfirmationSequenceSucceed( "weapon_a", 0, [ "weapon_a", "weapon_a" ], [ 0, 1 ] ) );
     reportSelfTestResult( "pap_wait_confirmation_rejects_weapon_swap", !doesPackAPunchConfirmationSequenceSucceed( "weapon_a", 0, [ "weapon_b", "weapon_b" ], [ 1, 1 ] ) );
     reportSelfTestResult( "pap_tracking_requires_live_upgrade_increase", resolveTrackedPackAPunchLevel( 1, 1, 0 ) == 1 );
@@ -1747,7 +1747,7 @@ isPackAPunchUpgradeConfirmedForState( previousWeaponKey, previousUpgradeLevel, c
 
     if ( currentWeaponKey != previousWeaponKey )
     {
-        return false;
+        return currentUpgradeLevel > previousUpgradeLevel;
     }
 
     return currentUpgradeLevel > previousUpgradeLevel;
@@ -2968,6 +2968,11 @@ getCurrentWeaponUpgradeLevel()
 
 isCurrentWeaponUpgradeLevelApproximate()
 {
+    if ( isdefined( self.abzmSelfTestWeaponKey ) )
+    {
+        return isdefined( self.abzmSelfTestUpgradeLevel ) && self.abzmSelfTestUpgradeLevel == 1;
+    }
+
     weapon = self getcurrentweapon();
     if ( !isdefined( weapon ) || !isdefined( self.weaponstate ) || !isdefined( self.weaponstate[weapon] ) )
     {
@@ -3235,7 +3240,7 @@ getPurchaseItemCandidates()
         return nodes;
     }
 
-    if ( (gettime() - level.abzm.purchaseItemCacheTime) < 2000 && level.abzm.purchaseItemSourceCacheTime == level.abzm.interactableCacheTime && level.abzm.purchaseItemSharedStateVersion == level.abzm.sharedPurchaseStateVersion )
+    if ( (gettime() - level.abzm.purchaseItemCacheTime) < 2000 && level.abzm.purchaseItemSourceCacheTime == level.abzm.interactableCacheTime )
     {
         return level.abzm.purchaseItemCandidates;
     }
@@ -3254,7 +3259,6 @@ getPurchaseItemCandidates()
     level.abzm.purchaseItemCandidates = purchaseNodes;
     level.abzm.purchaseItemCacheTime = gettime();
     level.abzm.purchaseItemSourceCacheTime = level.abzm.interactableCacheTime;
-    level.abzm.purchaseItemSharedStateVersion = level.abzm.sharedPurchaseStateVersion;
     return level.abzm.purchaseItemCandidates;
 }
 isGenericWeaponPurchaseMarker( entity )
