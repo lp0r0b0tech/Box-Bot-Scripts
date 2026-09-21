@@ -248,6 +248,7 @@ runSelfTestsIfEnabled()
 
     runReviveOutcomeSelfTests();
     runBotLifecycleSelfTests();
+    runSharedPurchaseSelfTests();
 }
 
 isDevelopmentModeEnabled()
@@ -293,6 +294,24 @@ runBotLifecycleSelfTests()
     reportSelfTestResult( "bot_lifecycle_purchase_state_reset", bot.abzmPerkPurchases == 0 && bot.abzmPurchasedPerkNodes.size == 0 && !isdefined( bot.abzmLastPerkPurchaseTime ) && !isdefined( bot.abzmLastPurchaseTime ) && bot.abzmLastWeaponPurchaseStateKey == "" );
 
     reportSelfTestResult( "bot_lifecycle_difficulty_mapping", resolveBotSkillDifficulty( "ultra" ) == "veteran" );
+}
+
+runSharedPurchaseSelfTests()
+{
+    previousSharedNodes = level.abzm.sharedPurchasedNodes;
+    level.abzm.sharedPurchasedNodes = [];
+
+    bot = spawnstruct();
+    node = spawnstruct();
+    node.target = "abzm_test_door";
+
+    bot markSharedPurchase( node, "door", false );
+    reportSelfTestResult( "shared_purchase_blocks_active_node", alreadyBoughtSharedNode( node, "door" ) );
+
+    level.abzm.sharedPurchasedNodes[0].expiresAt = gettime() - 1;
+    reportSelfTestResult( "shared_purchase_expires_and_compacts", !alreadyBoughtSharedNode( node, "door" ) && level.abzm.sharedPurchasedNodes.size == 0 );
+
+    level.abzm.sharedPurchasedNodes = previousSharedNodes;
 }
 
 abzmBoot()
@@ -1017,11 +1036,10 @@ attemptWeaponPurchase()
 
     if ( roundNumber >= 7 )
     {
-        prePurchaseStateKey = getWeaponPurchaseStateKey();
-        mysteryNode = getClosestPurchaseItemInteractable( "mystery" );
+        mysteryNode = getClosestAvailableSharedInteractable( "mystery" );
         if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
         {
-            markWeaponPurchase( prePurchaseStateKey );
+            markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
             return true;
         }
     }
@@ -1045,10 +1063,10 @@ attemptUtilityPurchase()
 
     if ( hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
-        papNode = getClosestInteractable( "packapunch" );
+        papNode = getClosestAvailableSharedInteractable( "packapunch" );
         if ( attemptPurchase( papNode, level.abzm.packapunchCost ) )
         {
-            markGenericPurchase();
+            markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
             return true;
         }
     }
@@ -1174,7 +1192,7 @@ markSharedPurchase( node, kind, usedFallback )
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
     sharedEntry.expiresAt = -1;
-    if ( kind == "exo" || kind == "door" )
+    if ( isTimedSharedPurchaseKind( kind ) )
     {
         sharedCooldown = ABZM_SHARED_PURCHASE_COOLDOWN_MS;
         if ( isdefined( usedFallback ) && usedFallback )
@@ -1195,6 +1213,11 @@ markSharedPurchase( node, kind, usedFallback )
     }
 
     markGenericPurchase();
+}
+
+isTimedSharedPurchaseKind( kind )
+{
+    return kind == "exo" || kind == "door" || kind == "mystery" || kind == "packapunch";
 }
 
 alreadyBoughtPerkNode( node )
@@ -2261,7 +2284,7 @@ isGenericWeaponPurchaseMarker( entity )
         return false;
     }
 
-    return !isDesiredInteractable( entity, "door" ) && !isDesiredInteractable( entity, "perk" ) && !isDesiredInteractable( entity, "exo" ) && !isDesiredInteractable( entity, "packapunch" ) && !isDesiredInteractable( entity, "revive" );
+    return !isDesiredInteractable( entity, "door" ) && !isDesiredInteractable( entity, "perk" ) && !isDesiredInteractable( entity, "exo" ) && !isDesiredInteractable( entity, "packapunch" ) && !isDesiredInteractable( entity, "mystery" ) && !isDesiredInteractable( entity, "revive" );
 }
 
 chooseTrainingAnchor()
