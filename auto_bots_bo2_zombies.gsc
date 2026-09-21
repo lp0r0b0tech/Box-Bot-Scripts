@@ -98,6 +98,21 @@ main()
     init();
 }
 
+resolveTrackedPackAPunchLevel( existingTrackedUpgradeLevel, previousUpgradeLevel, observedUpgradeLevel )
+{
+    if ( isdefined( observedUpgradeLevel ) && observedUpgradeLevel > 0 )
+    {
+        return observedUpgradeLevel;
+    }
+
+    if ( isdefined( existingTrackedUpgradeLevel ) && existingTrackedUpgradeLevel > 0 )
+    {
+        return existingTrackedUpgradeLevel;
+    }
+
+    return max( 1, previousUpgradeLevel + 1 );
+}
+
 doesPackAPunchConfirmationSequenceSucceed( previousWeaponKey, previousUpgradeLevel, weaponKeys, upgradeLevels )
 {
     if ( !isdefined( weaponKeys ) || !isdefined( upgradeLevels ) )
@@ -466,6 +481,7 @@ runPurchaseConfirmationSelfTests()
     reportSelfTestResult( "mystery_confirmation_requires_change", !isMysteryBoxRewardConfirmedForState( "weapon_a", 0, "weapon_a", 0 ) );
     reportSelfTestResult( "pap_confirmation_requires_same_weapon_upgrade", !isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_b", 1 ) && isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_a", 1 ) );
     reportSelfTestResult( "pap_wait_confirmation_rejects_weapon_swap", !doesPackAPunchConfirmationSequenceSucceed( "weapon_a", 0, [ "weapon_b", "weapon_b" ], [ 1, 1 ] ) );
+    reportSelfTestResult( "pap_tracking_requires_live_upgrade_increase", resolveTrackedPackAPunchLevel( 1, 1, 0 ) == 1 );
 }
 
 runDeferredSelfTests()
@@ -1250,6 +1266,7 @@ attemptWeaponPurchase()
                     else
                     {
                         clearSharedPurchaseReservation( mysteryNode, "mystery" );
+                        markGenericPurchase();
                     }
                 }
                 else
@@ -1317,9 +1334,10 @@ attemptUtilityPurchase()
                 }
 
                 clearSharedPurchaseReservation( papNode, "packapunch" );
+                markGenericPurchase();
                 if ( isdefined( self.abzmLastPurchaseUsedFallback ) && self.abzmLastPurchaseUsedFallback )
                 {
-                    markGenericPurchase();
+                    return false;
                 }
                 return false;
             }
@@ -1482,18 +1500,13 @@ markPackAPunchPurchase( weaponKey, previousUpgradeLevel )
     }
 
     entryIndex = findPackAPunchWeaponEntryIndex( currentWeaponKey );
-    if ( observedUpgradeLevel > 0 )
+    existingTrackedUpgradeLevel = 0;
+    if ( entryIndex >= 0 && isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel ) )
     {
-        trackedUpgradeLevel = observedUpgradeLevel;
+        existingTrackedUpgradeLevel = self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel;
     }
-    else if ( entryIndex >= 0 && isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel ) && self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel > 0 )
-    {
-        trackedUpgradeLevel = max( self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel, previousUpgradeLevel + 1 );
-    }
-    else
-    {
-        trackedUpgradeLevel = max( 1, previousUpgradeLevel + 1 );
-    }
+
+    trackedUpgradeLevel = resolveTrackedPackAPunchLevel( existingTrackedUpgradeLevel, previousUpgradeLevel, observedUpgradeLevel );
 
     trackedUpgradeLevel = min( trackedUpgradeLevel, ABZM_MAX_PACKAPUNCH_LEVEL );
 
