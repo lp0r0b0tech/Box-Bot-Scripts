@@ -42,13 +42,19 @@ atlas45_register_damage_modifier()
 {
     level endon("game_ended");
 
-    if(isdefined(level.exo_damage_curve_registering) &&
-       level.exo_damage_curve_registering)
+    now = 0;
+    if(isdefined(level.time))
+    {
+        now = level.time;
+    }
+
+    if(isdefined(level.exo_damage_curve_registering_until) &&
+       level.exo_damage_curve_registering_until > now)
     {
         return;
     }
 
-    level.exo_damage_curve_registering = true;
+    level.exo_damage_curve_registering_until = now + 35000;
 
     /*
         Wait for the Zombies gametype to initialize the weapon-damage
@@ -67,14 +73,14 @@ atlas45_register_damage_modifier()
     if(!isdefined(level.modifyweapondamage))
     {
         println("ExoWeaponDamage: ERROR - level.modifyweapondamage was never initialized.");
-        level.exo_damage_curve_registering = false;
+        level.exo_damage_curve_registering_until = 0;
         return;
     }
 
     if(isdefined(level.exo_damage_curve_registered) &&
        level.exo_damage_curve_registered)
     {
-        level.exo_damage_curve_registering = false;
+        level.exo_damage_curve_registering_until = 0;
         return;
     }
 
@@ -129,7 +135,7 @@ atlas45_register_damage_modifier()
     }
 
     println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".");
-    level.exo_damage_curve_registering = false;
+    level.exo_damage_curve_registering_until = 0;
 }
 
 atlas45_should_register_weapon(weaponName)
