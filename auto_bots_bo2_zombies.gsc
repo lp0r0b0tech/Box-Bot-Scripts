@@ -398,6 +398,7 @@ runWeaponPurchaseRoutingSelfTests()
 
     reportSelfTestResult( "weapon_routing_explicit_marker_stays_weapon", isDesiredInteractable( explicitWeaponNode, "weapon" ) && !isDesiredInteractable( explicitWeaponNode, "generic_weapon_buy" ) );
     reportSelfTestResult( "weapon_routing_generic_marker_stays_generic", !isDesiredInteractable( genericWeaponNode, "weapon" ) && isDesiredInteractable( genericWeaponNode, "generic_weapon_buy" ) );
+    reportSelfTestResult( "weapon_routing_state_change_reopens_purchase", shouldResetWeaponPurchaseStateKey( "starter|true|true", "starter|false|false" ) );
 }
 
 runDeferredSelfTests()
@@ -1166,13 +1167,21 @@ attemptWeaponPurchase()
         mysteryNode = getClosestAvailableSharedInteractable( "mystery" );
         if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && reserveSharedPurchase( mysteryNode, "mystery" ) )
         {
+            previousMysteryStateKey = getWeaponPurchaseStateKey();
             if ( attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
             {
                 if ( !self.abzmLastPurchaseUsedFallback )
                 {
-                    markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
-                    self.abzmLastWeaponPurchaseStateKey = "";
-                    purchasedWeaponUpgrade = true;
+                    if ( waitForWeaponPurchaseStateChange( previousMysteryStateKey, 1000 ) )
+                    {
+                        markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
+                        self.abzmLastWeaponPurchaseStateKey = "";
+                        purchasedWeaponUpgrade = true;
+                    }
+                    else
+                    {
+                        clearSharedPurchaseReservation( mysteryNode, "mystery" );
+                    }
                 }
                 else
                 {
@@ -1343,7 +1352,7 @@ shouldSkipWeaponRepurchase()
     }
 
     currentStateKey = getWeaponPurchaseStateKey();
-    if ( currentStateKey != self.abzmLastWeaponPurchaseStateKey )
+    if ( shouldResetWeaponPurchaseStateKey( self.abzmLastWeaponPurchaseStateKey, currentStateKey ) )
     {
         self.abzmLastWeaponPurchaseStateKey = "";
         return false;
@@ -1352,8 +1361,30 @@ shouldSkipWeaponRepurchase()
     return true;
 }
 
+shouldResetWeaponPurchaseStateKey( previousStateKey, currentStateKey )
+{
+    return previousStateKey != currentStateKey;
+}
+
+waitForWeaponPurchaseStateChange( previousStateKey, maxWaitMs )
+{
+    start = gettime();
+    while ( (gettime() - start) < maxWaitMs )
+    {
+        if ( shouldResetWeaponPurchaseStateKey( previousStateKey, getWeaponPurchaseStateKey() ) )
+        {
+            return true;
+        }
+
+        wait 0.05;
+    }
+
+    return shouldResetWeaponPurchaseStateKey( previousStateKey, getWeaponPurchaseStateKey() );
+}
+
 markPackAPunchPurchase()
 {
+    self initializeBotPurchaseState();
     currentWeaponKey = getCurrentWeaponIdentityKey();
     if ( currentWeaponKey == "" )
     {
@@ -1479,6 +1510,7 @@ findPackAPunchWeaponEntryIndex( weaponKey )
 
 markPerkPurchase( node )
 {
+    self initializeBotPurchaseState();
     perkKey = getPerkPurchaseKey( node );
     addedNewPerk = false;
     if ( isdefined( perkKey ) && perkKey != "" && !nodeArrayContains( self.abzmPurchasedPerkNodes, perkKey ) )
@@ -1646,7 +1678,7 @@ alreadyBoughtPerkNode( node )
 
 alreadyBoughtSharedNode( node, kind )
 {
-    if ( !isdefined( level.abzm ) )
+    if ( !isdefined( level.abzm ) || !isdefined( level.abzm.sharedPurchasedNodes ) )
     {
         return false;
     }
