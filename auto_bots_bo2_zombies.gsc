@@ -924,12 +924,7 @@ attemptWeaponPurchase()
     roundNumber = max( 1, level.abzm.round );
     weaponNode = getClosestPurchaseItemInteractable( "weapon" );
 
-    if ( roundNumber < 5 && !currentWeaponNeedsAmmo() && !isCurrentWeaponWeak() )
-    {
-        return false;
-    }
-
-    if ( roundNumber >= 8 && !isCurrentWeaponWeak() && !currentWeaponNeedsAmmo() )
+    if ( !isCurrentWeaponWeak() && !currentWeaponNeedsAmmo() )
     {
         return false;
     }
