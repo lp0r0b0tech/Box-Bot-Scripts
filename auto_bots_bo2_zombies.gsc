@@ -337,11 +337,6 @@ initializeBotPurchaseState()
     {
         self.abzmPurchasedPerkKeys = [];
     }
-
-    if ( !isdefined( self.abzmPurchasedUpgradeKeys ) )
-    {
-        self.abzmPurchasedUpgradeKeys = [];
-    }
 }
 
 resetBotPerkPurchaseState()
@@ -854,7 +849,7 @@ moveToRetreatAnchor()
 
 attemptPerkPurchase()
 {
-    if ( !botCanAttemptPurchase( ABZM_PERK_PURCHASE_COOLDOWN_SEC ) )
+    if ( !botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC ) || !botCanAttemptPerkPurchase( ABZM_PERK_PURCHASE_COOLDOWN_SEC ) )
     {
         return false;
     }
@@ -942,9 +937,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestInteractable( "exo" );
-        if ( !alreadyBoughtBotUpgradeNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        if ( !alreadyBoughtSharedNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
-            markBotUpgradePurchase( exoNode );
+            markSharedPurchase( exoNode );
             return true;
         }
     }
@@ -970,6 +965,16 @@ botCanAttemptPurchase( cooldownSec )
     }
 
     return ((gettime() - self.abzmLastPurchaseTime) / 1000.0) >= cooldownSec;
+}
+
+botCanAttemptPerkPurchase( cooldownSec )
+{
+    if ( !isdefined( self.abzmLastPerkPurchaseTime ) )
+    {
+        return true;
+    }
+
+    return ((gettime() - self.abzmLastPerkPurchaseTime) / 1000.0) >= cooldownSec;
 }
 
 markGenericPurchase()
@@ -1011,17 +1016,6 @@ markSharedPurchase( node )
     markGenericPurchase();
 }
 
-markBotUpgradePurchase( node )
-{
-    key = getInteractableKey( node );
-    if ( isdefined( key ) && key != "" )
-    {
-        self.abzmPurchasedUpgradeKeys[key] = true;
-    }
-
-    markGenericPurchase();
-}
-
 alreadyBoughtPerkNode( node )
 {
     key = getInteractableKey( node );
@@ -1049,16 +1043,6 @@ alreadyBoughtSharedNode( node )
     return isdefined( level.abzm.sharedPurchaseKeys[key] ) && level.abzm.sharedPurchaseKeys[key];
 }
 
-alreadyBoughtBotUpgradeNode( node )
-{
-    key = getInteractableKey( node );
-    if ( !isdefined( key ) || key == "" )
-    {
-        return false;
-    }
-
-    return isdefined( self.abzmPurchasedUpgradeKeys[key] ) && self.abzmPurchasedUpgradeKeys[key];
-}
 
 getBestPerkInteractable()
 {
@@ -1777,9 +1761,20 @@ getWeaponPurchaseCandidates()
         return level.abzm.purchaseItemCandidates;
     }
 
+    rawNodes = [];
+    appendEntArray( rawNodes, getentarray( "weapon", "classname" ) );
+    appendEntArray( rawNodes, getentarray( "item", "classname" ) );
+
     nodes = [];
-    appendEntArray( nodes, getentarray( "weapon", "classname" ) );
-    appendEntArray( nodes, getentarray( "item", "classname" ) );
+    for ( i = 0; i < rawNodes.size; i++ )
+    {
+        node = rawNodes[i];
+        if ( isDesiredInteractable( node, "weapon" ) || isDesiredInteractable( node, "mystery" ) )
+        {
+            nodes[nodes.size] = node;
+        }
+    }
+
     level.abzm.purchaseItemCandidates = nodes;
     level.abzm.purchaseItemCacheTime = gettime();
     return level.abzm.purchaseItemCandidates;
