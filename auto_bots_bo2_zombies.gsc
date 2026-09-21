@@ -1667,7 +1667,7 @@ isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel )
 
 getPackAPunchConfirmationKey( weaponKey, upgradeLevel )
 {
-    return weaponKey;
+    return weaponKey + "|" + upgradeLevel;
 }
 
 waitForPackAPunchConfirmation( previousWeaponKey, previousUpgradeLevel, maxWaitMs )
@@ -1785,7 +1785,7 @@ reserveSharedPurchase( node, kind )
     purchaseKey = getSharedPurchaseKey( node, kind );
     if ( !isdefined( purchaseKey ) || purchaseKey == "" )
     {
-        return true;
+        return false;
     }
 
     claimedIndex = -1;
@@ -1831,7 +1831,7 @@ reserveSharedPurchase( node, kind )
     if ( finalIndex >= 0 )
     {
         finalEntry = level.abzm.sharedPurchasedNodes[finalIndex];
-        if ( isdefined( finalEntry ) && isdefined( finalEntry.expiresAt ) && gettime() < finalEntry.expiresAt )
+        if ( isdefined( finalEntry ) && isdefined( finalEntry.expiresAt ) && gettime() < finalEntry.expiresAt && finalIndex != claimedIndex )
         {
             return false;
         }
@@ -2080,15 +2080,20 @@ getStableInteractableKey( node, fallbackPrefix )
         keyPart = toLower( node.classname + "" );
     }
 
-    if ( keyPart == "" )
-    {
-        keyPart = toLower( fallbackPrefix + "" );
-    }
-
     originKey = "0_0_0";
     if ( isdefined( node.origin ) )
     {
         originKey = int( node.origin[0] ) + "_" + int( node.origin[1] ) + "_" + int( node.origin[2] );
+    }
+
+    if ( uniquePart == "" && keyPart == "" )
+    {
+        return "";
+    }
+
+    if ( keyPart == "" )
+    {
+        keyPart = toLower( fallbackPrefix + "" );
     }
 
     if ( uniquePart != "" )
@@ -2146,7 +2151,13 @@ getSharedPurchaseKey( node, kind )
         return "";
     }
 
-    return toLower( kind + "" ) + "|" + getStableInteractableKey( node, "generic_" + toLower( kind + "" ) );
+    stableKey = getStableInteractableKey( node, "generic_" + toLower( kind + "" ) );
+    if ( !isdefined( stableKey ) || stableKey == "" )
+    {
+        return "";
+    }
+
+    return toLower( kind + "" ) + "|" + stableKey;
 }
 
 getBestPerkInteractable()
