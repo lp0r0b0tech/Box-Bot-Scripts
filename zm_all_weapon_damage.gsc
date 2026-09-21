@@ -2,7 +2,7 @@
     Exo Zombies custom damage modifier for all weapons
 
     Place this file at:
-        s1/scripts/zm/all_weapon_damage.gsc
+        s1/scripts/zm/zm_all_weapon_damage.gsc
 
     Damage progression for every weapon:
         Mk1  = stock / vanilla damage
@@ -150,6 +150,11 @@ awd_modify_damage(
 )
 {
     if ( !isdefined( attacker ) || !isplayer( attacker ) )
+    {
+        return damage;
+    }
+
+    if ( !isdefined( attacker.weaponstate ) )
     {
         return damage;
     }
