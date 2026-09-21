@@ -151,7 +151,7 @@ atlas45_modify_damage(
         return damage;
     }
 
-    weaponName = weapon + "";
+    weaponName = atlas45_resolve_registered_weapon_name(weapon);
     weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
         attacker,
         weaponName
@@ -242,6 +242,43 @@ atlas45_apply_previous_damage_callback(
         direction,
         hitLocation
     );
+}
+
+atlas45_resolve_registered_weapon_name(weapon)
+{
+    if(!isdefined(weapon))
+    {
+        return "";
+    }
+
+    weaponName = weapon + "";
+    if(!isdefined(level.exo_damage_curve_previous_callbacks))
+    {
+        if(isdefined(level.modifyweapondamage) &&
+           isdefined(level.modifyweapondamage[tolower(weaponName)]))
+        {
+            return tolower(weaponName);
+        }
+
+        return weaponName;
+    }
+
+    if(isdefined(level.exo_damage_curve_previous_callbacks[weaponName]) ||
+       (isdefined(level.modifyweapondamage) &&
+        isdefined(level.modifyweapondamage[weaponName])))
+    {
+        return weaponName;
+    }
+
+    lowercaseWeaponName = tolower(weaponName);
+    if(isdefined(level.exo_damage_curve_previous_callbacks[lowercaseWeaponName]) ||
+       (isdefined(level.modifyweapondamage) &&
+        isdefined(level.modifyweapondamage[lowercaseWeaponName])))
+    {
+        return lowercaseWeaponName;
+    }
+
+    return weaponName;
 }
 
 atlas45_apply_callback_modifiers(baseDamage, originalDamage, callbackDamage)
