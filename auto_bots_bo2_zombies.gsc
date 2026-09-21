@@ -1160,6 +1160,7 @@ applyBotPostSpawnSetup()
 
         initializeBotPurchaseState();
         applyBotCombatProfile();
+        grantForcedBotLoadout();
     }
 }
 
@@ -1232,13 +1233,14 @@ botBrainLoop()
     {
         refreshRuntimeConfig();
         applyBotCombatProfile();
-        maintainForcedBotLoadout();
 
         if ( level.abzm.botsCanRevive && attemptBotRevive() )
         {
             wait 0.1;
             continue;
         }
+
+        maintainForcedBotLoadout();
 
         if ( shouldRetreat() )
         {
