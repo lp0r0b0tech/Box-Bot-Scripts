@@ -298,20 +298,24 @@ runBotLifecycleSelfTests()
 
 runSharedPurchaseSelfTests()
 {
-    previousAbzmState = level.abzm;
-    level.abzm = buildModState();
-
     bot = spawnstruct();
     node = spawnstruct();
     node.target = "abzm_test_door";
 
+    previousSharedNodes = level.abzm.sharedPurchasedNodes;
+    level.abzm.sharedPurchasedNodes = [];
     bot markSharedPurchase( node, "door", false );
-    reportSelfTestResult( "shared_purchase_blocks_active_node", alreadyBoughtSharedNode( node, "door" ) );
+    sharedPurchaseBlocksActiveNode = alreadyBoughtSharedNode( node, "door" );
+    level.abzm.sharedPurchasedNodes = previousSharedNodes;
+    reportSelfTestResult( "shared_purchase_blocks_active_node", sharedPurchaseBlocksActiveNode );
 
+    previousSharedNodes = level.abzm.sharedPurchasedNodes;
+    level.abzm.sharedPurchasedNodes = [];
+    bot markSharedPurchase( node, "door", false );
     level.abzm.sharedPurchasedNodes[0].expiresAt = gettime() - 1;
-    reportSelfTestResult( "shared_purchase_expires_and_compacts", !alreadyBoughtSharedNode( node, "door" ) && level.abzm.sharedPurchasedNodes.size == 0 );
-
-    level.abzm = previousAbzmState;
+    sharedPurchaseExpiresAndCompacts = !alreadyBoughtSharedNode( node, "door" ) && level.abzm.sharedPurchasedNodes.size == 0;
+    level.abzm.sharedPurchasedNodes = previousSharedNodes;
+    reportSelfTestResult( "shared_purchase_expires_and_compacts", sharedPurchaseExpiresAndCompacts );
 }
 
 abzmBoot()
@@ -1018,6 +1022,10 @@ attemptWeaponPurchase()
 {
     roundNumber = max( 1, level.abzm.round );
     weaponNode = getClosestPurchaseItemInteractable( "weapon" );
+    if ( !isdefined( weaponNode ) )
+    {
+        weaponNode = getClosestPurchaseItemInteractable( "generic_weapon_buy" );
+    }
 
     if ( !isCurrentWeaponWeak() && !currentWeaponNeedsAmmo() )
     {
@@ -1044,7 +1052,7 @@ attemptWeaponPurchase()
         }
     }
 
-    if ( level.abzm.botsAutoBuyUpgrades && hasEnoughPoints( self, level.abzm.packapunchCost ) )
+    if ( level.abzm.botsAutoBuyUpgrades && !isCurrentWeaponWeak() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
         papNode = getClosestAvailableSharedInteractable( "packapunch" );
         if ( attemptPurchase( papNode, level.abzm.packapunchCost ) )
@@ -2138,7 +2146,7 @@ getClosestInteractableFromCandidates( nodes, kind, skipSharedPurchases )
     for ( i = 0; i < nodes.size; i++ )
     {
         node = nodes[i];
-        if ( !isDesiredInteractable( node, kind ) && !( kind == "weapon" && isGenericWeaponPurchaseMarker( node ) ) )
+        if ( !isDesiredInteractable( node, kind ) )
         {
             continue;
         }
@@ -2582,6 +2590,9 @@ isDesiredInteractable( entity, kind )
     {
         case "weapon":
             return entityMatchesToken( entity, "weapon" ) || entityMatchesToken( entity, "wallbuy" ) || entityMatchesToken( entity, "armory" );
+
+        case "generic_weapon_buy":
+            return isGenericWeaponPurchaseMarker( entity );
 
         case "mystery":
             return entityMatchesToken( entity, "mystery" ) || entityMatchesToken( entity, "printer" );
