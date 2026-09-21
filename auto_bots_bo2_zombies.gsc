@@ -337,6 +337,17 @@ initializeBotPurchaseState()
     {
         self.abzmPurchasedPerkKeys = [];
     }
+
+    if ( !isdefined( self.abzmPurchasedUpgradeKeys ) )
+    {
+        self.abzmPurchasedUpgradeKeys = [];
+    }
+}
+
+resetBotPerkPurchaseState()
+{
+    self.abzmPerkPurchases = 0;
+    self.abzmPurchasedPerkKeys = [];
 }
 
 monitorPlayerConnections()
@@ -383,6 +394,7 @@ onPlayerConnected()
         if ( self.abzmIsBot )
         {
             initializeBotPurchaseState();
+            resetBotPerkPurchaseState();
             applyBotCombatProfile();
         }
 
@@ -544,6 +556,7 @@ applyBotPostSpawnSetup()
         }
 
         initializeBotPurchaseState();
+        resetBotPerkPurchaseState();
         applyBotCombatProfile();
     }
 }
@@ -769,7 +782,8 @@ tryUseReviveInteraction( downed )
     reviveNode notify( "use", self );
 
     start = gettime();
-    while ( isdefined( downed ) && downed.abzmDowned && (gettime() - start) < 750 )
+    maxWaitMs = int( (ABZM_BO2_REVIVE_TIME + 0.5) * 1000 );
+    while ( isdefined( downed ) && downed.abzmDowned && (gettime() - start) < maxWaitMs )
     {
         wait 0.05;
     }
@@ -928,9 +942,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestInteractable( "exo" );
-        if ( !alreadyBoughtSharedNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        if ( !alreadyBoughtBotUpgradeNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
-            markSharedPurchase( exoNode );
+            markBotUpgradePurchase( exoNode );
             return true;
         }
     }
@@ -997,6 +1011,17 @@ markSharedPurchase( node )
     markGenericPurchase();
 }
 
+markBotUpgradePurchase( node )
+{
+    key = getInteractableKey( node );
+    if ( isdefined( key ) && key != "" )
+    {
+        self.abzmPurchasedUpgradeKeys[key] = true;
+    }
+
+    markGenericPurchase();
+}
+
 alreadyBoughtPerkNode( node )
 {
     key = getInteractableKey( node );
@@ -1022,6 +1047,17 @@ alreadyBoughtSharedNode( node )
     }
 
     return isdefined( level.abzm.sharedPurchaseKeys[key] ) && level.abzm.sharedPurchaseKeys[key];
+}
+
+alreadyBoughtBotUpgradeNode( node )
+{
+    key = getInteractableKey( node );
+    if ( !isdefined( key ) || key == "" )
+    {
+        return false;
+    }
+
+    return isdefined( self.abzmPurchasedUpgradeKeys[key] ) && self.abzmPurchasedUpgradeKeys[key];
 }
 
 getBestPerkInteractable()
