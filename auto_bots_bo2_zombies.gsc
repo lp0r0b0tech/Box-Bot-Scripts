@@ -357,6 +357,19 @@ applyBotCombatProfile()
 
 initializeBotPurchaseState()
 {
+    if ( !isdefined( self.abzmPerkPurchases ) )
+    {
+        self.abzmPerkPurchases = 0;
+    }
+
+    if ( !isdefined( self.abzmPurchasedPerkNodes ) )
+    {
+        self.abzmPurchasedPerkNodes = [];
+    }
+}
+
+clearBotPurchaseState()
+{
     self.abzmPerkPurchases = 0;
     self.abzmPurchasedPerkNodes = [];
 }
@@ -426,6 +439,10 @@ trackDownedState()
         self.abzmDowned = true;
         self.abzmDownedAt = gettime();
         clearActiveReviveClaim();
+        if ( self.abzmIsBot )
+        {
+            clearBotPurchaseState();
+        }
 
         if ( isdefined( level.abzm ) && level.abzm.bo2Enabled )
         {
@@ -1048,7 +1065,7 @@ markSharedPurchase( node, kind )
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
     sharedEntry.expiresAt = -1;
-    if ( kind == "exo" )
+    if ( kind == "exo" || kind == "door" )
     {
         sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
     }
