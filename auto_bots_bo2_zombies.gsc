@@ -59,6 +59,7 @@
 #define ABZM_BO2_REVIVE_RANGE                 96
 #define ABZM_INTERACT_RANGE                   96
 #define ABZM_REVIVE_INTERACT_TIMEOUT_MS       750
+#define ABZM_SHARED_PURCHASE_COOLDOWN_MS      15000
 #define ABZM_PURCHASE_COOLDOWN_SEC            1.5
 #define ABZM_PERK_PURCHASE_COOLDOWN_SEC       5.0
 #define ABZM_BO2_RUN_ROUND                    3
@@ -742,7 +743,7 @@ attemptBotRevive()
             return true;
         }
 
-        if ( reviveResult <= 0 )
+        if ( reviveResult < 0 )
         {
             if ( !isdefined( downed ) )
             {
@@ -752,6 +753,12 @@ attemptBotRevive()
 
             downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             signalReviveSuccess( downed, self );
+        }
+        else if ( reviveResult == 0 )
+        {
+            downed.abzmReviver = undefined;
+            self.abzmReviveTarget = undefined;
+            return false;
         }
 
         downed.abzmReviver = undefined;
@@ -1013,6 +1020,11 @@ markSharedPurchase( node, kind )
         return;
     }
 
+    if ( isdefined( node ) )
+    {
+        node.abzmSharedCooldownUntil = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
+    }
+
     if ( !shouldPersistSharedPurchaseNode( node, kind ) )
     {
         removeNodeFromArray( level.abzm.sharedPurchasedNodes, node );
@@ -1057,6 +1069,11 @@ alreadyBoughtSharedNode( node, kind )
 shouldPersistSharedPurchaseNode( node, kind )
 {
     if ( !isdefined( node ) )
+    {
+        return true;
+    }
+
+    if ( isdefined( node.abzmSharedCooldownUntil ) && gettime() < node.abzmSharedCooldownUntil )
     {
         return true;
     }
