@@ -176,7 +176,7 @@ buildModState()
     state.interactableCandidates = [];
     state.interactableCacheTime = 0;
     state.purchaseItemCandidates = [];
-    state.purchaseItemCacheTime = 0;
+    state.purchaseItemCacheTime = -999999;
     state.sharedPurchaseKeys = [];
     state.botNames = [];
     state.botNames[0] = "Atlas-1";
@@ -722,7 +722,8 @@ attemptBotRevive()
 
     if ( downed.abzmDowned )
     {
-        if ( !tryUseReviveInteraction( downed ) )
+        reviveResult = tryUseReviveInteraction( downed );
+        if ( reviveResult < 0 )
         {
             if ( !isdefined( downed ) )
             {
@@ -732,6 +733,12 @@ attemptBotRevive()
 
             downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             signalReviveSuccess( downed, self );
+        }
+        else if ( reviveResult == 0 )
+        {
+            downed.abzmReviver = undefined;
+            self.abzmReviveTarget = undefined;
+            return false;
         }
 
         downed.abzmReviver = undefined;
@@ -749,13 +756,13 @@ tryUseReviveInteraction( downed )
 {
     if ( !isdefined( downed ) || !downed.abzmDowned )
     {
-        return false;
+        return 0;
     }
 
     reviveNode = getReviveInteractableForPlayer( downed );
     if ( !isdefined( reviveNode ) )
     {
-        return false;
+        return -1;
     }
 
     reviveNode notify( "trigger", self );
@@ -767,7 +774,12 @@ tryUseReviveInteraction( downed )
         wait 0.05;
     }
 
-    return isdefined( downed ) && !downed.abzmDowned;
+    if ( isdefined( downed ) && !downed.abzmDowned )
+    {
+        return 1;
+    }
+
+    return 0;
 }
 
 getReviveInteractableForPlayer( downed )
@@ -1724,7 +1736,7 @@ getWeaponPurchaseCandidates()
         return nodes;
     }
 
-    if ( (gettime() - level.abzm.purchaseItemCacheTime) < 2000 && level.abzm.purchaseItemCandidates.size > 0 )
+    if ( (gettime() - level.abzm.purchaseItemCacheTime) < 2000 )
     {
         return level.abzm.purchaseItemCandidates;
     }
@@ -2062,15 +2074,6 @@ getInteractableKey( entity )
     {
         key = entity.script_string;
     }
-    else if ( isdefined( entity.model ) && entity.model != "" )
-    {
-        key = entity.model;
-    }
-    else if ( isdefined( entity.classname ) && entity.classname != "" )
-    {
-        key = entity.classname;
-    }
-
     if ( key == "" )
     {
         return "";
