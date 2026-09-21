@@ -117,7 +117,6 @@ abzmDeferredInit()
 
     level.abzm = buildModState();
     initDvars();
-    runSelfTestsIfEnabled();
     level thread abzmBoot();
 }
 
@@ -318,6 +317,12 @@ runSharedPurchaseSelfTests()
     reportSelfTestResult( "shared_purchase_expires_and_compacts", sharedPurchaseExpiresAndCompacts );
 }
 
+runDeferredSelfTests()
+{
+    wait 1.0;
+    runSelfTestsIfEnabled();
+}
+
 abzmBoot()
 {
     level endon( "game_ended" );
@@ -337,6 +342,7 @@ abzmBoot()
     level thread monitorPowerupSpawns();
     level thread periodicZombieRefresh();
     level thread periodicPowerupRefresh();
+    level thread runDeferredSelfTests();
 }
 
 refreshRuntimeConfig()
@@ -427,9 +433,15 @@ applyBotCombatProfile()
     self.maxhealth = level.abzm.botMaxHealth;
     self.botAggression = level.abzm.botAggression;
 
-    if ( !isdefined( self.health ) || level.abzm.botMaxHealth > previousMaxHealth )
+    if ( !isdefined( self.health ) )
     {
         self.health = self.maxhealth;
+    }
+    else if ( previousMaxHealth > 0 && previousMaxHealth != self.maxhealth )
+    {
+        healthRatio = self.health / previousMaxHealth;
+        healthRatio = abzmClamp( healthRatio, 0.0, 1.0 );
+        self.health = max( 1, int( self.maxhealth * healthRatio ) );
     }
     else if ( self.health > self.maxhealth )
     {
@@ -1038,6 +1050,7 @@ attemptWeaponPurchase()
     {
         weaponNode = getClosestPurchaseItemInteractable( "generic_weapon_buy" );
     }
+    needsStandardWeaponPurchase = isCurrentWeaponWeak() || currentWeaponNeedsAmmo();
 
     if ( !botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC ) )
     {
@@ -1049,7 +1062,7 @@ attemptWeaponPurchase()
         return false;
     }
 
-    if ( roundNumber >= 7 )
+    if ( roundNumber >= 7 && !needsStandardWeaponPurchase )
     {
         mysteryNode = getClosestAvailableSharedInteractable( "mystery" );
         if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
@@ -1060,7 +1073,7 @@ attemptWeaponPurchase()
         }
     }
 
-    if ( level.abzm.botsAutoBuyUpgrades && !isCurrentWeaponWeak() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
+    if ( level.abzm.botsAutoBuyUpgrades && !needsStandardWeaponPurchase && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
         papNode = getClosestAvailableSharedInteractable( "packapunch" );
         if ( isdefined( papNode ) && attemptPurchase( papNode, level.abzm.packapunchCost ) )
@@ -1075,7 +1088,7 @@ attemptWeaponPurchase()
         }
     }
 
-    if ( !isCurrentWeaponWeak() && !currentWeaponNeedsAmmo() )
+    if ( !needsStandardWeaponPurchase )
     {
         return false;
     }
