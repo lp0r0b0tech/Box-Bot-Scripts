@@ -102,7 +102,7 @@ resolveTrackedPackAPunchLevel( existingTrackedUpgradeLevel, previousUpgradeLevel
 {
     if ( isdefined( observedUpgradeLevel ) && observedUpgradeLevel > 0 )
     {
-        return observedUpgradeLevel;
+        return max( observedUpgradeLevel, existingTrackedUpgradeLevel );
     }
 
     if ( isdefined( existingTrackedUpgradeLevel ) && existingTrackedUpgradeLevel > 0 )
@@ -490,7 +490,7 @@ runPurchaseConfirmationSelfTests()
     entry.weaponKey = "weapon_a";
     entry.upgradeLevel = 25;
     bot.abzmPackAPunchWeaponEntries[0] = entry;
-    bot updateTrackedPackAPunchWeaponLevel( 0, "weapon_a", 20 );
+    bot updateTrackedPackAPunchWeaponLevel( 0, 20 );
     reportSelfTestResult( "pap_tracking_preserves_highest_existing_level", bot.abzmPackAPunchWeaponEntries[0].upgradeLevel == 25 );
 }
 
@@ -1272,6 +1272,7 @@ attemptWeaponPurchase()
                         markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
                         self.abzmLastWeaponPurchaseStateKey = "";
                         confirmedWeaponPurchase = true;
+                        return true;
                     }
                     else
                     {
@@ -1568,7 +1569,7 @@ alreadyPackAPunchedCurrentWeapon()
         liveWeaponKey = getCurrentWeaponIdentityKey();
         if ( liveWeaponKey == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey )
         {
-            updateTrackedPackAPunchWeaponLevel( entryIndex, currentWeaponKey, currentUpgradeLevel );
+            updateTrackedPackAPunchWeaponLevel( entryIndex, currentUpgradeLevel );
             trackedUpgradeLevel = self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel;
             return currentUpgradeLevel >= trackedUpgradeLevel;
         }
@@ -1589,7 +1590,7 @@ alreadyPackAPunchedCurrentWeapon()
     return getCurrentWeaponIdentityKey() == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey;
 }
 
-updateTrackedPackAPunchWeaponLevel( entryIndex, weaponKey, observedUpgradeLevel )
+updateTrackedPackAPunchWeaponLevel( entryIndex, observedUpgradeLevel )
 {
     if ( entryIndex < 0 || !isdefined( self.abzmPackAPunchWeaponEntries[entryIndex] ) || !isdefined( observedUpgradeLevel ) || observedUpgradeLevel <= 0 )
     {
@@ -1603,7 +1604,7 @@ updateTrackedPackAPunchWeaponLevel( entryIndex, weaponKey, observedUpgradeLevel 
     }
 
     self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel = max( existingUpgradeLevel, min( observedUpgradeLevel, ABZM_MAX_PACKAPUNCH_LEVEL ) );
-    self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey = getPackAPunchConfirmationKey( weaponKey, self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel );
+    self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey = getPackAPunchConfirmationKey( self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey, self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel );
     self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt = gettime();
 }
 
