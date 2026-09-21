@@ -347,6 +347,11 @@ initializeBotPurchaseState()
     {
         self.abzmPurchasedPerkKeys = [];
     }
+
+    if ( !isdefined( self.abzmPurchasedUpgradeKeys ) )
+    {
+        self.abzmPurchasedUpgradeKeys = [];
+    }
 }
 
 resetBotPerkPurchaseState()
@@ -907,6 +912,8 @@ attemptPerkPurchase()
 attemptWeaponPurchase()
 {
     roundNumber = max( 1, level.abzm.round );
+    weaponNode = getClosestInteractable( "weapon" );
+
     if ( roundNumber < 5 && !currentWeaponNeedsAmmo() && !isCurrentWeaponWeak() )
     {
         return false;
@@ -922,10 +929,11 @@ attemptWeaponPurchase()
         return false;
     }
 
-    if ( roundNumber >= 7 && hasEnoughPoints( self, level.abzm.mysteryCost ) )
+    if ( roundNumber >= 7 )
     {
         mysteryNode = getClosestInteractable( "mystery" );
-        if ( attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
+        canCoverMysteryFallback = isdefined( weaponNode ) && hasEnoughPoints( self, level.abzm.mysteryCost + level.abzm.weaponCost );
+        if ( isdefined( mysteryNode ) && ( canCoverMysteryFallback || ( !isdefined( weaponNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) ) ) && attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
         {
             markGenericPurchase();
             return true;
@@ -937,7 +945,6 @@ attemptWeaponPurchase()
         return false;
     }
 
-    weaponNode = getClosestInteractable( "weapon" );
     if ( attemptPurchase( weaponNode, level.abzm.weaponCost ) )
     {
         markGenericPurchase();
@@ -967,9 +974,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestInteractable( "exo" );
-        if ( !alreadyBoughtSharedNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        if ( !alreadyBoughtBotUpgradeNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
-            markSharedPurchase( exoNode );
+            markBotUpgradePurchase( exoNode );
             return true;
         }
     }
@@ -1046,6 +1053,17 @@ markSharedPurchase( node )
     markGenericPurchase();
 }
 
+markBotUpgradePurchase( node )
+{
+    key = getInteractableKey( node );
+    if ( isdefined( key ) && key != "" )
+    {
+        self.abzmPurchasedUpgradeKeys[key] = true;
+    }
+
+    markGenericPurchase();
+}
+
 alreadyBoughtPerkNode( node )
 {
     key = getInteractableKey( node );
@@ -1071,6 +1089,17 @@ alreadyBoughtSharedNode( node )
     }
 
     return isdefined( level.abzm.sharedPurchaseKeys[key] ) && level.abzm.sharedPurchaseKeys[key];
+}
+
+alreadyBoughtBotUpgradeNode( node )
+{
+    key = getInteractableKey( node );
+    if ( !isdefined( key ) || key == "" )
+    {
+        return false;
+    }
+
+    return isdefined( self.abzmPurchasedUpgradeKeys[key] ) && self.abzmPurchasedUpgradeKeys[key];
 }
 
 
@@ -1775,18 +1804,10 @@ getInteractableCandidates()
     appendEntArray( nodes, getentarray( "script_model", "classname" ) );
     appendEntArray( nodes, getentarray( "script_brushmodel", "classname" ) );
 
-    rawPurchaseNodes = [];
-    appendUniqueEntArray( rawPurchaseNodes, getentarray( "weapon", "classname" ) );
-    appendUniqueEntArray( rawPurchaseNodes, getentarray( "item", "classname" ) );
-
-    purchaseSourceNodes = [];
-    appendUniqueEntArray( purchaseSourceNodes, nodes );
-    appendUniqueEntArray( purchaseSourceNodes, rawPurchaseNodes );
-
     purchaseNodes = [];
-    for ( i = 0; i < purchaseSourceNodes.size; i++ )
+    for ( i = 0; i < nodes.size; i++ )
     {
-        node = purchaseSourceNodes[i];
+        node = nodes[i];
         if ( isDesiredInteractable( node, "weapon" ) || isDesiredInteractable( node, "mystery" ) )
         {
             purchaseNodes[purchaseNodes.size] = node;
@@ -2026,42 +2047,6 @@ appendEntArray( destination, source )
             destination[destination.size] = source[i];
         }
     }
-}
-
-appendUniqueEntArray( destination, source )
-{
-    if ( !isdefined( source ) )
-    {
-        return;
-    }
-
-    for ( i = 0; i < source.size; i++ )
-    {
-        if ( !isdefined( source[i] ) || entArrayContains( destination, source[i] ) )
-        {
-            continue;
-        }
-
-        destination[destination.size] = source[i];
-    }
-}
-
-entArrayContains( source, target )
-{
-    if ( !isdefined( source ) || !isdefined( target ) )
-    {
-        return false;
-    }
-
-    for ( i = 0; i < source.size; i++ )
-    {
-        if ( isdefined( source[i] ) && source[i] == target )
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 isZombieEntity( entity )
