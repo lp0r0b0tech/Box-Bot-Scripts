@@ -453,6 +453,11 @@ initializeBotPurchaseState()
     {
         self.abzmLastWeaponPurchaseStateKey = "";
     }
+
+    if ( !isdefined( self.abzmLastPackAPunchWeaponKey ) )
+    {
+        self.abzmLastPackAPunchWeaponKey = "";
+    }
 }
 
 clearBotPurchaseState()
@@ -462,6 +467,7 @@ clearBotPurchaseState()
     self.abzmLastPerkPurchaseTime = undefined;
     self.abzmLastPurchaseTime = undefined;
     self.abzmLastWeaponPurchaseStateKey = "";
+    self.abzmLastPackAPunchWeaponKey = "";
 }
 
 monitorPlayerConnections()
@@ -1014,6 +1020,12 @@ attemptPerkPurchase()
         return false;
     }
 
+    if ( isdefined( self.abzmLastPurchaseUsedFallback ) && self.abzmLastPurchaseUsedFallback )
+    {
+        markGenericPurchase();
+        return false;
+    }
+
     markPerkPurchase( perkNode );
     return true;
 }
@@ -1052,12 +1064,16 @@ attemptWeaponPurchase()
         }
     }
 
-    if ( level.abzm.botsAutoBuyUpgrades && !isCurrentWeaponWeak() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
+    if ( level.abzm.botsAutoBuyUpgrades && !isCurrentWeaponWeak() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
         papNode = getClosestAvailableSharedInteractable( "packapunch" );
         if ( isdefined( papNode ) && attemptPurchase( papNode, level.abzm.packapunchCost ) )
         {
             markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
+            if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
+            {
+                markPackAPunchPurchase();
+            }
             return true;
         }
     }
@@ -1150,6 +1166,33 @@ shouldSkipWeaponRepurchase()
     if ( currentStateKey != self.abzmLastWeaponPurchaseStateKey )
     {
         self.abzmLastWeaponPurchaseStateKey = "";
+        return false;
+    }
+
+    return true;
+}
+
+markPackAPunchPurchase()
+{
+    self.abzmLastPackAPunchWeaponKey = getCurrentWeaponIdentityKey();
+}
+
+alreadyPackAPunchedCurrentWeapon()
+{
+    currentWeaponKey = getCurrentWeaponIdentityKey();
+    if ( !isdefined( currentWeaponKey ) || currentWeaponKey == "" )
+    {
+        return false;
+    }
+
+    if ( !isdefined( self.abzmLastPackAPunchWeaponKey ) || self.abzmLastPackAPunchWeaponKey == "" )
+    {
+        return false;
+    }
+
+    if ( self.abzmLastPackAPunchWeaponKey != currentWeaponKey )
+    {
+        self.abzmLastPackAPunchWeaponKey = "";
         return false;
     }
 
@@ -2063,6 +2106,17 @@ getWeaponPurchaseStateKey()
     return weapon + "|" + currentWeaponNeedsAmmo() + "|" + isCurrentWeaponWeak();
 }
 
+getCurrentWeaponIdentityKey()
+{
+    weapon = self getcurrentweapon();
+    if ( !isdefined( weapon ) )
+    {
+        return "";
+    }
+
+    return toLower( weapon + "" );
+}
+
 isCurrentWeaponWeak()
 {
     weapon = self getcurrentweapon();
@@ -2590,7 +2644,7 @@ isDesiredInteractable( entity, kind )
     switch ( kind )
     {
         case "weapon":
-            return entityMatchesToken( entity, "weapon" ) || entityMatchesToken( entity, "wallbuy" ) || entityMatchesToken( entity, "armory" );
+            return !isGenericWeaponPurchaseMarker( entity ) && ( entityMatchesToken( entity, "weapon" ) || entityMatchesToken( entity, "wallbuy" ) || entityMatchesToken( entity, "armory" ) );
 
         case "generic_weapon_buy":
             return isGenericWeaponPurchaseMarker( entity );
