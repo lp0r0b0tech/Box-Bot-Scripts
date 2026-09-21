@@ -342,7 +342,10 @@ abzmBoot()
     level thread monitorPowerupSpawns();
     level thread periodicZombieRefresh();
     level thread periodicPowerupRefresh();
-    level thread runDeferredSelfTests();
+    if ( getdvarint( "scr_zm_autobots_run_self_tests" ) > 0 && isDevelopmentModeEnabled() )
+    {
+        level thread runDeferredSelfTests();
+    }
 }
 
 refreshRuntimeConfig()
@@ -1045,6 +1048,7 @@ attemptPerkPurchase()
 attemptWeaponPurchase()
 {
     roundNumber = max( 1, level.abzm.round );
+    purchasedWeaponUpgrade = false;
     weaponNode = getClosestPurchaseItemInteractable( "weapon" );
     if ( !isdefined( weaponNode ) )
     {
@@ -1069,28 +1073,13 @@ attemptWeaponPurchase()
         {
             markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
             self.abzmLastWeaponPurchaseStateKey = "";
-            return true;
-        }
-    }
-
-    if ( level.abzm.botsAutoBuyUpgrades && !needsStandardWeaponPurchase && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
-    {
-        papNode = getClosestAvailableSharedInteractable( "packapunch" );
-        if ( isdefined( papNode ) && attemptPurchase( papNode, level.abzm.packapunchCost ) )
-        {
-            markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
-            self.abzmLastWeaponPurchaseStateKey = "";
-            if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
-            {
-                markPackAPunchPurchase();
-            }
-            return true;
+            purchasedWeaponUpgrade = true;
         }
     }
 
     if ( !needsStandardWeaponPurchase )
     {
-        return false;
+        return purchasedWeaponUpgrade;
     }
 
     prePurchaseStateKey = getWeaponPurchaseStateKey();
@@ -1110,12 +1099,17 @@ attemptUtilityPurchase()
         return false;
     }
 
-    if ( hasEnoughPoints( self, level.abzm.exoCost ) )
+    if ( level.abzm.botsAutoBuyUpgrades && !isCurrentWeaponWeak() && !currentWeaponNeedsAmmo() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
-        exoNode = getClosestAvailableSharedInteractable( "exo" );
-        if ( isdefined( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        papNode = getClosestAvailableSharedInteractable( "packapunch" );
+        if ( isdefined( papNode ) && attemptPurchase( papNode, level.abzm.packapunchCost ) )
         {
-            markSharedPurchase( exoNode, "exo", self.abzmLastPurchaseUsedFallback );
+            markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
+            self.abzmLastWeaponPurchaseStateKey = "";
+            if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
+            {
+                markPackAPunchPurchase();
+            }
             return true;
         }
     }
@@ -1126,6 +1120,16 @@ attemptUtilityPurchase()
         if ( isdefined( doorNode ) && attemptPurchase( doorNode, level.abzm.doorCost ) )
         {
             markSharedPurchase( doorNode, "door", self.abzmLastPurchaseUsedFallback );
+            return true;
+        }
+    }
+
+    if ( hasEnoughPoints( self, level.abzm.exoCost ) )
+    {
+        exoNode = getClosestAvailableSharedInteractable( "exo" );
+        if ( isdefined( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        {
+            markSharedPurchase( exoNode, "exo", self.abzmLastPurchaseUsedFallback );
             return true;
         }
     }
