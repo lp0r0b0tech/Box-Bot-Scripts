@@ -101,6 +101,11 @@ awd_sync_weapon_callbacks()
 
             baseWeaponName = getweaponbasename( weaponName );
 
+            if ( isdefined( player.weaponstate[weaponName] ) )
+            {
+                player.weaponstate[weaponName]["weapon_level_increase"] = 0;
+            }
+
             if ( isdefined( baseWeaponName ) &&
                  baseWeaponName != "" &&
                  isdefined( player.weaponstate[baseWeaponName] ) )

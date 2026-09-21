@@ -4,7 +4,7 @@ EMZ/EMP zombies Nerf
 
 all weapons upgrade similar to the Cell 3 Cauterizer
 
-make a folder in s1 call it scripts now in the scripts folder create 3 new folders 1 says mp 1 says sv 1 says zm
+make a folder in s1 call it scripts now in the scripts folder create 2 new folders 1 says mp 1 says zm
 
 for autobots.gsc put in the mp folder
 
