@@ -112,6 +112,8 @@ atlas45_register_damage_modifier()
         {
             level.exo_damage_curve_previous_callbacks[weaponName] =
                 previousCallback;
+            level.exo_damage_curve_previous_callbacks[tolower(weaponName + "")] =
+                previousCallback;
             delegatedCount++;
         }
         else
@@ -276,14 +278,33 @@ atlas45_apply_compatible_previous_callback(
         resolvedWeaponName = atlas45_resolve_registered_weapon_name(weapon);
     }
 
-    if(!isdefined(resolvedWeaponName) || resolvedWeaponName == "" ||
-       !isdefined(level.exo_damage_curve_previous_callbacks) ||
-       !isdefined(level.exo_damage_curve_previous_callbacks[resolvedWeaponName]))
+    if(!isdefined(level.exo_damage_curve_previous_callbacks))
     {
         return damage;
     }
 
-    previousCallback = level.exo_damage_curve_previous_callbacks[resolvedWeaponName];
+    previousCallback = undefined;
+    if(isdefined(resolvedWeaponName) && resolvedWeaponName != "" &&
+       isdefined(level.exo_damage_curve_previous_callbacks[resolvedWeaponName]))
+    {
+        previousCallback =
+            level.exo_damage_curve_previous_callbacks[resolvedWeaponName];
+    }
+    else if(isdefined(weapon))
+    {
+        weaponNameLowercase = tolower((weapon + ""));
+        if(isdefined(level.exo_damage_curve_previous_callbacks[weapon + ""]))
+        {
+            previousCallback =
+                level.exo_damage_curve_previous_callbacks[weapon + ""];
+        }
+        else if(isdefined(level.exo_damage_curve_previous_callbacks[weaponNameLowercase]))
+        {
+            previousCallback =
+                level.exo_damage_curve_previous_callbacks[weaponNameLowercase];
+        }
+    }
+
     if(!isdefined(previousCallback) ||
        atlas45_is_self_reference_callback(previousCallback))
     {
