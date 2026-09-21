@@ -310,7 +310,7 @@ applyBotCombatProfile()
         return;
     }
 
-    previousMaxHealth = level.abzm.botMaxHealth;
+    previousMaxHealth = 0;
     if ( isdefined( self.maxhealth ) )
     {
         previousMaxHealth = self.maxhealth;
@@ -786,22 +786,10 @@ tryUseReviveInteraction( downed )
         return ABZM_REVIVE_STATUS_FALLBACK;
     }
 
-    self setlookatpos( reviveNode.origin );
-    self moveto( reviveNode.origin, 0.2 );
-
-    moveStart = gettime();
-    while ( distance( self.origin, reviveNode.origin ) > 48 )
+    if ( !moveToAndUse( reviveNode ) )
     {
-        if ( gettime() - moveStart >= 1000 )
-        {
-            return ABZM_REVIVE_STATUS_FAILED;
-        }
-
-        wait 0.05;
+        return ABZM_REVIVE_STATUS_FAILED;
     }
-
-    reviveNode notify( "trigger", self );
-    reviveNode notify( "use", self );
 
     start = gettime();
     maxWaitMs = int( (ABZM_BO2_REVIVE_TIME + 0.5) * 1000 );
@@ -930,8 +918,7 @@ attemptWeaponPurchase()
     if ( roundNumber >= 7 )
     {
         mysteryNode = getClosestInteractable( "mystery" );
-        canCoverMysteryFallback = isdefined( weaponNode ) && hasEnoughPoints( self, level.abzm.mysteryCost + level.abzm.weaponCost );
-        if ( isdefined( mysteryNode ) && ( canCoverMysteryFallback || ( !isdefined( weaponNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) ) ) && attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
+        if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
         {
             markGenericPurchase();
             return true;
@@ -1027,7 +1014,7 @@ markPerkPurchase( node )
         addedNewPerk = true;
     }
 
-    shouldCountPerk = addedNewPerk || !isdefined( perkKey ) || perkKey == "";
+    shouldCountPerk = true;
     if ( shouldCountPerk && !isdefined( self.abzmPerkPurchases ) )
     {
         self.abzmPerkPurchases = 0;
