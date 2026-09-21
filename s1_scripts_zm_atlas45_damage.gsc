@@ -119,7 +119,14 @@ atlas45_should_register_weapon(weaponName)
         return false;
     }
 
-    return strlen(weaponName + "") > 0;
+    weaponName = tolower(weaponName + "");
+    if(strlen(weaponName) <= 0)
+    {
+        return false;
+    }
+
+    return issubstr(weaponName, "_zm_") &&
+           issubstr(weaponName, "_mp");
 }
 
 /*
