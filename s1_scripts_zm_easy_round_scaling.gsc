@@ -76,6 +76,7 @@ buildEasyRoundScalingState()
 {
     state = spawnstruct();
     state.round = readLiveEasyRoundScalingRound();
+    state.healthCache = [];
     state.trackedZombies = [];
     return state;
 }
@@ -209,9 +210,15 @@ tuneZombieForEasyRoundScaling()
     health = calculateEasyRoundScalingHealth( roundNumber );
 
     previousHealth = health;
+    previousMaxHealth = health;
     if ( isdefined( self.health ) )
     {
         previousHealth = self.health;
+    }
+
+    if ( isdefined( self.maxhealth ) )
+    {
+        previousMaxHealth = self.maxhealth;
     }
 
     self.maxhealth = health;
@@ -221,7 +228,8 @@ tuneZombieForEasyRoundScaling()
     }
     else
     {
-        self.health = min( previousHealth, health );
+        damageTaken = max( 0, previousMaxHealth - previousHealth );
+        self.health = max( 1, health - damageTaken );
     }
 
     self.ezrsZombieTuned = true;
@@ -343,25 +351,39 @@ calculateInterpolatedLegacyEasyRoundScalingHealth( legacyRoundFloat, maximumLega
 
 calculateLegacyEasyRoundScalingHealth( roundNumber )
 {
+    roundNumber = max( 1, int( roundNumber ) );
+
+    if ( isdefined( level.ezrs ) && isdefined( level.ezrs.healthCache[roundNumber] ) )
+    {
+        return level.ezrs.healthCache[roundNumber];
+    }
+
     if ( roundNumber <= 1 )
     {
-        return EZRS_BASE_HEALTH;
+        health = EZRS_BASE_HEALTH;
     }
-
-    if ( roundNumber <= EZRS_HEALTH_CURVE_ROUND )
+    else if ( roundNumber <= EZRS_HEALTH_CURVE_ROUND )
     {
-        return min( EZRS_HEALTH_CAP, EZRS_BASE_HEALTH + ((roundNumber - 1) * EZRS_HEALTH_INCREMENT) );
+        health = min( EZRS_HEALTH_CAP, EZRS_BASE_HEALTH + ((roundNumber - 1) * EZRS_HEALTH_INCREMENT) );
     }
-
-    health = EZRS_BASE_HEALTH + ((EZRS_HEALTH_CURVE_ROUND - 1) * EZRS_HEALTH_INCREMENT);
-
-    for ( i = EZRS_HEALTH_CURVE_ROUND + 1; i <= roundNumber; i++ )
+    else
     {
-        health = min( EZRS_HEALTH_CAP, int( health * EZRS_HEALTH_CURVE_MULTIPLIER ) );
-        if ( health >= EZRS_HEALTH_CAP )
+        health = EZRS_BASE_HEALTH + ((EZRS_HEALTH_CURVE_ROUND - 1) * EZRS_HEALTH_INCREMENT);
+
+        for ( i = EZRS_HEALTH_CURVE_ROUND + 1; i <= roundNumber; i++ )
         {
-            return EZRS_HEALTH_CAP;
+            health = min( EZRS_HEALTH_CAP, int( health * EZRS_HEALTH_CURVE_MULTIPLIER ) );
+            if ( health >= EZRS_HEALTH_CAP )
+            {
+                health = EZRS_HEALTH_CAP;
+                break;
+            }
         }
+    }
+
+    if ( isdefined( level.ezrs ) )
+    {
+        level.ezrs.healthCache[roundNumber] = health;
     }
 
     return health;
@@ -502,7 +524,7 @@ easyRoundScalingStringContainsToken( value, token )
         return false;
     }
 
-    return issubstr( value, token );
+    return issubstr( toLower( value + "" ), toLower( token + "" ) );
 }
 
 ezrsIsZombieContext()
