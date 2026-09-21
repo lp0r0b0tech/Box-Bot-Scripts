@@ -231,7 +231,9 @@ buildModState()
     state.purchaseItemCandidates = [];
     state.purchaseItemCacheTime = -999999;
     state.purchaseItemSourceCacheTime = -999999;
+    state.purchaseItemSharedStateVersion = -1;
     state.sharedPurchasedNodes = [];
+    state.sharedPurchaseStateVersion = 0;
     state.weakWeaponTokens = [];
     state.weakWeaponTokens[0] = ABZM_WEAK_WEAPON_TOKEN_ATLAS45;
     state.weakWeaponTokens[1] = ABZM_WEAK_WEAPON_TOKEN_PISTOL;
@@ -1291,14 +1293,12 @@ attemptWeaponPurchase()
                     }
                     else
                     {
-                        clearSharedPurchaseReservation( mysteryNode, "mystery" );
-                        markGenericPurchase();
+                        markSharedPurchase( mysteryNode, "mystery", true );
                     }
                 }
                 else
                 {
-                    clearSharedPurchaseReservation( mysteryNode, "mystery" );
-                    markGenericPurchase();
+                    markSharedPurchase( mysteryNode, "mystery", true );
                 }
             }
             else
@@ -1359,12 +1359,7 @@ attemptUtilityPurchase()
                     }
                 }
 
-                clearSharedPurchaseReservation( papNode, "packapunch" );
-                markGenericPurchase();
-                if ( isdefined( self.abzmLastPurchaseUsedFallback ) && self.abzmLastPurchaseUsedFallback )
-                {
-                    return false;
-                }
+                markSharedPurchase( papNode, "packapunch", true );
                 return false;
             }
 
@@ -1385,8 +1380,7 @@ attemptUtilityPurchase()
                     return true;
                 }
 
-                clearSharedPurchaseReservation( doorNode, "door" );
-                markGenericPurchase();
+                markSharedPurchase( doorNode, "door", true );
                 return false;
             }
 
@@ -1407,8 +1401,7 @@ attemptUtilityPurchase()
                     return true;
                 }
 
-                clearSharedPurchaseReservation( exoNode, "exo" );
-                markGenericPurchase();
+                markSharedPurchase( exoNode, "exo", true );
                 return false;
             }
 
@@ -1663,7 +1656,7 @@ isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel )
 
 getPackAPunchConfirmationKey( weaponKey, upgradeLevel )
 {
-    return weaponKey + "|" + upgradeLevel;
+    return weaponKey;
 }
 
 waitForPackAPunchConfirmation( previousWeaponKey, previousUpgradeLevel, maxWaitMs )
@@ -1767,6 +1760,7 @@ markSharedPurchase( node, kind, usedFallback )
         level.abzm.sharedPurchasedNodes[level.abzm.sharedPurchasedNodes.size] = sharedEntry;
     }
 
+    touchSharedPurchaseState();
     markGenericPurchase();
 }
 
@@ -1843,6 +1837,7 @@ reserveSharedPurchase( node, kind )
         level.abzm.sharedPurchasedNodes[level.abzm.sharedPurchasedNodes.size] = sharedEntry;
     }
 
+    touchSharedPurchaseState();
     return true;
 }
 
@@ -2016,12 +2011,28 @@ compactSharedPurchaseArray( purchaseIndex )
     }
 
     level.abzm.sharedPurchasedNodes = newArray;
+    touchSharedPurchaseState();
 }
 
 invalidateSharedPurchaseEntry( purchaseIndex )
 {
     compactSharedPurchaseArray( purchaseIndex );
     return false;
+}
+
+touchSharedPurchaseState()
+{
+    if ( !isdefined( level.abzm ) )
+    {
+        return;
+    }
+
+    if ( !isdefined( level.abzm.sharedPurchaseStateVersion ) )
+    {
+        level.abzm.sharedPurchaseStateVersion = 0;
+    }
+
+    level.abzm.sharedPurchaseStateVersion++;
 }
 
 getStableInteractableKey( node, fallbackPrefix )
@@ -3019,7 +3030,7 @@ getPurchaseItemCandidates()
         return nodes;
     }
 
-    if ( (gettime() - level.abzm.purchaseItemCacheTime) < 2000 && level.abzm.purchaseItemSourceCacheTime == level.abzm.interactableCacheTime )
+    if ( (gettime() - level.abzm.purchaseItemCacheTime) < 2000 && level.abzm.purchaseItemSourceCacheTime == level.abzm.interactableCacheTime && level.abzm.purchaseItemSharedStateVersion == level.abzm.sharedPurchaseStateVersion )
     {
         return level.abzm.purchaseItemCandidates;
     }
@@ -3038,6 +3049,7 @@ getPurchaseItemCandidates()
     level.abzm.purchaseItemCandidates = purchaseNodes;
     level.abzm.purchaseItemCacheTime = gettime();
     level.abzm.purchaseItemSourceCacheTime = level.abzm.interactableCacheTime;
+    level.abzm.purchaseItemSharedStateVersion = level.abzm.sharedPurchaseStateVersion;
     return level.abzm.purchaseItemCandidates;
 }
 isGenericWeaponPurchaseMarker( entity )
