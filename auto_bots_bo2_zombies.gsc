@@ -175,6 +175,9 @@ buildModState()
     state.trackedZombies = [];
     state.interactableCandidates = [];
     state.interactableCacheTime = 0;
+    state.purchaseItemCandidates = [];
+    state.purchaseItemCacheTime = 0;
+    state.sharedPurchaseKeys = [];
     state.botNames = [];
     state.botNames[0] = "Atlas-1";
     state.botNames[1] = "Atlas-2";
@@ -334,17 +337,6 @@ initializeBotPurchaseState()
     {
         self.abzmPurchasedPerkKeys = [];
     }
-
-    if ( !isdefined( self.abzmPurchasedUpgradeKeys ) )
-    {
-        self.abzmPurchasedUpgradeKeys = [];
-    }
-}
-
-resetBotPurchaseCooldowns()
-{
-    self.abzmLastPurchaseTime = 0;
-    self.abzmLastPerkPurchaseTime = 0;
 }
 
 monitorPlayerConnections()
@@ -391,7 +383,6 @@ onPlayerConnected()
         if ( self.abzmIsBot )
         {
             initializeBotPurchaseState();
-            resetBotPurchaseCooldowns();
             applyBotCombatProfile();
         }
 
@@ -553,7 +544,6 @@ applyBotPostSpawnSetup()
         }
 
         initializeBotPurchaseState();
-        resetBotPurchaseCooldowns();
         applyBotCombatProfile();
     }
 }
@@ -762,8 +752,14 @@ tryUseReviveInteraction( downed )
         return false;
     }
 
-    downed notify( "trigger", self );
-    downed notify( "use", self );
+    reviveNode = getReviveInteractableForPlayer( downed );
+    if ( !isdefined( reviveNode ) )
+    {
+        return false;
+    }
+
+    reviveNode notify( "trigger", self );
+    reviveNode notify( "use", self );
 
     start = gettime();
     while ( isdefined( downed ) && downed.abzmDowned && (gettime() - start) < 750 )
@@ -772,6 +768,36 @@ tryUseReviveInteraction( downed )
     }
 
     return isdefined( downed ) && !downed.abzmDowned;
+}
+
+getReviveInteractableForPlayer( downed )
+{
+    if ( !isdefined( downed ) )
+    {
+        return undefined;
+    }
+
+    nodes = getInteractableCandidates();
+    best = undefined;
+    bestDist = 999999;
+
+    for ( i = 0; i < nodes.size; i++ )
+    {
+        node = nodes[i];
+        if ( !isDesiredInteractable( node, "revive" ) )
+        {
+            continue;
+        }
+
+        dist = distance( downed.origin, node.origin );
+        if ( dist < bestDist && dist <= ABZM_BO2_REVIVE_RANGE )
+        {
+            best = node;
+            bestDist = dist;
+        }
+    }
+
+    return best;
 }
 
 runTrainingMovement()
@@ -890,9 +916,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestInteractable( "exo" );
-        if ( !alreadyBoughtUpgradeNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        if ( !alreadyBoughtSharedNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
-            markUpgradePurchase( exoNode );
+            markSharedPurchase( exoNode );
             return true;
         }
     }
@@ -900,9 +926,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.doorCost ) )
     {
         doorNode = getClosestInteractable( "door" );
-        if ( !alreadyBoughtUpgradeNode( doorNode ) && attemptPurchase( doorNode, level.abzm.doorCost ) )
+        if ( !alreadyBoughtSharedNode( doorNode ) && attemptPurchase( doorNode, level.abzm.doorCost ) )
         {
-            markUpgradePurchase( doorNode );
+            markSharedPurchase( doorNode );
             return true;
         }
     }
@@ -943,12 +969,17 @@ markPerkPurchase( node )
     markGenericPurchase();
 }
 
-markUpgradePurchase( node )
+markSharedPurchase( node )
 {
+    if ( !isdefined( level.abzm ) )
+    {
+        return;
+    }
+
     key = getInteractableKey( node );
     if ( isdefined( key ) && key != "" )
     {
-        self.abzmPurchasedUpgradeKeys[key] = true;
+        level.abzm.sharedPurchaseKeys[key] = true;
     }
 
     markGenericPurchase();
@@ -965,15 +996,20 @@ alreadyBoughtPerkNode( node )
     return isdefined( self.abzmPurchasedPerkKeys[key] ) && self.abzmPurchasedPerkKeys[key];
 }
 
-alreadyBoughtUpgradeNode( node )
+alreadyBoughtSharedNode( node )
 {
+    if ( !isdefined( level.abzm ) )
+    {
+        return false;
+    }
+
     key = getInteractableKey( node );
     if ( !isdefined( key ) || key == "" )
     {
         return false;
     }
 
-    return isdefined( self.abzmPurchasedUpgradeKeys[key] ) && self.abzmPurchasedUpgradeKeys[key];
+    return isdefined( level.abzm.sharedPurchaseKeys[key] ) && level.abzm.sharedPurchaseKeys[key];
 }
 
 getBestPerkInteractable()
@@ -1573,8 +1609,7 @@ getClosestInteractable( kind )
 
     if ( kind == "weapon" || kind == "mystery" )
     {
-        appendEntArray( nodes, getentarray( "weapon", "classname" ) );
-        appendEntArray( nodes, getentarray( "item", "classname" ) );
+        appendEntArray( nodes, getWeaponPurchaseCandidates() );
     }
 
     best = undefined;
@@ -1679,6 +1714,27 @@ getInteractableCandidates()
     level.abzm.interactableCandidates = nodes;
     level.abzm.interactableCacheTime = gettime();
     return level.abzm.interactableCandidates;
+}
+
+getWeaponPurchaseCandidates()
+{
+    if ( !isdefined( level.abzm ) )
+    {
+        nodes = [];
+        return nodes;
+    }
+
+    if ( (gettime() - level.abzm.purchaseItemCacheTime) < 2000 && level.abzm.purchaseItemCandidates.size > 0 )
+    {
+        return level.abzm.purchaseItemCandidates;
+    }
+
+    nodes = [];
+    appendEntArray( nodes, getentarray( "weapon", "classname" ) );
+    appendEntArray( nodes, getentarray( "item", "classname" ) );
+    level.abzm.purchaseItemCandidates = nodes;
+    level.abzm.purchaseItemCacheTime = gettime();
+    return level.abzm.purchaseItemCandidates;
 }
 
 chooseTrainingAnchor()
@@ -1961,6 +2017,9 @@ isDesiredInteractable( entity, kind )
 
         case "mystery":
             return entityMatchesToken( entity, "mystery" ) || entityMatchesToken( entity, "box" ) || entityMatchesToken( entity, "printer" );
+
+        case "revive":
+            return entityMatchesToken( entity, "revive" ) || entityMatchesToken( entity, "laststand" ) || entityMatchesToken( entity, "downed" );
 
         case "perk":
             return entityMatchesToken( entity, "perk" ) || entityMatchesToken( entity, "vending" ) || entityMatchesToken( entity, "perkacola" );
