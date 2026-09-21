@@ -98,6 +98,12 @@ awd_sync_weapon_callbacks()
                 continue;
             }
 
+            if ( !isdefined( player.weaponstate[weaponName] ) ||
+                 !isdefined( player.weaponstate[weaponName]["level"] ) )
+            {
+                continue;
+            }
+
             baseWeaponName = getweaponbasename( weaponName );
 
             awd_disable_stock_weapon_level_increase( player, weaponName );
