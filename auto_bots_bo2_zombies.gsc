@@ -1061,7 +1061,7 @@ markSharedPurchase( node, kind )
     sharedEntry = spawnstruct();
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
-    sharedEntry.expiresAt = -1;
+    sharedEntry.expiresAt = 0;
     if ( kind == "exo" || kind == "door" )
     {
         sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
@@ -1922,7 +1922,7 @@ getClosestInteractable( kind )
 
 getClosestPurchaseItemInteractable( kind )
 {
-    return getClosestInteractableFromCandidates( getWeaponPurchaseCandidates(), kind, false );
+    return getClosestInteractableFromCandidates( getPurchaseItemCandidates(), kind, false );
 }
 
 getClosestAvailableSharedInteractable( kind )
@@ -2052,7 +2052,7 @@ getInteractableCandidates()
     return level.abzm.interactableCandidates;
 }
 
-getWeaponPurchaseCandidates()
+getPurchaseItemCandidates()
 {
     if ( !isdefined( level.abzm ) )
     {
