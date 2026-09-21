@@ -124,8 +124,8 @@ atlas45_register_damage_modifier()
         level.exo_damage_curve_registered_weapons[weaponName] = true;
 
         if(!hasDistinctAliasCallback &&
-           (lowercaseWeaponName == weaponName ||
-            !isdefined(level.modifyweapondamage[lowercaseWeaponName]) ||
+           lowercaseWeaponName != weaponName &&
+           (!isdefined(level.modifyweapondamage[lowercaseWeaponName]) ||
             level.modifyweapondamage[lowercaseWeaponName] == previousCallback))
         {
             if(isdefined(level.modifyweapondamage[lowercaseWeaponName]) &&
