@@ -870,14 +870,24 @@ maintainForcedBotLoadout()
     self givemaxammo( ABZM_FORCE_LOADOUT_PRIMARY );
     self givemaxammo( ABZM_FORCE_LOADOUT_SECONDARY );
     grantForcedBotPerks();
-    currentWeaponKey = getCurrentWeaponIdentityKey();
-    if ( currentWeaponKey == toLower( ABZM_FORCE_LOADOUT_PRIMARY ) || currentWeaponKey == toLower( ABZM_FORCE_LOADOUT_SECONDARY ) )
+    previousWeapon = self getcurrentweapon();
+    self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
+    applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
+    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_PRIMARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    self switchtoweapon( ABZM_FORCE_LOADOUT_SECONDARY );
+    applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
+    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_SECONDARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    if ( isdefined( previousWeapon ) && previousWeapon != "" )
     {
-        applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
-        markPackAPunchPurchase( currentWeaponKey, max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+        self switchtoweapon( previousWeapon );
+    }
+    else
+    {
+        self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
     }
 
     self.abzmForcedLoadoutMaintainedAt = gettime();
+    self.abzmForcedLoadoutWeaponTrackAt = self.abzmForcedLoadoutMaintainedAt;
     return true;
 }
 
@@ -1625,6 +1635,12 @@ attemptUtilityPurchase()
                     }
                 }
 
+                currentPapWeaponKey = getCurrentWeaponIdentityKey();
+                if ( !isdefined( currentPapWeaponKey ) || currentPapWeaponKey == "" )
+                {
+                    currentPapWeaponKey = previousPapWeaponKey;
+                }
+                markPackAPunchPurchase( currentPapWeaponKey, previousPapUpgradeLevel );
                 markSharedPurchase( papNode, "packapunch", true );
                 return false;
             }
