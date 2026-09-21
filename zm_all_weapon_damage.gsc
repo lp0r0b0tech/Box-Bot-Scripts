@@ -140,7 +140,10 @@ awd_sync_weapon_callbacks()
 
 awd_disable_stock_weapon_level_increase( player, weaponKey )
 {
-    if ( !isdefined( player ) || !isdefined( weaponKey ) || weaponKey == "" )
+    if ( !isdefined( player ) ||
+         !isdefined( player.weaponstate ) ||
+         !isdefined( weaponKey ) ||
+         weaponKey == "" )
     {
         return;
     }
@@ -230,5 +233,10 @@ awd_get_cauterizer_damage( baseDamage, mark )
     }
 
     scaledDamage = baseDamage + ( baseDamage * AWD_CAUTERIZER_LEVEL_MULTIPLIER * ( mark - 1 ) );
+    if ( scaledDamage < 0 )
+    {
+        return int( scaledDamage - 0.5 );
+    }
+
     return int( scaledDamage + 0.5 );
 }

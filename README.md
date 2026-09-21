@@ -4,7 +4,7 @@ EMZ/EMP Zombies Nerf
 
 All upgraded weapons use a Cell 3 Cauterizer-style damage curve
 
-Inside `s1`, create a `scripts` folder. Inside `s1/scripts`, create `mp` and `zm`. No files currently in this repository need an `sv` folder.
+Inside `s1`, create a `scripts` folder. For the files listed below, create `mp` and `zm` inside `s1/scripts`.
 
 Place `autobots_combat_training.gsc` at `s1/scripts/mp/autobots_combat_training.gsc`.
 
