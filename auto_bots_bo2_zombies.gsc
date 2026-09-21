@@ -1488,7 +1488,7 @@ markPackAPunchPurchase( weaponKey, previousUpgradeLevel )
     }
     else if ( entryIndex >= 0 && isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel ) && self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel > 0 )
     {
-        trackedUpgradeLevel = self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel;
+        trackedUpgradeLevel = max( self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel, previousUpgradeLevel + 1 );
     }
     else
     {
