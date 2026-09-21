@@ -372,6 +372,7 @@ clearBotPurchaseState()
 {
     self.abzmPerkPurchases = 0;
     self.abzmPurchasedPerkNodes = [];
+    self.abzmLastPerkPurchaseTime = undefined;
 }
 
 monitorPlayerConnections()
@@ -948,7 +949,7 @@ attemptWeaponPurchase()
         }
     }
 
-    if ( isdefined( weaponNode ) && attemptPurchase( weaponNode, level.abzm.weaponCost ) )
+    if ( isdefined( weaponNode ) && hasEnoughPoints( self, level.abzm.weaponCost ) && attemptPurchase( weaponNode, level.abzm.weaponCost ) )
     {
         markGenericPurchase();
         return true;
