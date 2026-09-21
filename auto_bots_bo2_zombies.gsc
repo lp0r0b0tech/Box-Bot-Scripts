@@ -1039,11 +1039,6 @@ attemptWeaponPurchase()
         weaponNode = getClosestPurchaseItemInteractable( "generic_weapon_buy" );
     }
 
-    if ( !isCurrentWeaponWeak() && !currentWeaponNeedsAmmo() )
-    {
-        return false;
-    }
-
     if ( !botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC ) )
     {
         return false;
@@ -1060,6 +1055,7 @@ attemptWeaponPurchase()
         if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
         {
             markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
+            self.abzmLastWeaponPurchaseStateKey = "";
             return true;
         }
     }
@@ -1070,12 +1066,18 @@ attemptWeaponPurchase()
         if ( isdefined( papNode ) && attemptPurchase( papNode, level.abzm.packapunchCost ) )
         {
             markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
+            self.abzmLastWeaponPurchaseStateKey = "";
             if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
             {
                 markPackAPunchPurchase();
             }
             return true;
         }
+    }
+
+    if ( !isCurrentWeaponWeak() && !currentWeaponNeedsAmmo() )
+    {
+        return false;
     }
 
     prePurchaseStateKey = getWeaponPurchaseStateKey();
@@ -1263,7 +1265,6 @@ markSharedPurchase( node, kind, usedFallback )
         level.abzm.sharedPurchasedNodes[level.abzm.sharedPurchasedNodes.size] = sharedEntry;
     }
 
-    self.abzmLastWeaponPurchaseStateKey = "";
     markGenericPurchase();
 }
 
