@@ -349,6 +349,10 @@ initializeBotPurchaseState()
         self.abzmPurchasedPerkNodes = [];
     }
 
+    if ( !isdefined( self.abzmPurchasedUpgradeNodes ) )
+    {
+        self.abzmPurchasedUpgradeNodes = [];
+    }
 }
 
 resetBotPerkPurchaseState()
@@ -653,10 +657,7 @@ botBrainLoop()
             runTrainingMovement();
         }
 
-        if ( level.abzm.botsAutoBuyUpgrades )
-        {
-            attemptWeaponPurchase();
-        }
+        attemptWeaponPurchase();
 
         if ( level.abzm.botsAutoBuyPerks )
         {
@@ -871,13 +872,12 @@ attemptPerkPurchase()
     }
 
     perkNode = getBestPerkInteractable();
-    if ( alreadyBoughtSharedNode( perkNode ) || !attemptPurchase( perkNode, level.abzm.perkCost ) )
+    if ( !attemptPurchase( perkNode, level.abzm.perkCost ) )
     {
         return false;
     }
 
     markPerkPurchase( perkNode );
-    markSharedPurchase( perkNode );
     return true;
 }
 
@@ -946,9 +946,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestInteractable( "exo" );
-        if ( !alreadyBoughtSharedNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        if ( !alreadyBoughtBotUpgradeNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
-            markSharedPurchase( exoNode );
+            markBotUpgradePurchase( exoNode );
             return true;
         }
     }
@@ -1023,6 +1023,16 @@ markSharedPurchase( node )
     markGenericPurchase();
 }
 
+markBotUpgradePurchase( node )
+{
+    if ( isdefined( node ) && !nodeArrayContains( self.abzmPurchasedUpgradeNodes, node ) )
+    {
+        self.abzmPurchasedUpgradeNodes[self.abzmPurchasedUpgradeNodes.size] = node;
+    }
+
+    markGenericPurchase();
+}
+
 alreadyBoughtPerkNode( node )
 {
     return nodeArrayContains( self.abzmPurchasedPerkNodes, node );
@@ -1036,6 +1046,11 @@ alreadyBoughtSharedNode( node )
     }
 
     return nodeArrayContains( level.abzm.sharedPurchasedNodes, node );
+}
+
+alreadyBoughtBotUpgradeNode( node )
+{
+    return nodeArrayContains( self.abzmPurchasedUpgradeNodes, node );
 }
 
 
