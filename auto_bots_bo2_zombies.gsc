@@ -1256,13 +1256,8 @@ getBestPerkInteractable()
             continue;
         }
 
-        dist = int( distance( self.origin, node.origin ) );
-        if ( dist > ABZM_INTERACT_RANGE )
-        {
-            continue;
-        }
-
         priority = perkPriorityForEntity( node );
+        dist = int( distance( self.origin, node.origin ) );
 
         if ( priority > bestPriority || ( priority == bestPriority && dist < bestDist ) )
         {
@@ -2378,7 +2373,7 @@ isDesiredInteractable( entity, kind )
     switch ( kind )
     {
         case "weapon":
-            return entityMatchesToken( entity, "weapon" ) || entityMatchesToken( entity, "wallbuy" ) || entityMatchesToken( entity, "armory" );
+            return entityMatchesToken( entity, "weapon" ) || entityMatchesToken( entity, "wallbuy" ) || entityMatchesToken( entity, "armory" ) || entityMatchesToken( entity, "buy" );
 
         case "mystery":
             return entityMatchesToken( entity, "mystery" ) || entityMatchesToken( entity, "printer" );
