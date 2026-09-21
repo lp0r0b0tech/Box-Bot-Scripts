@@ -75,6 +75,7 @@
 #define ABZM_SHARED_PURCHASE_COOLDOWN_MS      15000
 #define ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS 2000
 #define ABZM_SHARED_PURCHASE_RESERVATION_MS   1500
+#define ABZM_PACKAPUNCH_CONFIRMATION_FALLBACK_MS 3000
 #define ABZM_MAX_PACKAPUNCH_LEVEL             2
 #define ABZM_PURCHASE_COOLDOWN_SEC            1.5
 #define ABZM_PERK_PURCHASE_COOLDOWN_SEC       5.0
@@ -95,6 +96,30 @@
 main()
 {
     init();
+}
+
+doesPackAPunchConfirmationSequenceSucceed( previousWeaponKey, previousUpgradeLevel, weaponKeys, upgradeLevels )
+{
+    if ( !isdefined( weaponKeys ) || !isdefined( upgradeLevels ) )
+    {
+        return false;
+    }
+
+    steps = weaponKeys.size;
+    if ( upgradeLevels.size < steps )
+    {
+        steps = upgradeLevels.size;
+    }
+
+    for ( i = 0; i < steps; i++ )
+    {
+        if ( isPackAPunchUpgradeConfirmedForState( previousWeaponKey, previousUpgradeLevel, weaponKeys[i], upgradeLevels[i] ) )
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 init()
@@ -406,6 +431,7 @@ runPurchaseConfirmationSelfTests()
 {
     reportSelfTestResult( "mystery_confirmation_requires_change", !isMysteryBoxRewardConfirmedForState( "weapon_a", 0, "weapon_a", 0 ) );
     reportSelfTestResult( "pap_confirmation_requires_same_weapon_upgrade", !isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_b", 1 ) && isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_a", 1 ) );
+    reportSelfTestResult( "pap_wait_confirmation_rejects_weapon_swap", !doesPackAPunchConfirmationSequenceSucceed( "weapon_a", 0, [ "weapon_b", "weapon_b" ], [ 1, 1 ] ) );
 }
 
 runDeferredSelfTests()
@@ -579,6 +605,11 @@ initializeBotPurchaseState()
     {
         self.abzmLastConfirmedPackAPunchStateKey = "";
     }
+
+    if ( !isdefined( self.abzmLastConfirmedPackAPunchTime ) )
+    {
+        self.abzmLastConfirmedPackAPunchTime = 0;
+    }
 }
 
 clearBotPurchaseState()
@@ -592,6 +623,7 @@ clearBotPurchaseState()
     self.abzmLastPackAPunchUpgradeLevel = 0;
     self.abzmPackAPunchWeaponEntries = [];
     self.abzmLastConfirmedPackAPunchStateKey = "";
+    self.abzmLastConfirmedPackAPunchTime = 0;
 }
 
 monitorPlayerConnections()
@@ -1457,7 +1489,8 @@ markPackAPunchPurchase( weaponKey, previousUpgradeLevel )
 
     self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
     self.abzmLastPackAPunchUpgradeLevel = trackedUpgradeLevel;
-    self.abzmLastConfirmedPackAPunchStateKey = getWeaponPurchaseStateKey();
+    self.abzmLastConfirmedPackAPunchStateKey = getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
+    self.abzmLastConfirmedPackAPunchTime = gettime();
 }
 
 alreadyPackAPunchedCurrentWeapon()
@@ -1486,7 +1519,17 @@ alreadyPackAPunchedCurrentWeapon()
         return currentUpgradeLevel >= trackedUpgradeLevel;
     }
 
-    return isdefined( self.abzmLastConfirmedPackAPunchStateKey ) && self.abzmLastConfirmedPackAPunchStateKey != "" && self.abzmLastConfirmedPackAPunchStateKey == getWeaponPurchaseStateKey();
+    if ( !isdefined( self.abzmLastConfirmedPackAPunchStateKey ) || self.abzmLastConfirmedPackAPunchStateKey == "" )
+    {
+        return false;
+    }
+
+    if ( !isdefined( self.abzmLastConfirmedPackAPunchTime ) || (gettime() - self.abzmLastConfirmedPackAPunchTime) > ABZM_PACKAPUNCH_CONFIRMATION_FALLBACK_MS )
+    {
+        return false;
+    }
+
+    return self.abzmLastConfirmedPackAPunchStateKey == getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
 }
 
 isMysteryBoxRewardConfirmedForState( previousWeaponKey, previousUpgradeLevel, currentWeaponKey, currentUpgradeLevel )
@@ -1531,6 +1574,11 @@ isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel )
     currentWeaponKey = getCurrentWeaponIdentityKey();
     currentUpgradeLevel = getCurrentWeaponUpgradeLevel();
     return isPackAPunchUpgradeConfirmedForState( previousWeaponKey, previousUpgradeLevel, currentWeaponKey, currentUpgradeLevel );
+}
+
+getPackAPunchConfirmationKey( weaponKey, upgradeLevel, stateKey )
+{
+    return weaponKey + "|" + upgradeLevel + "|" + stateKey;
 }
 
 waitForPackAPunchConfirmation( previousWeaponKey, previousUpgradeLevel, maxWaitMs )
