@@ -68,6 +68,7 @@ atlas45_register_damage_modifier()
     }
 
     level.exo_damage_curve_registered = 1;
+    level.exo_damage_curve_previous_callbacks = [];
 
     registeredCount = 0;
     weaponNames = getarraykeys(level.modifyweapondamage);
@@ -78,6 +79,14 @@ atlas45_register_damage_modifier()
         if(!atlas45_should_register_weapon(weaponName))
         {
             continue;
+        }
+
+        previousCallback = level.modifyweapondamage[weaponName];
+        if(isdefined(previousCallback) &&
+           previousCallback != ::atlas45_modify_damage)
+        {
+            level.exo_damage_curve_previous_callbacks[weaponName] =
+                previousCallback;
         }
 
         level.modifyweapondamage[weaponName] =
@@ -143,6 +152,16 @@ atlas45_modify_damage(
     }
 
     weaponName = weapon + "";
+    damageAfterStockCallback = atlas45_apply_previous_damage_callback(
+        victim,
+        attacker,
+        damage,
+        meansOfDeath,
+        weaponName,
+        point,
+        direction,
+        hitLocation
+    );
 
     weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
         attacker,
@@ -154,7 +173,7 @@ atlas45_modify_damage(
     */
     if(!isdefined(weaponLevel) || weaponLevel < 2)
     {
-        return damage;
+        return damageAfterStockCallback;
     }
 
     if(weaponLevel > 25)
@@ -181,6 +200,41 @@ atlas45_modify_damage(
         hit-location behavior.
     */
     return atlas45_get_base_damage(weaponLevel);
+}
+
+atlas45_apply_previous_damage_callback(
+    victim,
+    attacker,
+    damage,
+    meansOfDeath,
+    weaponName,
+    point,
+    direction,
+    hitLocation
+)
+{
+    if(!isdefined(level.exo_damage_curve_previous_callbacks) ||
+       !isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
+    {
+        return damage;
+    }
+
+    previousCallback = level.exo_damage_curve_previous_callbacks[weaponName];
+    if(!isdefined(previousCallback))
+    {
+        return damage;
+    }
+
+    return [[previousCallback]](
+        victim,
+        attacker,
+        damage,
+        meansOfDeath,
+        weaponName,
+        point,
+        direction,
+        hitLocation
+    );
 }
 
 /*
