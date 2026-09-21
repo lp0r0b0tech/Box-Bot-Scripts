@@ -1066,7 +1066,7 @@ markSharedPurchase( node, kind )
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
     sharedEntry.expiresAt = -1;
-    if ( kind == "exo" )
+    if ( kind == "exo" || kind == "door" )
     {
         sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
     }
@@ -1277,7 +1277,7 @@ getBestPerkInteractable()
 
 perkPriorityForEntity( node )
 {
-    if ( entityMatchesToken( node, "quick" ) || ( entityMatchesToken( node, "revive" ) && isDesiredInteractable( node, "perk" ) ) )
+    if ( isQuickRevivePerkNode( node ) )
     {
         return ABZM_PERK_PRIORITY_QUICK_REVIVE;
     }
@@ -1305,6 +1305,21 @@ perkPriorityForEntity( node )
     return ABZM_PERK_PRIORITY_DEFAULT;
 }
 
+isQuickRevivePerkNode( node )
+{
+    if ( !isdefined( node ) )
+    {
+        return false;
+    }
+
+    if ( entityMatchesToken( node, "quick" ) )
+    {
+        return true;
+    }
+
+    return entityMatchesToken( node, "revive" ) && ( entityMatchesToken( node, "perk" ) || entityMatchesToken( node, "vending" ) || entityMatchesToken( node, "perkacola" ) );
+}
+
 getPerkPurchaseKey( node )
 {
     if ( !isdefined( node ) )
@@ -1312,7 +1327,7 @@ getPerkPurchaseKey( node )
         return "";
     }
 
-    if ( entityMatchesToken( node, "quick" ) || entityMatchesToken( node, "revive" ) )
+    if ( isQuickRevivePerkNode( node ) )
     {
         return "quick_revive";
     }
