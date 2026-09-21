@@ -298,8 +298,8 @@ runBotLifecycleSelfTests()
 
 runSharedPurchaseSelfTests()
 {
-    previousSharedNodes = level.abzm.sharedPurchasedNodes;
-    level.abzm.sharedPurchasedNodes = [];
+    previousAbzmState = level.abzm;
+    level.abzm = buildModState();
 
     bot = spawnstruct();
     node = spawnstruct();
@@ -311,7 +311,7 @@ runSharedPurchaseSelfTests()
     level.abzm.sharedPurchasedNodes[0].expiresAt = gettime() - 1;
     reportSelfTestResult( "shared_purchase_expires_and_compacts", !alreadyBoughtSharedNode( node, "door" ) && level.abzm.sharedPurchasedNodes.size == 0 );
 
-    level.abzm.sharedPurchasedNodes = previousSharedNodes;
+    level.abzm = previousAbzmState;
 }
 
 abzmBoot()
@@ -1044,6 +1044,16 @@ attemptWeaponPurchase()
         }
     }
 
+    if ( level.abzm.botsAutoBuyUpgrades && hasEnoughPoints( self, level.abzm.packapunchCost ) )
+    {
+        papNode = getClosestAvailableSharedInteractable( "packapunch" );
+        if ( attemptPurchase( papNode, level.abzm.packapunchCost ) )
+        {
+            markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
+            return true;
+        }
+    }
+
     prePurchaseStateKey = getWeaponPurchaseStateKey();
     if ( isdefined( weaponNode ) && hasEnoughPoints( self, level.abzm.weaponCost ) && attemptPurchase( weaponNode, level.abzm.weaponCost ) )
     {
@@ -1059,16 +1069,6 @@ attemptUtilityPurchase()
     if ( !botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC ) )
     {
         return false;
-    }
-
-    if ( hasEnoughPoints( self, level.abzm.packapunchCost ) )
-    {
-        papNode = getClosestAvailableSharedInteractable( "packapunch" );
-        if ( attemptPurchase( papNode, level.abzm.packapunchCost ) )
-        {
-            markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
-            return true;
-        }
     }
 
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
