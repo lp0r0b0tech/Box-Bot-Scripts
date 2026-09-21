@@ -68,7 +68,10 @@ atlas45_register_damage_modifier()
     }
 
     level.exo_damage_curve_registered = 1;
-    level.exo_damage_curve_previous_callbacks = [];
+    if(!isdefined(level.exo_damage_curve_previous_callbacks))
+    {
+        level.exo_damage_curve_previous_callbacks = [];
+    }
 
     registeredCount = 0;
     delegatedCount = 0;
