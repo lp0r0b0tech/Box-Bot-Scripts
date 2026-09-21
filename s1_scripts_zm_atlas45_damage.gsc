@@ -113,10 +113,17 @@ atlas45_register_damage_modifier()
         }
 
         lowercaseWeaponName = tolower(weaponName + "");
+        lowercaseAliasCallback = undefined;
+        if(isdefined(level.modifyweapondamage[lowercaseWeaponName]))
+        {
+            lowercaseAliasCallback = level.modifyweapondamage[lowercaseWeaponName];
+        }
+
         hasDistinctAliasCallback =
             lowercaseWeaponName != weaponName &&
-            isdefined(level.modifyweapondamage[lowercaseWeaponName]) &&
-            level.modifyweapondamage[lowercaseWeaponName] != previousCallback;
+            isdefined(lowercaseAliasCallback) &&
+            !atlas45_is_self_reference_callback(lowercaseAliasCallback) &&
+            lowercaseAliasCallback != previousCallback;
 
         level.modifyweapondamage[weaponName] =
             ::atlas45_modify_damage;
@@ -124,14 +131,15 @@ atlas45_register_damage_modifier()
 
         if(!hasDistinctAliasCallback &&
            lowercaseWeaponName != weaponName &&
-           (!isdefined(level.modifyweapondamage[lowercaseWeaponName]) ||
-            level.modifyweapondamage[lowercaseWeaponName] == previousCallback))
+           (!isdefined(lowercaseAliasCallback) ||
+            lowercaseAliasCallback == previousCallback ||
+            atlas45_is_self_reference_callback(lowercaseAliasCallback)))
         {
-            if(isdefined(level.modifyweapondamage[lowercaseWeaponName]) &&
-               !atlas45_is_self_reference_callback(level.modifyweapondamage[lowercaseWeaponName]))
+            if(isdefined(lowercaseAliasCallback) &&
+               !atlas45_is_self_reference_callback(lowercaseAliasCallback))
             {
                 level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
-                    level.modifyweapondamage[lowercaseWeaponName];
+                    lowercaseAliasCallback;
             }
 
             level.modifyweapondamage[lowercaseWeaponName] =
