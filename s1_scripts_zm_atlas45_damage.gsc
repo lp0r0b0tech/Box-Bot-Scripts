@@ -3,7 +3,7 @@
     Advanced Warfare Exo Zombies / S1-Mod / CBServers
 
     Place this file at:
-        s1/scripts/zm/atlas45_damage.gsc
+        s1_scripts_zm_atlas45_damage.gsc
 
     Scope:
         Applies to all Exo Zombies weapons registered in the stock
@@ -35,21 +35,23 @@ main()
 
     println("ExoWeaponDamage: Zombies script initialized.");
 
-    level thread atlas45_register_damage_modifier();
+    level thread atlas45_registration_loop();
+}
+
+atlas45_registration_loop()
+{
+    level endon("game_ended");
+
+    for(;;)
+    {
+        atlas45_register_damage_modifier();
+        wait 5;
+    }
 }
 
 atlas45_register_damage_modifier()
 {
     level endon("game_ended");
-
-    if(isdefined(level.exo_damage_curve_registering) &&
-       level.exo_damage_curve_registering)
-    {
-        return;
-    }
-
-    level.exo_damage_curve_registering = true;
-    level thread atlas45_registration_guard_watchdog();
 
     /*
         Wait for the Zombies gametype to initialize the weapon-damage
@@ -67,11 +69,8 @@ atlas45_register_damage_modifier()
 
     if(!isdefined(level.modifyweapondamage))
     {
-        println("ExoWeaponDamage: ERROR - level.modifyweapondamage was never initialized.");
-        level.exo_damage_curve_registering = false;
         return;
     }
-
     if(!isdefined(level.exo_damage_curve_previous_callbacks))
     {
         level.exo_damage_curve_previous_callbacks = [];
@@ -145,36 +144,21 @@ atlas45_register_damage_modifier()
 
     if(registeredCount <= 0)
     {
-        println("ExoWeaponDamage: no eligible zombie weapon callbacks found yet; registration will retry on next initialization attempt.");
         level.exo_damage_curve_registered = false;
-        level.exo_damage_curve_registering = false;
-        level thread atlas45_retry_register_damage_modifier();
         return;
     }
 
+    shouldLogRegistration =
+        !isdefined(level.exo_damage_curve_registered) ||
+        !level.exo_damage_curve_registered ||
+        !isdefined(level.exo_damage_curve_last_registered_count) ||
+        level.exo_damage_curve_last_registered_count != registeredCount;
+
     level.exo_damage_curve_registered = 1;
-    println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".");
-    level.exo_damage_curve_registering = false;
-    level thread atlas45_retry_register_damage_modifier();
-}
-
-atlas45_retry_register_damage_modifier()
-{
-    level endon("game_ended");
-
-    wait 5;
-    level thread atlas45_register_damage_modifier();
-}
-
-atlas45_registration_guard_watchdog()
-{
-    level endon("game_ended");
-
-    wait 35;
-    if(isdefined(level.exo_damage_curve_registering) &&
-       level.exo_damage_curve_registering)
+    level.exo_damage_curve_last_registered_count = registeredCount;
+    if(shouldLogRegistration)
     {
-        level.exo_damage_curve_registering = false;
+        println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".");
     }
 }
 
