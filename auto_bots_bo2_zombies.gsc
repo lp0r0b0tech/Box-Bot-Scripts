@@ -1721,7 +1721,8 @@ attemptPurchase( node, cost )
         return true;
     }
 
-    return false;
+    spendPlayerPoints( self, cost );
+    return true;
 }
 
 getInteractableCandidates()
