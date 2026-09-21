@@ -285,7 +285,7 @@ runBotLifecycleSelfTests()
 {
     bot = spawnstruct();
     bot initializeBotPurchaseState();
-    reportSelfTestResult( "bot_lifecycle_purchase_state_init", bot.abzmPerkPurchases == 0 && bot.abzmPurchasedPerkNodes.size == 0 && bot.abzmLastWeaponPurchaseStateKey == "" && bot.abzmLastPackAPunchWeaponKey == "" && bot.abzmLastPackAPunchUpgradeLevel == 0 );
+    reportSelfTestResult( "bot_lifecycle_purchase_state_init", bot.abzmPerkPurchases == 0 && bot.abzmPurchasedPerkNodes.size == 0 && bot.abzmLastWeaponPurchaseStateKey == "" && bot.abzmLastPackAPunchWeaponKey == "" && bot.abzmLastPackAPunchUpgradeLevel == 0 && bot.abzmPackAPunchWeaponEntries.size == 0 );
 
     bot.abzmPerkPurchases = 3;
     bot.abzmPurchasedPerkNodes[0] = "health|test";
@@ -294,8 +294,12 @@ runBotLifecycleSelfTests()
     bot.abzmLastWeaponPurchaseStateKey = "starter|true|true";
     bot.abzmLastPackAPunchWeaponKey = "test_weapon";
     bot.abzmLastPackAPunchUpgradeLevel = 1;
+    entry = spawnstruct();
+    entry.weaponKey = "test_weapon";
+    entry.upgradeLevel = 1;
+    bot.abzmPackAPunchWeaponEntries[0] = entry;
     bot clearBotPurchaseState();
-    reportSelfTestResult( "bot_lifecycle_purchase_state_reset", bot.abzmPerkPurchases == 0 && bot.abzmPurchasedPerkNodes.size == 0 && !isdefined( bot.abzmLastPerkPurchaseTime ) && !isdefined( bot.abzmLastPurchaseTime ) && bot.abzmLastWeaponPurchaseStateKey == "" && bot.abzmLastPackAPunchWeaponKey == "" && bot.abzmLastPackAPunchUpgradeLevel == 0 );
+    reportSelfTestResult( "bot_lifecycle_purchase_state_reset", bot.abzmPerkPurchases == 0 && bot.abzmPurchasedPerkNodes.size == 0 && !isdefined( bot.abzmLastPerkPurchaseTime ) && !isdefined( bot.abzmLastPurchaseTime ) && bot.abzmLastWeaponPurchaseStateKey == "" && bot.abzmLastPackAPunchWeaponKey == "" && bot.abzmLastPackAPunchUpgradeLevel == 0 && bot.abzmPackAPunchWeaponEntries.size == 0 );
 
     reportSelfTestResult( "bot_lifecycle_difficulty_mapping", resolveBotSkillDifficulty( "ultra" ) == "veteran" );
 }
@@ -372,13 +376,14 @@ runCombatProfileSelfTests()
     level.abzm.botAggression = 9.99;
 
     bot applyBotCombatProfile();
-    reportSelfTestResult( "combat_profile_preserves_health_ratio", bot.health == 1000 );
+    preservesHealthRatio = bot.health == 1000;
 
     level.abzm.botDifficulty = previousBotDifficulty;
     level.abzm.botAccuracy = previousBotAccuracy;
     level.abzm.botReactionTime = previousBotReactionTime;
     level.abzm.botMaxHealth = previousBotMaxHealth;
     level.abzm.botAggression = previousBotAggression;
+    reportSelfTestResult( "combat_profile_preserves_health_ratio", preservesHealthRatio );
 }
 
 runDeferredSelfTests()
@@ -542,6 +547,11 @@ initializeBotPurchaseState()
     {
         self.abzmLastPackAPunchUpgradeLevel = 0;
     }
+
+    if ( !isdefined( self.abzmPackAPunchWeaponEntries ) )
+    {
+        self.abzmPackAPunchWeaponEntries = [];
+    }
 }
 
 clearBotPurchaseState()
@@ -553,6 +563,7 @@ clearBotPurchaseState()
     self.abzmLastWeaponPurchaseStateKey = "";
     self.abzmLastPackAPunchWeaponKey = "";
     self.abzmLastPackAPunchUpgradeLevel = 0;
+    self.abzmPackAPunchWeaponEntries = [];
 }
 
 monitorPlayerConnections()
@@ -1179,7 +1190,7 @@ attemptUtilityPurchase()
         return false;
     }
 
-    if ( level.abzm.botsAutoBuyUpgrades && !isCurrentWeaponWeak() && !currentWeaponNeedsAmmo() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
+    if ( level.abzm.botsAutoBuyUpgrades && !isCurrentWeaponWeak() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
         papNode = getClosestAvailableSharedInteractable( "packapunch" );
         if ( isdefined( papNode ) && reserveSharedPurchase( papNode, "packapunch" ) )
@@ -1323,14 +1334,32 @@ markPackAPunchPurchase()
     observedUpgradeLevel = getCurrentWeaponUpgradeLevel();
     if ( observedUpgradeLevel > 0 )
     {
-        self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
-        self.abzmLastPackAPunchUpgradeLevel = observedUpgradeLevel;
+        trackedUpgradeLevel = observedUpgradeLevel;
     }
     else if ( self.abzmLastPackAPunchWeaponKey != currentWeaponKey || self.abzmLastPackAPunchUpgradeLevel <= 0 )
     {
-        self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
-        self.abzmLastPackAPunchUpgradeLevel = 1;
+        trackedUpgradeLevel = 1;
     }
+    else
+    {
+        trackedUpgradeLevel = self.abzmLastPackAPunchUpgradeLevel;
+    }
+
+    entryIndex = findPackAPunchWeaponEntryIndex( currentWeaponKey );
+    if ( entryIndex >= 0 )
+    {
+        self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel = trackedUpgradeLevel;
+    }
+    else
+    {
+        entry = spawnstruct();
+        entry.weaponKey = currentWeaponKey;
+        entry.upgradeLevel = trackedUpgradeLevel;
+        self.abzmPackAPunchWeaponEntries[self.abzmPackAPunchWeaponEntries.size] = entry;
+    }
+
+    self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
+    self.abzmLastPackAPunchUpgradeLevel = trackedUpgradeLevel;
 }
 
 alreadyPackAPunchedCurrentWeapon()
@@ -1341,25 +1370,25 @@ alreadyPackAPunchedCurrentWeapon()
         return false;
     }
 
-    if ( !isdefined( self.abzmLastPackAPunchWeaponKey ) || self.abzmLastPackAPunchWeaponKey == "" || !isdefined( self.abzmLastPackAPunchUpgradeLevel ) || self.abzmLastPackAPunchUpgradeLevel <= 0 )
+    entryIndex = findPackAPunchWeaponEntryIndex( currentWeaponKey );
+    if ( entryIndex < 0 )
     {
         return false;
     }
 
-    if ( self.abzmLastPackAPunchWeaponKey != currentWeaponKey )
+    trackedUpgradeLevel = self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel;
+    if ( !isdefined( trackedUpgradeLevel ) || trackedUpgradeLevel <= 0 )
     {
-        self.abzmLastPackAPunchWeaponKey = "";
-        self.abzmLastPackAPunchUpgradeLevel = 0;
         return false;
     }
 
     currentUpgradeLevel = getCurrentWeaponUpgradeLevel();
     if ( currentUpgradeLevel <= 0 )
     {
-        return self.abzmLastPackAPunchUpgradeLevel > 0;
+        return trackedUpgradeLevel > 0;
     }
 
-    return currentUpgradeLevel >= self.abzmLastPackAPunchUpgradeLevel;
+    return currentUpgradeLevel >= trackedUpgradeLevel;
 }
 
 isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel )
@@ -1376,6 +1405,25 @@ isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel )
     }
 
     return getCurrentWeaponUpgradeLevel() > previousUpgradeLevel;
+}
+
+findPackAPunchWeaponEntryIndex( weaponKey )
+{
+    if ( !isdefined( weaponKey ) || weaponKey == "" || !isdefined( self.abzmPackAPunchWeaponEntries ) )
+    {
+        return -1;
+    }
+
+    for ( i = 0; i < self.abzmPackAPunchWeaponEntries.size; i++ )
+    {
+        entry = self.abzmPackAPunchWeaponEntries[i];
+        if ( isdefined( entry ) && isdefined( entry.weaponKey ) && entry.weaponKey == weaponKey )
+        {
+            return i;
+        }
+    }
+
+    return -1;
 }
 
 markPerkPurchase( node )
