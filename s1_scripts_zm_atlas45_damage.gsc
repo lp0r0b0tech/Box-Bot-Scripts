@@ -152,34 +152,10 @@ atlas45_modify_damage(
     }
 
     weaponName = weapon + "";
-    damageAfterStockCallback = atlas45_apply_previous_damage_callback(
-        victim,
-        attacker,
-        damage,
-        meansOfDeath,
-        weaponName,
-        point,
-        direction,
-        hitLocation
-    );
-
     weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
         attacker,
         weaponName
     );
-
-    /*
-        Keep Mk1 completely vanilla.
-    */
-    if(!isdefined(weaponLevel) || weaponLevel < 2)
-    {
-        return damageAfterStockCallback;
-    }
-
-    if(weaponLevel > 25)
-    {
-        weaponLevel = 25;
-    }
 
     /*
         Prevent the stock weapon-level damage increase from being applied
@@ -187,11 +163,37 @@ atlas45_modify_damage(
 
         This does not alter normal magazine-size or reserve-ammo upgrades.
     */
-    if(isdefined(attacker.weaponstate) &&
+    if(isdefined(weaponLevel) && weaponLevel >= 2 &&
+       isdefined(attacker.weaponstate) &&
        isdefined(attacker.weaponstate[weaponName]))
     {
         attacker.weaponstate[weaponName]
             ["weapon_level_increase"] = 0;
+    }
+
+    damageAfterStockCallback = atlas45_apply_previous_damage_callback(
+        victim,
+        attacker,
+        damage,
+        meansOfDeath,
+        weapon,
+        weaponName,
+        point,
+        direction,
+        hitLocation
+    );
+
+    if(!isdefined(weaponLevel) || weaponLevel < 2)
+    {
+        /*
+            Keep Mk1 completely vanilla.
+        */
+        return damageAfterStockCallback;
+    }
+
+    if(weaponLevel > 25)
+    {
+        weaponLevel = 25;
     }
 
     /*
@@ -207,6 +209,7 @@ atlas45_apply_previous_damage_callback(
     attacker,
     damage,
     meansOfDeath,
+    weapon,
     weaponName,
     point,
     direction,
@@ -230,7 +233,7 @@ atlas45_apply_previous_damage_callback(
         attacker,
         damage,
         meansOfDeath,
-        weaponName,
+        weapon,
         point,
         direction,
         hitLocation
