@@ -1301,7 +1301,7 @@ attemptPerkPurchase()
         return false;
     }
 
-    if ( !attemptPurchase( perkNode, level.abzm.perkCost ) )
+    if ( !attemptPurchase( perkNode, level.abzm.perkCost, true ) )
     {
         return false;
     }
@@ -1344,7 +1344,7 @@ attemptWeaponPurchase()
         {
             previousMysteryWeaponKey = getCurrentWeaponIdentityKey();
             previousMysteryUpgradeLevel = getCurrentWeaponUpgradeLevel();
-            if ( attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
+            if ( attemptPurchase( mysteryNode, level.abzm.mysteryCost, false ) )
             {
                 if ( !self.abzmLastPurchaseUsedFallback )
                 {
@@ -1379,7 +1379,7 @@ attemptWeaponPurchase()
     }
 
     prePurchaseStateKey = getWeaponPurchaseStateKey();
-    if ( isdefined( weaponNode ) && hasEnoughPoints( self, level.abzm.weaponCost ) && attemptPurchase( weaponNode, level.abzm.weaponCost ) )
+    if ( isdefined( weaponNode ) && hasEnoughPoints( self, level.abzm.weaponCost ) && attemptPurchase( weaponNode, level.abzm.weaponCost, false ) )
     {
         if ( self.abzmLastPurchaseUsedFallback )
         {
@@ -1411,7 +1411,7 @@ attemptUtilityPurchase()
         {
             previousPapWeaponKey = getCurrentWeaponIdentityKey();
             previousPapUpgradeLevel = getCurrentWeaponUpgradeLevel();
-            if ( attemptPurchase( papNode, level.abzm.packapunchCost ) )
+            if ( attemptPurchase( papNode, level.abzm.packapunchCost, false ) )
             {
                 if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
                 {
@@ -1442,7 +1442,7 @@ attemptUtilityPurchase()
         doorNode = getClosestAvailableSharedInteractable( "door" );
         if ( isdefined( doorNode ) && reserveSharedPurchase( doorNode, "door" ) )
         {
-            if ( attemptPurchase( doorNode, level.abzm.doorCost ) )
+            if ( attemptPurchase( doorNode, level.abzm.doorCost, false ) )
             {
                 if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
                 {
@@ -1463,7 +1463,7 @@ attemptUtilityPurchase()
         exoNode = getClosestAvailableSharedInteractable( "exo" );
         if ( isdefined( exoNode ) && reserveSharedPurchase( exoNode, "exo" ) )
         {
-            if ( attemptPurchase( exoNode, level.abzm.exoCost ) )
+            if ( attemptPurchase( exoNode, level.abzm.exoCost, false ) )
             {
                 if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
                 {
@@ -1670,7 +1670,7 @@ alreadyPackAPunchedCurrentWeapon()
         {
             if ( isCurrentWeaponUpgradeLevelApproximate() )
             {
-                return true;
+                return currentUpgradeLevel >= confirmedUpgradeLevel || (confirmationActive && confirmationKeyMatches);
             }
 
             if ( currentUpgradeLevel >= confirmedUpgradeLevel )
@@ -1856,7 +1856,7 @@ markSharedPurchase( node, kind, usedFallback )
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
     sharedEntry.isReservation = false;
-    sharedEntry.isPersistent = kind == "door" || (kind == "packapunch" && (!isdefined( usedFallback ) || !usedFallback));
+    sharedEntry.isPersistent = kind == "door";
     sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS;
     if ( sharedEntry.isPersistent )
     {
@@ -3185,7 +3185,7 @@ moveToAndUse( node )
     return true;
 }
 
-attemptPurchase( node, cost )
+attemptPurchase( node, cost, allowFallbackSpend )
 {
     self initializeBotPurchaseState();
     self.abzmLastPurchaseUsedFallback = false;
@@ -3212,6 +3212,11 @@ attemptPurchase( node, cost )
     {
         self.abzmWallet = self.score;
         return true;
+    }
+
+    if ( !isdefined( allowFallbackSpend ) || !allowFallbackSpend )
+    {
+        return false;
     }
 
     self.abzmLastPurchaseUsedFallback = true;
