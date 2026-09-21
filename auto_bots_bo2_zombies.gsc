@@ -567,6 +567,11 @@ initializeBotPurchaseState()
     {
         self.abzmPackAPunchWeaponEntries = [];
     }
+
+    if ( !isdefined( self.abzmLastConfirmedPackAPunchStateKey ) )
+    {
+        self.abzmLastConfirmedPackAPunchStateKey = "";
+    }
 }
 
 clearBotPurchaseState()
@@ -579,6 +584,7 @@ clearBotPurchaseState()
     self.abzmLastPackAPunchWeaponKey = "";
     self.abzmLastPackAPunchUpgradeLevel = 0;
     self.abzmPackAPunchWeaponEntries = [];
+    self.abzmLastConfirmedPackAPunchStateKey = "";
 }
 
 monitorPlayerConnections()
@@ -1144,7 +1150,7 @@ attemptPerkPurchase()
 attemptWeaponPurchase()
 {
     roundNumber = max( 1, level.abzm.round );
-    purchasedWeaponUpgrade = false;
+    confirmedWeaponPurchase = false;
     weaponNode = getClosestPurchaseItemInteractable( "weapon" );
     if ( !isdefined( weaponNode ) )
     {
@@ -1177,7 +1183,7 @@ attemptWeaponPurchase()
                     {
                         markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
                         self.abzmLastWeaponPurchaseStateKey = "";
-                        purchasedWeaponUpgrade = true;
+                        confirmedWeaponPurchase = true;
                     }
                     else
                     {
@@ -1199,7 +1205,7 @@ attemptWeaponPurchase()
 
     if ( !needsStandardWeaponPurchase )
     {
-        return purchasedWeaponUpgrade;
+        return confirmedWeaponPurchase;
     }
 
     prePurchaseStateKey = getWeaponPurchaseStateKey();
@@ -1439,6 +1445,7 @@ markPackAPunchPurchase()
 
     self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
     self.abzmLastPackAPunchUpgradeLevel = trackedUpgradeLevel;
+    self.abzmLastConfirmedPackAPunchStateKey = getWeaponPurchaseStateKey();
 }
 
 alreadyPackAPunchedCurrentWeapon()
@@ -1462,12 +1469,12 @@ alreadyPackAPunchedCurrentWeapon()
     }
 
     currentUpgradeLevel = getCurrentWeaponUpgradeLevel();
-    if ( currentUpgradeLevel <= 0 )
+    if ( currentUpgradeLevel > 0 )
     {
-        return trackedUpgradeLevel > 0;
+        return currentUpgradeLevel >= trackedUpgradeLevel;
     }
 
-    return currentUpgradeLevel >= trackedUpgradeLevel;
+    return isdefined( self.abzmLastConfirmedPackAPunchStateKey ) && self.abzmLastConfirmedPackAPunchStateKey != "" && self.abzmLastConfirmedPackAPunchStateKey == getWeaponPurchaseStateKey();
 }
 
 isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel )
@@ -1542,8 +1549,8 @@ markPerkPurchase( node )
     {
         self.abzmPerkPurchases++;
         self.abzmLastPerkPurchaseTime = gettime();
+        markGenericPurchase();
     }
-    markGenericPurchase();
 }
 
 markSharedPurchase( node, kind, usedFallback )
