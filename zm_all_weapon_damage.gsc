@@ -27,6 +27,7 @@ main()
     }
 
     level.awd_started = 1;
+    level.awd_callback_table_generation = 0;
     level.awd_previous_damage_callbacks = [];
     level.awd_previous_damage_callback_keys = [];
 
@@ -70,6 +71,11 @@ awd_register_damage_modifiers()
 
 awd_sync_weapon_callbacks()
 {
+    if ( !awd_ensure_callback_table_generation() )
+    {
+        return;
+    }
+
     players = getplayers();
 
     if ( !isdefined( players ) )
@@ -108,6 +114,26 @@ awd_sync_weapon_callbacks()
             awd_register_damage_key( baseWeaponName );
         }
     }
+
+    awd_ensure_callback_table_generation()
+    {
+        if ( !isdefined( level.modifyweapondamage ) )
+        {
+            return false;
+        }
+
+        if ( !isdefined( level.modifyweapondamage["__awd_generation"] ) ||
+             level.modifyweapondamage["__awd_generation"] != level.awd_callback_table_generation )
+        {
+            level.awd_callback_table_generation++;
+            level.awd_previous_damage_callbacks = [];
+            level.awd_previous_damage_callback_keys = [];
+            level.modifyweapondamage["__awd_generation"] =
+                level.awd_callback_table_generation;
+        }
+
+        return true;
+    }
 }
 
 awd_disable_stock_weapon_level_increase( player, weaponKey )
@@ -145,7 +171,8 @@ awd_register_damage_key( weaponKey )
 
     currentCallback = level.modifyweapondamage[weaponKey];
 
-    if ( isdefined( currentCallback ) &&
+    if ( !isdefined( level.awd_previous_damage_callbacks[weaponKey] ) &&
+         isdefined( currentCallback ) &&
          currentCallback != ::awd_modify_damage )
     {
         level.awd_previous_damage_callbacks[weaponKey] = currentCallback;
