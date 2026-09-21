@@ -149,8 +149,8 @@ awd_disable_stock_weapon_level_increase( player, weaponKey )
     }
 
     if ( isdefined( player.weaponstate[weaponKey] ) &&
-         isdefined( player.weaponstate[weaponKey][AWD_WEAPON_LEVEL_INCREASE_KEY] ) &&
-         player.weaponstate[weaponKey][AWD_WEAPON_LEVEL_INCREASE_KEY] != 0 )
+         ( !isdefined( player.weaponstate[weaponKey][AWD_WEAPON_LEVEL_INCREASE_KEY] ) ||
+           player.weaponstate[weaponKey][AWD_WEAPON_LEVEL_INCREASE_KEY] != 0 ) )
     {
         player.weaponstate[weaponKey][AWD_WEAPON_LEVEL_INCREASE_KEY] = 0;
     }
