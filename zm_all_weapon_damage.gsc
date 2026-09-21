@@ -28,6 +28,7 @@ main()
 
     level.awd_started = 1;
     level.awd_registered_damage_keys = [];
+    level.awd_previous_damage_callbacks = [];
 
     println( "AllWeaponDamage: Zombies script initialized." );
 
@@ -131,8 +132,55 @@ awd_register_damage_key( weaponKey )
         return;
     }
 
+    if ( isdefined( level.modifyweapondamage[weaponKey] ) )
+    {
+        level.awd_previous_damage_callbacks[weaponKey] =
+            level.modifyweapondamage[weaponKey];
+    }
+
     level.modifyweapondamage[weaponKey] = ::awd_modify_damage;
     level.awd_registered_damage_keys[weaponKey] = 1;
+}
+
+awd_apply_previous_damage_callback(
+    victim,
+    attacker,
+    damage,
+    meansOfDeath,
+    weapon,
+    point,
+    direction,
+    hitLocation,
+    baseWeaponName
+)
+{
+    callback = undefined;
+
+    if ( isdefined( level.awd_previous_damage_callbacks[weapon] ) )
+    {
+        callback = level.awd_previous_damage_callbacks[weapon];
+    }
+    else if ( isdefined( baseWeaponName ) &&
+              isdefined( level.awd_previous_damage_callbacks[baseWeaponName] ) )
+    {
+        callback = level.awd_previous_damage_callbacks[baseWeaponName];
+    }
+
+    if ( !isdefined( callback ) )
+    {
+        return damage;
+    }
+
+    return [[ callback ]](
+        victim,
+        attacker,
+        damage,
+        meansOfDeath,
+        weapon,
+        point,
+        direction,
+        hitLocation
+    );
 }
 
 /*
@@ -167,6 +215,18 @@ awd_modify_damage(
     {
         return damage;
     }
+
+    damage = awd_apply_previous_damage_callback(
+        victim,
+        attacker,
+        damage,
+        meansOfDeath,
+        weapon,
+        point,
+        direction,
+        hitLocation,
+        baseWeaponName
+    );
 
     weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
         attacker,
