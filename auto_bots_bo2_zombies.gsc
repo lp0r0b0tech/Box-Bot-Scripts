@@ -638,6 +638,26 @@ refreshRuntimeConfig()
     level.abzm.enabled = level.abzm.autoBotsEnabled || level.abzm.bo2Enabled;
 }
 
+getCurrentRoundNumber()
+{
+    if ( isdefined( level.abzm ) && isdefined( level.abzm.round ) && level.abzm.round > 0 )
+    {
+        return int( level.abzm.round );
+    }
+
+    if ( isdefined( level.round_number ) && level.round_number > 0 )
+    {
+        return int( level.round_number );
+    }
+
+    if ( isdefined( level.roundNumber ) && level.roundNumber > 0 )
+    {
+        return int( level.roundNumber );
+    }
+
+    return 1;
+}
+
 normalizeBotDifficulty( difficulty )
 {
     if ( !isdefined( difficulty ) )
@@ -1318,11 +1338,7 @@ attemptPerkPurchase()
 
 attemptWeaponPurchase()
 {
-    roundNumber = 1;
-    if ( isdefined( level.abzm ) && isdefined( level.abzm.round ) )
-    {
-        roundNumber = max( 1, level.abzm.round );
-    }
+    roundNumber = getCurrentRoundNumber();
     confirmedWeaponPurchase = false;
     weaponNode = getClosestWeaponPurchaseItemInteractable();
     needsStandardWeaponPurchase = currentWeaponReplacementPreferred() || currentWeaponNeedsAmmo();
