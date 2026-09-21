@@ -142,8 +142,7 @@ awd_register_damage_key( weaponKey )
         return;
     }
 
-    if ( !isdefined( level.awd_previous_damage_callbacks[weaponKey] ) &&
-         isdefined( level.modifyweapondamage[weaponKey] ) &&
+    if ( isdefined( level.modifyweapondamage[weaponKey] ) &&
          level.modifyweapondamage[weaponKey] != ::awd_modify_damage )
     {
         level.awd_previous_damage_callbacks[weaponKey] =
