@@ -900,20 +900,29 @@ grantForcedBotPerks()
         return;
     }
 
-    self givePerk( "specialty_exo_health", false );
-    self givePerk( "specialty_exo_reload", false );
-    self givePerk( "specialty_exo_medic", false );
-    self givePerk( "specialty_exo_slamboots", false );
-    self givePerk( "specialty_exo_soldier", false );
-    self givePerk( "specialty_exo_stockpile", false );
+    forcedPerkKeys = getForcedBotPerkKeys();
+    for ( i = 0; i < forcedPerkKeys.size; i++ )
+    {
+        self givePerk( forcedPerkKeys[i], false );
+    }
     self.abzmPurchasedPerkNodes = [];
-    self.abzmPurchasedPerkNodes[0] = "specialty_exo_health";
-    self.abzmPurchasedPerkNodes[1] = "specialty_exo_reload";
-    self.abzmPurchasedPerkNodes[2] = "specialty_exo_medic";
-    self.abzmPurchasedPerkNodes[3] = "specialty_exo_slamboots";
-    self.abzmPurchasedPerkNodes[4] = "specialty_exo_soldier";
-    self.abzmPurchasedPerkNodes[5] = "specialty_exo_stockpile";
+    for ( i = 0; i < forcedPerkKeys.size; i++ )
+    {
+        self.abzmPurchasedPerkNodes[i] = forcedPerkKeys[i];
+    }
     self.abzmPerkPurchases = self.abzmPurchasedPerkNodes.size;
+}
+
+getForcedBotPerkKeys()
+{
+    perkKeys = [];
+    perkKeys[0] = "specialty_exo_health";
+    perkKeys[1] = "specialty_exo_reload";
+    perkKeys[2] = "specialty_exo_medic";
+    perkKeys[3] = "specialty_exo_slamboots";
+    perkKeys[4] = "specialty_exo_soldier";
+    perkKeys[5] = "specialty_exo_stockpile";
+    return perkKeys;
 }
 
 maintainForcedBotLoadout()
@@ -1673,6 +1682,8 @@ attemptWeaponPurchase()
             markWeaponPurchase( prePurchaseStateKey );
             return true;
         }
+
+        markGenericPurchase();
     }
 
     return false;
@@ -2213,7 +2224,7 @@ markSharedPurchase( node, kind, usedFallback )
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
     sharedEntry.isReservation = false;
-    sharedEntry.isPersistent = false;
+    sharedEntry.isPersistent = kind == "door" && ( !isdefined( usedFallback ) || !usedFallback );
     sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS;
     if ( sharedEntry.isPersistent )
     {
