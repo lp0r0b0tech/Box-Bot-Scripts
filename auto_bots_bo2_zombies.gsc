@@ -480,6 +480,11 @@ runWeaponPurchaseRoutingSelfTests()
 
     genericWeaponNode = spawnstruct();
     genericWeaponNode.targetname = "buy_weapon_fallback_test";
+    genericWeaponNode.origin = (32, 0, 0);
+    explicitWeaponNode.origin = (64, 0, 0);
+    secondaryGenericWeaponNode = spawnstruct();
+    secondaryGenericWeaponNode.targetname = "buy_weapon_fallback_test_2";
+    secondaryGenericWeaponNode.origin = (64, 0, 0);
 
     reportSelfTestResult( "weapon_routing_explicit_marker_stays_weapon", isDesiredInteractable( explicitWeaponNode, "weapon" ) && !isDesiredInteractable( explicitWeaponNode, "generic_weapon_buy" ) );
     reportSelfTestResult( "weapon_routing_generic_marker_stays_generic", !isDesiredInteractable( genericWeaponNode, "weapon" ) && isDesiredInteractable( genericWeaponNode, "generic_weapon_buy" ) );
@@ -491,6 +496,20 @@ runWeaponPurchaseRoutingSelfTests()
     reportSelfTestResult( "weapon_routing_weak_weapon_prefers_replacement", bot currentWeaponReplacementPreferred() && !bot currentWeaponCanUsePackAPunch() );
     bot setCurrentWeaponSelfTestState( "bal27_ar", 0 );
     reportSelfTestResult( "weapon_routing_strong_weapon_allows_upgrade", !bot currentWeaponReplacementPreferred() && bot currentWeaponCanUsePackAPunch() );
+    bot.origin = (0, 0, 0);
+    previousSharedNodes = level.abzm.sharedPurchasedNodes;
+    previousSharedStateVersion = level.abzm.sharedPurchaseStateVersion;
+    level.abzm.sharedPurchasedNodes = [];
+    level.abzm.sharedPurchaseStateVersion = 0;
+    routingNodes = [];
+    routingNodes[0] = genericWeaponNode;
+    routingNodes[1] = secondaryGenericWeaponNode;
+    nearestWithoutSkip = bot getClosestInteractableFromCandidates( routingNodes, "generic_weapon_buy", false );
+    bot markSharedPurchase( genericWeaponNode, "generic_weapon_buy", false );
+    nearestWithSkip = bot getClosestInteractableFromCandidates( routingNodes, "generic_weapon_buy", true );
+    level.abzm.sharedPurchasedNodes = previousSharedNodes;
+    level.abzm.sharedPurchaseStateVersion = previousSharedStateVersion;
+    reportSelfTestResult( "weapon_routing_skip_shared_chooses_unblocked_node", nearestWithoutSkip == genericWeaponNode && nearestWithSkip == secondaryGenericWeaponNode );
 }
 
 runPurchaseConfirmationSelfTests()
@@ -1333,6 +1352,7 @@ attemptWeaponPurchase()
                         markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
                         self.abzmLastWeaponPurchaseStateKey = "";
                         confirmedWeaponPurchase = true;
+                        markGenericPurchase();
                         return true;
                     }
                     else
@@ -1398,12 +1418,16 @@ attemptUtilityPurchase()
                     {
                         markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
                         self.abzmLastWeaponPurchaseStateKey = "";
-                        markPackAPunchPurchase( previousPapWeaponKey, previousPapUpgradeLevel );
+                        currentPapWeaponKey = getCurrentWeaponIdentityKey();
+                        if ( !isdefined( currentPapWeaponKey ) || currentPapWeaponKey == "" )
+                        {
+                            currentPapWeaponKey = previousPapWeaponKey;
+                        }
+                        markPackAPunchPurchase( currentPapWeaponKey, previousPapUpgradeLevel );
                         return true;
                     }
                 }
 
-                markPackAPunchPurchase( previousPapWeaponKey, previousPapUpgradeLevel );
                 markSharedPurchase( papNode, "packapunch", true );
                 return false;
             }
@@ -1577,6 +1601,7 @@ markPackAPunchPurchase( weaponKey, previousUpgradeLevel )
     }
 
     confirmedUpgradeLevel = resolveConfirmedPackAPunchLevel( previousUpgradeLevel, observedUpgradeLevel );
+    confirmedUpgradeLevel = max( existingConfirmedUpgradeLevel, confirmedUpgradeLevel );
     if ( observedUpgradeLevel > 0 && isCurrentWeaponUpgradeLevelApproximate() )
     {
         confirmedUpgradeLevel = max( max( existingConfirmedUpgradeLevel, existingTrackedUpgradeLevel ), confirmedUpgradeLevel );
@@ -1682,7 +1707,7 @@ updateTrackedPackAPunchWeaponLevel( entryIndex, observedUpgradeLevel )
     }
 
     self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel = max( existingUpgradeLevel, min( observedUpgradeLevel, ABZM_MAX_PACKAPUNCH_LEVEL ) );
-    self.abzmPackAPunchWeaponEntries[entryIndex].confirmedUpgradeLevel = min( observedUpgradeLevel, ABZM_MAX_PACKAPUNCH_LEVEL );
+    self.abzmPackAPunchWeaponEntries[entryIndex].confirmedUpgradeLevel = max( existingConfirmedUpgradeLevel, min( observedUpgradeLevel, ABZM_MAX_PACKAPUNCH_LEVEL ) );
     if ( isCurrentWeaponUpgradeLevelApproximate() )
     {
         self.abzmPackAPunchWeaponEntries[entryIndex].confirmedUpgradeLevel = max( max( existingConfirmedUpgradeLevel, existingUpgradeLevel ), self.abzmPackAPunchWeaponEntries[entryIndex].confirmedUpgradeLevel );
