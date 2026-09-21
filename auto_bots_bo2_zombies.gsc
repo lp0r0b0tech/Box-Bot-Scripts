@@ -76,7 +76,7 @@
 #define ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS 2000
 #define ABZM_SHARED_PURCHASE_RESERVATION_MS   1500
 #define ABZM_PACKAPUNCH_CONFIRMATION_FALLBACK_MS 3000
-#define ABZM_MAX_PACKAPUNCH_LEVEL             2
+#define ABZM_MAX_PACKAPUNCH_LEVEL             25
 #define ABZM_PURCHASE_COOLDOWN_SEC            1.5
 #define ABZM_PERK_PURCHASE_COOLDOWN_SEC       5.0
 #define ABZM_BO2_RUN_ROUND                    3
@@ -482,6 +482,7 @@ runPurchaseConfirmationSelfTests()
     reportSelfTestResult( "pap_confirmation_requires_same_weapon_upgrade", !isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_b", 1 ) && isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_a", 1 ) );
     reportSelfTestResult( "pap_wait_confirmation_rejects_weapon_swap", !doesPackAPunchConfirmationSequenceSucceed( "weapon_a", 0, [ "weapon_b", "weapon_b" ], [ 1, 1 ] ) );
     reportSelfTestResult( "pap_tracking_requires_live_upgrade_increase", resolveTrackedPackAPunchLevel( 1, 1, 0 ) == 1 );
+    reportSelfTestResult( "pap_level_cap_supports_requested_ceiling", min( 30, ABZM_MAX_PACKAPUNCH_LEVEL ) == 25 );
 }
 
 runDeferredSelfTests()
