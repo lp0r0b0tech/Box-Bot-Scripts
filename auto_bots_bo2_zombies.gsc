@@ -1061,7 +1061,7 @@ markSharedPurchase( node, kind )
     sharedEntry = spawnstruct();
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
-    sharedEntry.expiresAt = 0;
+    sharedEntry.expiresAt = -1;
     if ( kind == "exo" || kind == "door" )
     {
         sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
@@ -2070,7 +2070,7 @@ getPurchaseItemCandidates()
     for ( i = 0; i < nodes.size; i++ )
     {
         node = nodes[i];
-        if ( isDesiredInteractable( node, "weapon" ) || isDesiredInteractable( node, "mystery" ) )
+        if ( isDesiredInteractable( node, "weapon" ) || isDesiredInteractable( node, "mystery" ) || isGenericWeaponPurchaseMarker( node ) )
         {
             purchaseNodes[purchaseNodes.size] = node;
         }
@@ -2080,6 +2080,16 @@ getPurchaseItemCandidates()
     level.abzm.purchaseItemCacheTime = gettime();
     level.abzm.purchaseItemSourceCacheTime = level.abzm.interactableCacheTime;
     return level.abzm.purchaseItemCandidates;
+    return level.abzm.purchaseItemCandidates;
+}
+isGenericWeaponPurchaseMarker( entity )
+{
+    if ( !isdefined( entity ) || !entityMatchesToken( entity, "buy" ) )
+    {
+        return false;
+    }
+
+    return !isDesiredInteractable( entity, "door" ) && !isDesiredInteractable( entity, "perk" ) && !isDesiredInteractable( entity, "exo" ) && !isDesiredInteractable( entity, "packapunch" ) && !isDesiredInteractable( entity, "revive" );
 }
 
 chooseTrainingAnchor()
@@ -2376,7 +2386,7 @@ isDesiredInteractable( entity, kind )
     switch ( kind )
     {
         case "weapon":
-            return entityMatchesToken( entity, "weapon" ) || entityMatchesToken( entity, "wallbuy" ) || entityMatchesToken( entity, "armory" ) || entityMatchesToken( entity, "buy" );
+            return entityMatchesToken( entity, "weapon" ) || entityMatchesToken( entity, "wallbuy" ) || entityMatchesToken( entity, "armory" );
 
         case "mystery":
             return entityMatchesToken( entity, "mystery" ) || entityMatchesToken( entity, "printer" );
