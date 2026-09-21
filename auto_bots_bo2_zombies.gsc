@@ -783,6 +783,20 @@ tryUseReviveInteraction( downed )
         return -1;
     }
 
+    self setlookatpos( reviveNode.origin );
+    self moveto( reviveNode.origin, 0.2 );
+
+    moveStart = gettime();
+    while ( distance( self.origin, reviveNode.origin ) > ABZM_BO2_REVIVE_RANGE )
+    {
+        if ( gettime() - moveStart >= 1000 )
+        {
+            return 0;
+        }
+
+        wait 0.05;
+    }
+
     reviveNode notify( "trigger", self );
     reviveNode notify( "use", self );
 
@@ -1025,9 +1039,14 @@ markSharedPurchase( node, kind )
         return;
     }
 
-    if ( isdefined( node ) && ( kind == "exo" || kind == "door" ) )
+    if ( isdefined( node ) && kind == "exo" )
     {
         node.abzmSharedCooldownUntil = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
+    }
+
+    if ( isdefined( node ) && kind == "door" )
+    {
+        node.abzmSharedPermanent = true;
     }
 
     if ( !shouldPersistSharedPurchaseNode( node, kind ) )
@@ -1087,6 +1106,11 @@ shouldPersistSharedPurchaseNode( node, kind )
     if ( !isdefined( node ) )
     {
         return false;
+    }
+
+    if ( kind == "door" && isdefined( node.abzmSharedPermanent ) && node.abzmSharedPermanent )
+    {
+        return true;
     }
 
     if ( !isDesiredInteractable( node, kind ) )
