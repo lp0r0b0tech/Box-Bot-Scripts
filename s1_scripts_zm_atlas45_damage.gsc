@@ -105,19 +105,7 @@ atlas45_should_register_weapon(weaponName)
         return false;
     }
 
-    weaponName = tolower(weaponName + "");
-
-    if(strlen(weaponName) < 4 || getsubstr(weaponName, 0, 4) != "iw5_")
-    {
-        return false;
-    }
-
-    if(!issubstr(weaponName, "_zm_"))
-    {
-        return false;
-    }
-
-    return issubstr(weaponName, "_mp");
+    return strlen(weaponName + "") > 0;
 }
 
 /*
@@ -163,10 +151,16 @@ atlas45_modify_damage(
 
         This does not alter normal magazine-size or reserve-ammo upgrades.
     */
-    if(isdefined(weaponLevel) && weaponLevel >= 2 &&
+    canSuppressStockLevelDamage =
+       isdefined(weaponLevel) && weaponLevel >= 2 &&
        isdefined(attacker.weaponstate) &&
-       isdefined(attacker.weaponstate[weaponName]))
+       isdefined(attacker.weaponstate[weaponName]) &&
+       isdefined(attacker.weaponstate[weaponName]["weapon_level_increase"]);
+
+    if(canSuppressStockLevelDamage)
     {
+        originalWeaponLevelIncrease =
+            attacker.weaponstate[weaponName]["weapon_level_increase"];
         attacker.weaponstate[weaponName]
             ["weapon_level_increase"] = 0;
     }
@@ -188,24 +182,34 @@ atlas45_modify_damage(
         /*
             Keep Mk1 completely vanilla.
         */
-        return damageAfterStockCallback;
+        finalDamage = damageAfterStockCallback;
     }
-
-    if(weaponLevel > 25)
+    else
     {
-        weaponLevel = 25;
+        if(weaponLevel > 25)
+        {
+            weaponLevel = 25;
+        }
+
+        /*
+            Do not process hitLocation here. This intentionally avoids custom
+            head/neck/helmet multipliers so the game can retain its normal
+            hit-location behavior.
+        */
+        finalDamage = atlas45_apply_callback_modifiers(
+            atlas45_get_base_damage(weaponLevel),
+            damage,
+            damageAfterStockCallback
+        );
     }
 
-    /*
-        Do not process hitLocation here. This intentionally avoids custom
-        head/neck/helmet multipliers so the game can retain its normal
-        hit-location behavior.
-    */
-    return atlas45_apply_callback_modifiers(
-        atlas45_get_base_damage(weaponLevel),
-        damage,
-        damageAfterStockCallback
-    );
+    if(canSuppressStockLevelDamage)
+    {
+        attacker.weaponstate[weaponName]
+            ["weapon_level_increase"] = originalWeaponLevelIncrease;
+    }
+
+    return finalDamage;
 }
 
 atlas45_apply_previous_damage_callback(
