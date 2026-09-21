@@ -102,15 +102,15 @@ resolveTrackedPackAPunchLevel( existingTrackedUpgradeLevel, previousUpgradeLevel
 {
     if ( isdefined( observedUpgradeLevel ) && observedUpgradeLevel > 0 )
     {
-        return max( observedUpgradeLevel, existingTrackedUpgradeLevel );
+        return min( max( observedUpgradeLevel, existingTrackedUpgradeLevel ), ABZM_MAX_PACKAPUNCH_LEVEL );
     }
 
     if ( isdefined( existingTrackedUpgradeLevel ) && existingTrackedUpgradeLevel > 0 )
     {
-        return existingTrackedUpgradeLevel;
+        return min( existingTrackedUpgradeLevel, ABZM_MAX_PACKAPUNCH_LEVEL );
     }
 
-    return max( 1, previousUpgradeLevel + 1 );
+    return min( max( 1, previousUpgradeLevel + 1 ), ABZM_MAX_PACKAPUNCH_LEVEL );
 }
 
 doesPackAPunchConfirmationSequenceSucceed( previousWeaponKey, previousUpgradeLevel, weaponKeys, upgradeLevels )
