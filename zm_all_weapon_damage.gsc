@@ -6,9 +6,10 @@
 
     Damage progression for every weapon:
         Mk1  = stock / vanilla damage
-        Mk2  = 2,500 base damage
-        Mk20 = 10,000 base damage
-        Mk25 = 17,000 base damage
+        Mk2+ = Cell 3 Cauterizer-style level scaling
+
+    Curve:
+        finalDamage = baseDamage + (baseDamage * 0.2 * (mark - 1))
 
     Magazine capacity and reserve ammunition:
         Left unchanged; the normal Exo Zombies weapon-upgrade system
@@ -27,9 +28,6 @@ main()
     }
 
     level.awd_started = 1;
-    level.awd_callback_table_generation = 0;
-    level.awd_previous_damage_callbacks = [];
-    level.awd_previous_damage_callback_keys = [];
 
     println( "AllWeaponDamage: Zombies script initialized." );
 
@@ -40,10 +38,6 @@ awd_register_damage_modifiers()
 {
     level endon( "game_ended" );
 
-    /*
-        Wait for the Zombies gametype to initialize the weapon-damage
-        callback table.
-    */
     for ( i = 0; i < 600; i++ )
     {
         if ( isdefined( level.modifyweapondamage ) )
@@ -71,7 +65,7 @@ awd_register_damage_modifiers()
 
 awd_sync_weapon_callbacks()
 {
-    if ( !awd_ensure_callback_table_generation() )
+    if ( !isdefined( level.modifyweapondamage ) )
     {
         return;
     }
@@ -107,33 +101,18 @@ awd_sync_weapon_callbacks()
             }
 
             baseWeaponName = getweaponbasename( weaponName );
+
             awd_disable_stock_weapon_level_increase( player, weaponName );
             awd_disable_stock_weapon_level_increase( player, baseWeaponName );
 
-            awd_register_damage_key( weaponName );
-            awd_register_damage_key( baseWeaponName );
+            level.modifyweapondamage[weaponName] = ::awd_modify_damage;
+
+            if ( isdefined( baseWeaponName ) && baseWeaponName != "" )
+            {
+                level.modifyweapondamage[baseWeaponName] = ::awd_modify_damage;
+            }
         }
     }
-}
-
-awd_ensure_callback_table_generation()
-{
-    if ( !isdefined( level.modifyweapondamage ) )
-    {
-        return false;
-    }
-
-    if ( !isdefined( level.modifyweapondamage["__awd_generation"] ) ||
-         level.modifyweapondamage["__awd_generation"] != level.awd_callback_table_generation )
-    {
-        level.awd_callback_table_generation++;
-        level.awd_previous_damage_callbacks = [];
-        level.awd_previous_damage_callback_keys = [];
-        level.modifyweapondamage["__awd_generation"] =
-            level.awd_callback_table_generation;
-    }
-
-    return true;
 }
 
 awd_disable_stock_weapon_level_increase( player, weaponKey )
@@ -143,112 +122,12 @@ awd_disable_stock_weapon_level_increase( player, weaponKey )
         return;
     }
 
-    if ( !isdefined( player.weaponstate[weaponKey] ) )
-    {
-        maps\mp\gametypes\zombies::createzombieweaponstate(
-            player,
-            weaponKey
-        );
-    }
-
     if ( isdefined( player.weaponstate[weaponKey] ) )
     {
         player.weaponstate[weaponKey]["weapon_level_increase"] = 0;
     }
 }
 
-awd_register_damage_key( weaponKey )
-{
-    if ( !isdefined( weaponKey ) || weaponKey == "" )
-    {
-        return;
-    }
-
-    if ( !isdefined( level.modifyweapondamage ) )
-    {
-        return;
-    }
-
-    currentCallback = level.modifyweapondamage[weaponKey];
-
-    if ( !isdefined( level.awd_previous_damage_callbacks[weaponKey] ) &&
-         isdefined( currentCallback ) &&
-         currentCallback != ::awd_modify_damage )
-    {
-        level.awd_previous_damage_callbacks[weaponKey] = currentCallback;
-        level.awd_previous_damage_callback_keys[weaponKey] = weaponKey;
-    }
-
-    level.modifyweapondamage[weaponKey] = ::awd_modify_damage;
-}
-
-awd_apply_previous_damage_callback(
-    victim,
-    attacker,
-    damage,
-    meansOfDeath,
-    weapon,
-    point,
-    direction,
-    hitLocation,
-    baseWeaponName
-)
-{
-    callback = undefined;
-    callbackWeapon = weapon;
-
-    if ( isdefined( level.awd_previous_damage_callbacks[weapon] ) )
-    {
-        callback = level.awd_previous_damage_callbacks[weapon];
-        if ( isdefined( level.awd_previous_damage_callback_keys[weapon] ) )
-        {
-            callbackWeapon = level.awd_previous_damage_callback_keys[weapon];
-        }
-    }
-    else if ( isdefined( baseWeaponName ) &&
-              isdefined( level.awd_previous_damage_callbacks[baseWeaponName] ) )
-    {
-        callback = level.awd_previous_damage_callbacks[baseWeaponName];
-        if ( isdefined( level.awd_previous_damage_callback_keys[baseWeaponName] ) )
-        {
-            callbackWeapon =
-                level.awd_previous_damage_callback_keys[baseWeaponName];
-        }
-        else
-        {
-            callbackWeapon = baseWeaponName;
-        }
-    }
-
-    if ( !isdefined( callback ) )
-    {
-        return damage;
-    }
-
-    if ( callback == ::awd_modify_damage )
-    {
-        return damage;
-    }
-
-    return [[ callback ]](
-        victim,
-        attacker,
-        damage,
-        meansOfDeath,
-        callbackWeapon,
-        point,
-        direction,
-        hitLocation
-    );
-}
-
-/*
-    Weapon-damage callback.
-
-    Returning the supplied damage preserves normal Mk1 behavior.
-    Returning a custom base damage for Mk2-Mk25 leaves stock ammo and
-    stock hit-location behavior under control of the Zombies system.
-*/
 awd_modify_damage(
     victim,
     attacker,
@@ -260,9 +139,6 @@ awd_modify_damage(
     hitLocation
 )
 {
-    /*
-        Only change damage caused by a player.
-    */
     if ( !isdefined( attacker ) || !isplayer( attacker ) )
     {
         return damage;
@@ -288,64 +164,24 @@ awd_modify_damage(
         );
     }
 
-    /*
-        Keep Mk1 completely vanilla.
-    */
     if ( !isdefined( weaponLevel ) || weaponLevel < 2 )
     {
         return damage;
     }
-
-    damage = awd_apply_previous_damage_callback(
-        victim,
-        attacker,
-        damage,
-        meansOfDeath,
-        weapon,
-        point,
-        direction,
-        hitLocation,
-        baseWeaponName
-    );
 
     if ( weaponLevel > 25 )
     {
         weaponLevel = 25;
     }
 
-    /*
-        Do not process hitLocation here. This intentionally avoids custom
-        head/neck/helmet multipliers so the game can retain its normal
-        hit-location behavior.
-    */
-    customBaseDamage = awd_get_base_damage( weaponLevel );
-
-    if ( damage > customBaseDamage )
-    {
-        return damage;
-    }
-
-    return customBaseDamage;
+    return awd_get_cauterizer_damage( damage, weaponLevel );
 }
 
-/*
-    Piecewise-linear upgrade damage curve:
-
-        Mk2  =  2,500
-        Mk20 = 10,000
-        Mk25 = 17,000
-
-    Mk2 through Mk20:
-        2500 + ((mark - 2) * 7500 / 18)
-
-    Mk20 through Mk25:
-        10000 + ((mark - 20) * 1400)
-*/
-awd_get_base_damage( mark )
+awd_get_cauterizer_damage( baseDamage, mark )
 {
     if ( mark < 2 )
     {
-        mark = 2;
+        return baseDamage;
     }
 
     if ( mark > 25 )
@@ -353,13 +189,5 @@ awd_get_base_damage( mark )
         mark = 25;
     }
 
-    if ( mark <= 20 )
-    {
-        /*
-            +9 rounds division to the nearest integer.
-        */
-        return 2500 + int( ( ( ( ( mark - 2 ) * 7500 ) + 9 ) / 18 ) );
-    }
-
-    return 10000 + int( ( mark - 20 ) * 1400 );
+    return int( baseDamage + ( baseDamage * 0.2 * ( mark - 1 ) ) );
 }

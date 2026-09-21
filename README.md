@@ -2,7 +2,7 @@ This repository contains custom Box Bot and Exo Zombies script tweaks.
 
 EMZ/EMP Zombies Nerf
 
-All weapons upgrade similar to the Cell 3 Cauterizer
+All upgraded weapons use a Cell 3 Cauterizer-style damage curve
 
 Inside `s1`, create a `scripts` folder. Inside `s1/scripts`, create `mp` and `zm`. No files currently in this repository need an `sv` folder.
 
