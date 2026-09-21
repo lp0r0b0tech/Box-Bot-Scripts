@@ -223,6 +223,7 @@ abzmBoot()
 
     wait 0.25;
     refreshRuntimeConfig();
+    level.abzm.sharedPurchasedNodes = [];
 
     if ( !level.abzm.enabled )
     {
@@ -744,6 +745,13 @@ attemptBotRevive()
     if ( downed.abzmDowned )
     {
         reviveResult = tryUseReviveInteraction( downed );
+        if ( reviveResult > 0 )
+        {
+            downed.abzmReviver = undefined;
+            self.abzmReviveTarget = undefined;
+            return true;
+        }
+
         if ( reviveResult <= 0 )
         {
             if ( !isdefined( downed ) )
