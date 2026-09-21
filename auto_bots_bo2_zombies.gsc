@@ -279,6 +279,7 @@ initDvars()
     setdvarifuninitialized( "scr_zm_autobots_auto_buy_perks", ABZM_DEFAULT_BOTS_AUTO_BUY_PERKS );
     setdvarifuninitialized( "scr_zm_autobots_auto_buy_upgrades", ABZM_DEFAULT_BOTS_AUTO_BUY_UPGRADES );
     setdvarifuninitialized( "scr_zm_autobots_use_equipment", ABZM_DEFAULT_BOTS_USE_EQUIPMENT );
+    // Forced-loadout mode swaps bot buying for fixed weapons/perks/equipment, and the PAP level controls the tracked forced upgrade tier.
     setdvarifuninitialized( "scr_zm_autobots_force_loadout", ABZM_DEFAULT_FORCE_LOADOUT );
     setdvarifuninitialized( "scr_zm_autobots_force_loadout_pap_level", ABZM_DEFAULT_FORCE_LOADOUT_PAP_LEVEL );
     // Teammate-only combat profile overrides. Difficulty accepts engine strings such as recruit/regular/hardened/veteran/ultra.
@@ -296,6 +297,7 @@ initDvars()
     setdvarifuninitialized( "scr_zm_autobots_door_cost", ABZM_DEFAULT_DOOR_COST );
     setdvarifuninitialized( "scr_zm_autobots_exo_cost", ABZM_DEFAULT_EXO_COST );
     setdvarifuninitialized( "scr_zm_autobots_max_perks", ABZM_DEFAULT_PERK_LIMIT );
+    // Developer-only toggle for the built-in script self-tests; leave disabled during normal gameplay.
     setdvarifuninitialized( "scr_zm_autobots_run_self_tests", 0 );
 
     setdvarifuninitialized( "scr_zm_bo2_enable", ABZM_DEFAULT_BO2_TUNING_ENABLED );
@@ -1718,6 +1720,11 @@ attemptWeaponPurchase()
 
 attemptUtilityPurchase()
 {
+    if ( !isdefined( level.abzm ) )
+    {
+        return false;
+    }
+
     if ( isdefined( level.abzm ) && level.abzm.forceLoadoutEnabled )
     {
         maintainForcedBotPackAPunchTracking();
@@ -2251,7 +2258,7 @@ markSharedPurchase( node, kind, usedFallback )
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
     sharedEntry.isReservation = false;
-    sharedEntry.isPersistent = kind == "door" && ( !isdefined( usedFallback ) || !usedFallback );
+    sharedEntry.isPersistent = false;
     sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS;
     if ( sharedEntry.isPersistent )
     {
