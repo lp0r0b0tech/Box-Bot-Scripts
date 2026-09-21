@@ -563,10 +563,11 @@ doesMysteryTimeoutPathKeepRetryWithoutConfirmation()
     return retryDurationValid && noConfirmedWeaponState;
 }
 
-setCurrentWeaponSelfTestState( weaponKey, upgradeLevel )
+setCurrentWeaponSelfTestState( weaponKey, upgradeLevel, approximateUpgrade )
 {
     self.abzmSelfTestWeaponKey = weaponKey;
     self.abzmSelfTestUpgradeLevel = upgradeLevel;
+    self.abzmSelfTestUpgradeApproximate = isdefined( approximateUpgrade ) && approximateUpgrade;
 }
 
 runDeferredSelfTests()
@@ -1181,13 +1182,13 @@ tryUseReviveInteraction( downed )
 {
     if ( !isdefined( downed ) || !downed.abzmDowned )
     {
-        return ABZM_REVIVE_STATUS_FALLBACK;
+        return ABZM_REVIVE_STATUS_FAILED;
     }
 
     reviveNode = getReviveInteractableForPlayer( downed );
     if ( !isdefined( reviveNode ) )
     {
-        return ABZM_REVIVE_STATUS_FALLBACK;
+        return ABZM_REVIVE_STATUS_FAILED;
     }
 
     if ( !moveToAndUse( reviveNode ) )
@@ -2980,7 +2981,7 @@ isCurrentWeaponUpgradeLevelApproximate()
 {
     if ( isdefined( self.abzmSelfTestWeaponKey ) )
     {
-        return isdefined( self.abzmSelfTestUpgradeLevel ) && self.abzmSelfTestUpgradeLevel == 1;
+        return isdefined( self.abzmSelfTestUpgradeApproximate ) && self.abzmSelfTestUpgradeApproximate;
     }
 
     weapon = self getcurrentweapon();
