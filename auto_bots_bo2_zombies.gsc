@@ -396,7 +396,6 @@ onPlayerConnected()
         if ( self.abzmIsBot )
         {
             initializeBotPurchaseState();
-            resetBotPerkPurchaseState();
             applyBotCombatProfile();
         }
 
@@ -558,7 +557,6 @@ applyBotPostSpawnSetup()
         }
 
         initializeBotPurchaseState();
-        resetBotPerkPurchaseState();
         applyBotCombatProfile();
     }
 }
@@ -742,7 +740,7 @@ attemptBotRevive()
             return true;
         }
 
-        if ( reviveResult < 0 )
+        if ( reviveResult <= 0 )
         {
             if ( !isdefined( downed ) )
             {
@@ -786,7 +784,13 @@ tryUseReviveInteraction( downed )
 
     reviveNode notify( "trigger", self );
     reviveNode notify( "use", self );
-    wait 0.05;
+
+    start = gettime();
+    maxWaitMs = int( (ABZM_BO2_REVIVE_TIME + 0.5) * 1000 );
+    while ( isdefined( downed ) && downed.abzmDowned && (gettime() - start) < maxWaitMs )
+    {
+        wait 0.05;
+    }
 
     if ( isdefined( downed ) && !downed.abzmDowned )
     {
@@ -1067,7 +1071,7 @@ alreadyBoughtSharedNode( node, kind )
 
 shouldPersistSharedPurchaseNode( node, kind )
 {
-    if ( kind == "door" )
+    if ( kind == "door" || kind == "exo" )
     {
         return true;
     }
