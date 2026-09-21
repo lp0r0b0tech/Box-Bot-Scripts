@@ -479,7 +479,12 @@ grantForcedBotLoadout()
         return false;
     }
 
-    self takeallweapons();
+    currentWeapon = self getcurrentweapon();
+    if ( isdefined( currentWeapon ) && currentWeapon != "" && currentWeapon != ABES_FORCE_LOADOUT_PRIMARY && currentWeapon != ABES_FORCE_LOADOUT_SECONDARY && currentWeapon != ABES_FORCE_LOADOUT_LETHAL )
+    {
+        self takeweapon( currentWeapon );
+    }
+
     self giveweapon( ABES_FORCE_LOADOUT_PRIMARY );
     self giveweapon( ABES_FORCE_LOADOUT_SECONDARY );
     self giveweapon( ABES_FORCE_LOADOUT_LETHAL );
