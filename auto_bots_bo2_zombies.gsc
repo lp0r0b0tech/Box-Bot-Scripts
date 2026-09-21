@@ -1023,7 +1023,7 @@ markSharedPurchase( node, kind )
         return;
     }
 
-    if ( isdefined( node ) )
+    if ( isdefined( node ) && kind == "exo" )
     {
         node.abzmSharedCooldownUntil = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
     }
