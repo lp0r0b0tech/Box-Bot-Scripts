@@ -122,6 +122,13 @@ awd_sync_weapon_callbacks()
             {
                 level.modifyweapondamage[weaponName] = ::awd_modify_damage;
             }
+
+            if ( baseWeaponName != weaponName &&
+                 ( !isdefined( level.modifyweapondamage[baseWeaponName] ) ||
+                   level.modifyweapondamage[baseWeaponName] != ::awd_modify_damage ) )
+            {
+                level.modifyweapondamage[baseWeaponName] = ::awd_modify_damage;
+            }
         }
     }
 }
