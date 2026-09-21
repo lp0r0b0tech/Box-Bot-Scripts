@@ -181,18 +181,18 @@ awd_modify_damage(
 
     weaponLevel = undefined;
     exactWeaponStateDefined = isdefined( attacker.weaponstate[weapon] );
-    exactWeaponLevelUsable = false;
+    exactWeaponLevelDefined = false;
 
     if ( exactWeaponStateDefined &&
          isdefined( attacker.weaponstate[weapon]["level"] ) )
     {
         weaponLevel = attacker.weaponstate[weapon]["level"];
-        exactWeaponLevelUsable = weaponLevel >= 2;
+        exactWeaponLevelDefined = true;
     }
 
     baseWeaponName = getweaponbasename( weapon );
 
-    if ( !exactWeaponLevelUsable &&
+    if ( !exactWeaponLevelDefined &&
          isdefined( baseWeaponName ) &&
          baseWeaponName != "" &&
          isdefined( attacker.weaponstate[baseWeaponName] ) &&
