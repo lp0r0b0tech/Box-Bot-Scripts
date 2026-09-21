@@ -170,8 +170,16 @@ awd_modify_damage(
 
     weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
         attacker,
-        baseWeaponName
+        weapon
     );
+
+    if ( !isdefined( weaponLevel ) || weaponLevel < 2 )
+    {
+        weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
+            attacker,
+            baseWeaponName
+        );
+    }
 
     /*
         Keep Mk1 completely vanilla.
