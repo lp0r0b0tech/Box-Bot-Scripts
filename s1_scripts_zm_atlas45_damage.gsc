@@ -125,8 +125,7 @@ atlas45_should_register_weapon(weaponName)
         return false;
     }
 
-    return issubstr(weaponName, "_zm_") &&
-           issubstr(weaponName, "_mp");
+    return issubstr(weaponName, "zm");
 }
 
 /*
@@ -147,7 +146,7 @@ atlas45_modify_damage(
     hitLocation
 )
 {
-    if(!isdefined(weapon) || !atlas45_should_register_weapon(weapon))
+    if(!isdefined(weapon))
     {
         return damage;
     }
