@@ -128,6 +128,13 @@ atlas45_register_damage_modifier()
             !isdefined(level.modifyweapondamage[lowercaseWeaponName]) ||
             level.modifyweapondamage[lowercaseWeaponName] == previousCallback))
         {
+            if(isdefined(level.modifyweapondamage[lowercaseWeaponName]) &&
+               !atlas45_is_self_reference_callback(level.modifyweapondamage[lowercaseWeaponName]))
+            {
+                level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
+                    level.modifyweapondamage[lowercaseWeaponName];
+            }
+
             level.modifyweapondamage[lowercaseWeaponName] =
                 ::atlas45_modify_damage;
             level.exo_damage_curve_registered_weapons[lowercaseWeaponName] = true;
