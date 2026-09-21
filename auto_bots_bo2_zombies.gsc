@@ -15,7 +15,7 @@
 #define ABZM_DEFAULT_BOTS_AUTO_BUY_PERKS      1
 #define ABZM_DEFAULT_BOTS_AUTO_BUY_UPGRADES   1
 #define ABZM_DEFAULT_BOTS_USE_EQUIPMENT       1
-#define ABZM_DEFAULT_FORCE_LOADOUT            1
+#define ABZM_DEFAULT_FORCE_LOADOUT            0
 #define ABZM_DEFAULT_FORCE_LOADOUT_PAP_LEVEL  25
 #define ABZM_DEFAULT_BO2_TUNING_ENABLED       1
 #define ABZM_DEFAULT_BOT_ACCURACY             9.99
@@ -925,6 +925,17 @@ getForcedBotPerkKeys()
     return perkKeys;
 }
 
+isForcedLoadoutWeaponKey( weaponKey )
+{
+    if ( !isdefined( weaponKey ) || weaponKey == "" )
+    {
+        return false;
+    }
+
+    weaponKey = toLower( weaponKey + "" );
+    return weaponKey == toLower( ABZM_FORCE_LOADOUT_PRIMARY ) || weaponKey == toLower( ABZM_FORCE_LOADOUT_SECONDARY );
+}
+
 maintainForcedBotLoadout()
 {
     if ( !isBotEntity( self ) || !isdefined( level.abzm ) || !level.abzm.forceLoadoutEnabled )
@@ -958,7 +969,15 @@ maintainForcedBotLoadout()
     setPackAPunchWeaponLevel( toLower( ABZM_FORCE_LOADOUT_SECONDARY ), level.abzm.forceLoadoutPackLevel );
     if ( isdefined( previousWeapon ) && previousWeapon != "" )
     {
-        self switchtoweapon( previousWeapon );
+        previousWeaponKey = toLower( previousWeapon + "" );
+        if ( isForcedLoadoutWeaponKey( previousWeaponKey ) )
+        {
+            self switchtoweapon( previousWeapon );
+        }
+        else
+        {
+            self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
+        }
     }
     else
     {
@@ -991,7 +1010,15 @@ maintainForcedBotPackAPunchTracking()
     setPackAPunchWeaponLevel( toLower( ABZM_FORCE_LOADOUT_SECONDARY ), level.abzm.forceLoadoutPackLevel );
     if ( isdefined( previousWeapon ) && previousWeapon != "" )
     {
-        self switchtoweapon( previousWeapon );
+        previousWeaponKey = toLower( previousWeapon + "" );
+        if ( isForcedLoadoutWeaponKey( previousWeaponKey ) )
+        {
+            self switchtoweapon( previousWeapon );
+        }
+        else
+        {
+            self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
+        }
     }
     else
     {
@@ -1011,7 +1038,7 @@ applyCurrentWeaponPackAPunchLevel( upgradeLevel )
     }
 
     weaponKey = toLower( weapon + "" );
-    if ( weaponKey != toLower( ABZM_FORCE_LOADOUT_PRIMARY ) && weaponKey != toLower( ABZM_FORCE_LOADOUT_SECONDARY ) )
+    if ( !isForcedLoadoutWeaponKey( weaponKey ) )
     {
         return;
     }
@@ -1622,11 +1649,6 @@ attemptWeaponPurchase()
         return false;
     }
 
-    if ( shouldSkipWeaponRepurchase() )
-    {
-        return false;
-    }
-
     if ( shouldAttemptMysteryBoxPurchase( roundNumber, needsStandardWeaponPurchase ) )
     {
         mysteryNode = getClosestAvailableSharedInteractable( "mystery" );
@@ -1666,6 +1688,11 @@ attemptWeaponPurchase()
     if ( confirmedWeaponPurchase )
     {
         return true;
+    }
+
+    if ( shouldSkipWeaponRepurchase() )
+    {
+        return false;
     }
 
     prePurchaseStateKey = getWeaponPurchaseStateKey();
