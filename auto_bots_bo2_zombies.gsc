@@ -484,6 +484,14 @@ runPurchaseConfirmationSelfTests()
     reportSelfTestResult( "pap_tracking_requires_live_upgrade_increase", resolveTrackedPackAPunchLevel( 1, 1, 0 ) == 1 );
     reportSelfTestResult( "pap_tracking_accepts_high_observed_level", min( resolveTrackedPackAPunchLevel( 1, 1, 25 ), ABZM_MAX_PACKAPUNCH_LEVEL ) == 25 );
     reportSelfTestResult( "pap_level_cap_supports_requested_ceiling", min( 30, ABZM_MAX_PACKAPUNCH_LEVEL ) == 25 );
+    bot = spawnstruct();
+    bot initializeBotPurchaseState();
+    entry = spawnstruct();
+    entry.weaponKey = "weapon_a";
+    entry.upgradeLevel = 25;
+    bot.abzmPackAPunchWeaponEntries[0] = entry;
+    bot updateTrackedPackAPunchWeaponLevel( 0, "weapon_a", 20 );
+    reportSelfTestResult( "pap_tracking_refreshes_existing_level", bot.abzmPackAPunchWeaponEntries[0].upgradeLevel == 20 );
 }
 
 runDeferredSelfTests()
@@ -1561,6 +1569,7 @@ alreadyPackAPunchedCurrentWeapon()
         if ( liveWeaponKey == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey )
         {
             updateTrackedPackAPunchWeaponLevel( entryIndex, currentWeaponKey, currentUpgradeLevel );
+            trackedUpgradeLevel = self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel;
             return currentUpgradeLevel >= trackedUpgradeLevel;
         }
 
