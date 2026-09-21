@@ -630,8 +630,6 @@ applyForcedBotUpgradeAlias( key, value )
 
 removeNonForcedBotWeapons()
 {
-    previousWeapon = "";
-
     for ( i = 0; i < 16; i++ )
     {
         currentWeapon = self getcurrentweapon();
@@ -639,13 +637,6 @@ removeNonForcedBotWeapons()
         {
             return;
         }
-
-        if ( currentWeapon == previousWeapon )
-        {
-            return;
-        }
-
-        previousWeapon = currentWeapon;
         self takeweapon( currentWeapon );
         wait 0.05;
     }
