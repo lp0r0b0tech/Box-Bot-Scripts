@@ -1047,6 +1047,7 @@ markSharedPurchase( node, kind )
 {
     if ( !isdefined( level.abzm ) )
     {
+        markGenericPurchase();
         return;
     }
 
@@ -1364,7 +1365,7 @@ getPerkPurchaseKey( node )
         return perkType;
     }
 
-    return "unknown_perk";
+    return getStableInteractableKey( node, "perk" );
 }
 
 useEquipmentIfNeeded()
