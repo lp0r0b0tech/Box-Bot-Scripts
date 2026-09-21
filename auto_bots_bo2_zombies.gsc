@@ -1042,8 +1042,8 @@ markPerkPurchase( node )
     if ( shouldCountPerk )
     {
         self.abzmPerkPurchases++;
-        self.abzmLastPerkPurchaseTime = gettime();
     }
+    self.abzmLastPerkPurchaseTime = gettime();
     markGenericPurchase();
 }
 
