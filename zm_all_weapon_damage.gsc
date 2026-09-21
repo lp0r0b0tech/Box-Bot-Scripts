@@ -28,6 +28,7 @@ main()
 
     level.awd_started = 1;
     level.awd_previous_damage_callbacks = [];
+    level.awd_previous_damage_callback_keys = [];
 
     println( "AllWeaponDamage: Zombies script initialized." );
 
@@ -148,6 +149,7 @@ awd_register_damage_key( weaponKey )
          currentCallback != ::awd_modify_damage )
     {
         level.awd_previous_damage_callbacks[weaponKey] = currentCallback;
+        level.awd_previous_damage_callback_keys[weaponKey] = weaponKey;
     }
 
     level.modifyweapondamage[weaponKey] = ::awd_modify_damage;
@@ -166,15 +168,29 @@ awd_apply_previous_damage_callback(
 )
 {
     callback = undefined;
+    callbackWeapon = weapon;
 
     if ( isdefined( level.awd_previous_damage_callbacks[weapon] ) )
     {
         callback = level.awd_previous_damage_callbacks[weapon];
+        if ( isdefined( level.awd_previous_damage_callback_keys[weapon] ) )
+        {
+            callbackWeapon = level.awd_previous_damage_callback_keys[weapon];
+        }
     }
     else if ( isdefined( baseWeaponName ) &&
               isdefined( level.awd_previous_damage_callbacks[baseWeaponName] ) )
     {
         callback = level.awd_previous_damage_callbacks[baseWeaponName];
+        if ( isdefined( level.awd_previous_damage_callback_keys[baseWeaponName] ) )
+        {
+            callbackWeapon =
+                level.awd_previous_damage_callback_keys[baseWeaponName];
+        }
+        else
+        {
+            callbackWeapon = baseWeaponName;
+        }
     }
 
     if ( !isdefined( callback ) )
@@ -192,7 +208,7 @@ awd_apply_previous_damage_callback(
         attacker,
         damage,
         meansOfDeath,
-        weapon,
+        callbackWeapon,
         point,
         direction,
         hitLocation
