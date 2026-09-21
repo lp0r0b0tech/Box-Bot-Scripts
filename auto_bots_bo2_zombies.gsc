@@ -27,6 +27,9 @@
 #define ABZM_DEFAULT_DOOR_COST                1250
 #define ABZM_DEFAULT_EXO_COST                 2000
 #define ABZM_DEFAULT_PERK_LIMIT               6
+#define ABZM_REVIVE_STATUS_FAILED             0
+#define ABZM_REVIVE_STATUS_FALLBACK           -1
+#define ABZM_REVIVE_STATUS_SUCCESS            1
 #define ABZM_PERK_PRIORITY_QUICK_REVIVE       10
 #define ABZM_PERK_PRIORITY_HEALTH             9
 #define ABZM_PERK_PRIORITY_SPEED              8
@@ -733,7 +736,7 @@ attemptBotRevive()
     if ( downed.abzmDowned )
     {
         reviveResult = tryUseReviveInteraction( downed );
-        if ( reviveResult > 0 )
+        if ( reviveResult == ABZM_REVIVE_STATUS_SUCCESS )
         {
             downed.abzmReviver = undefined;
             self.abzmReviveTarget = undefined;
@@ -741,7 +744,7 @@ attemptBotRevive()
             return true;
         }
 
-        if ( reviveResult < 0 )
+        if ( reviveResult == ABZM_REVIVE_STATUS_FALLBACK )
         {
             if ( !isdefined( downed ) )
             {
@@ -752,7 +755,7 @@ attemptBotRevive()
             downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             signalReviveSuccess( downed, self );
         }
-        else if ( reviveResult == 0 )
+        else if ( reviveResult == ABZM_REVIVE_STATUS_FAILED )
         {
             downed.abzmReviver = undefined;
             self.abzmReviveTarget = undefined;
@@ -774,13 +777,13 @@ tryUseReviveInteraction( downed )
 {
     if ( !isdefined( downed ) || !downed.abzmDowned )
     {
-        return 0;
+        return ABZM_REVIVE_STATUS_FAILED;
     }
 
     reviveNode = getReviveInteractableForPlayer( downed );
     if ( !isdefined( reviveNode ) )
     {
-        return -1;
+        return ABZM_REVIVE_STATUS_FALLBACK;
     }
 
     self setlookatpos( reviveNode.origin );
@@ -791,7 +794,7 @@ tryUseReviveInteraction( downed )
     {
         if ( gettime() - moveStart >= 1000 )
         {
-            return 0;
+            return ABZM_REVIVE_STATUS_FAILED;
         }
 
         wait 0.05;
@@ -809,10 +812,10 @@ tryUseReviveInteraction( downed )
 
     if ( isdefined( downed ) && !downed.abzmDowned )
     {
-        return 1;
+        return ABZM_REVIVE_STATUS_SUCCESS;
     }
 
-    return 0;
+    return ABZM_REVIVE_STATUS_FAILED;
 }
 
 getReviveInteractableForPlayer( downed )
@@ -1017,17 +1020,22 @@ markGenericPurchase()
 markPerkPurchase( node )
 {
     perkKey = getPerkPurchaseKey( node );
+    addedNewPerk = false;
     if ( isdefined( perkKey ) && perkKey != "" && !nodeArrayContains( self.abzmPurchasedPerkNodes, perkKey ) )
     {
         self.abzmPurchasedPerkNodes[self.abzmPurchasedPerkNodes.size] = perkKey;
+        addedNewPerk = true;
     }
 
-    if ( !isdefined( self.abzmPerkPurchases ) )
+    if ( addedNewPerk && !isdefined( self.abzmPerkPurchases ) )
     {
         self.abzmPerkPurchases = 0;
     }
 
-    self.abzmPerkPurchases++;
+    if ( addedNewPerk )
+    {
+        self.abzmPerkPurchases++;
+    }
     self.abzmLastPerkPurchaseTime = gettime();
     markGenericPurchase();
 }
@@ -1039,14 +1047,9 @@ markSharedPurchase( node, kind )
         return;
     }
 
-    if ( isdefined( node ) && kind == "exo" )
+    if ( isdefined( node ) && ( kind == "exo" || kind == "door" ) )
     {
         node.abzmSharedCooldownUntil = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
-    }
-
-    if ( isdefined( node ) && kind == "door" )
-    {
-        node.abzmSharedPermanent = true;
     }
 
     if ( !shouldPersistSharedPurchaseNode( node, kind ) )
@@ -1106,11 +1109,6 @@ shouldPersistSharedPurchaseNode( node, kind )
     if ( !isdefined( node ) )
     {
         return false;
-    }
-
-    if ( kind == "door" && isdefined( node.abzmSharedPermanent ) && node.abzmSharedPermanent )
-    {
-        return true;
     }
 
     if ( isdefined( node.abzmSharedCooldownUntil ) && gettime() < node.abzmSharedCooldownUntil )
