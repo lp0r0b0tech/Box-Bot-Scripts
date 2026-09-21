@@ -14,6 +14,10 @@
 #define ABES_DEFAULT_BOTS_USE_SCORESTREAKS      1
 #define ABES_DEFAULT_BOTS_USE_EXO_ABILITIES     1
 #define ABES_DEFAULT_BOTS_FOLLOW_TEAM           1
+#define ABES_DEFAULT_FORCE_LOADOUT              1
+#define ABES_DEFAULT_FORCE_WEAPON_PROFICIENCY   4
+#define ABES_DEFAULT_FORCE_ARMOR_LEVEL          4
+#define ABES_DEFAULT_FORCE_EXO_BATTERY_LEVEL    4
 
 #define ABES_MAX_BOTS                            4
 #define ABES_INTERACT_RANGE                      96
@@ -28,6 +32,10 @@
 #define ABES_EXO_COOLDOWN_SEC                    15.0
 #define ABES_STUCK_DISTANCE                       18
 #define ABES_STUCK_TIME_SEC                        2.5
+
+#define ABES_FORCE_LOADOUT_PRIMARY               "ameli_mp"
+#define ABES_FORCE_LOADOUT_SECONDARY             "pytaek_mp"
+#define ABES_FORCE_LOADOUT_LETHAL                "contact_grenade_mp"
 
 main()
 {
@@ -123,6 +131,10 @@ initDvars()
     setdvarifuninitialized( "scr_es_autobots_scorestreaks", ABES_DEFAULT_BOTS_USE_SCORESTREAKS );
     setdvarifuninitialized( "scr_es_autobots_exo", ABES_DEFAULT_BOTS_USE_EXO_ABILITIES );
     setdvarifuninitialized( "scr_es_autobots_follow", ABES_DEFAULT_BOTS_FOLLOW_TEAM );
+    setdvarifuninitialized( "scr_es_autobots_force_loadout", ABES_DEFAULT_FORCE_LOADOUT );
+    setdvarifuninitialized( "scr_es_autobots_force_weapon_proficiency", ABES_DEFAULT_FORCE_WEAPON_PROFICIENCY );
+    setdvarifuninitialized( "scr_es_autobots_force_armor_level", ABES_DEFAULT_FORCE_ARMOR_LEVEL );
+    setdvarifuninitialized( "scr_es_autobots_force_exo_battery", ABES_DEFAULT_FORCE_EXO_BATTERY_LEVEL );
 
     setdvarifuninitialized( "scr_es_autobots_weapon_cost", 2000 );
     setdvarifuninitialized( "scr_es_autobots_mystery_cost", 950 );
@@ -147,6 +159,10 @@ refreshRuntimeConfig()
     level.abes.botsUseScorestreaks = getdvarint( "scr_es_autobots_scorestreaks" ) > 0;
     level.abes.botsUseExoAbilities = getdvarint( "scr_es_autobots_exo" ) > 0;
     level.abes.botsFollowTeam = getdvarint( "scr_es_autobots_follow" ) > 0;
+    level.abes.forceLoadoutEnabled = getdvarint( "scr_es_autobots_force_loadout" ) > 0;
+    level.abes.forceWeaponProficiency = abesClamp( getdvarint( "scr_es_autobots_force_weapon_proficiency" ), 0, 4 );
+    level.abes.forceArmorLevel = abesClamp( getdvarint( "scr_es_autobots_force_armor_level" ), 0, 4 );
+    level.abes.forceExoBatteryLevel = abesClamp( getdvarint( "scr_es_autobots_force_exo_battery" ), 0, 4 );
 
     level.abes.weaponCost = max( 0, getdvarint( "scr_es_autobots_weapon_cost" ) );
     level.abes.mysteryCost = max( 0, getdvarint( "scr_es_autobots_mystery_cost" ) );
@@ -155,6 +171,13 @@ refreshRuntimeConfig()
     level.abes.armorCost = max( 0, getdvarint( "scr_es_autobots_armor_cost" ) );
     level.abes.supportCost = max( 0, getdvarint( "scr_es_autobots_support_cost" ) );
     level.abes.equipmentCost = max( 0, getdvarint( "scr_es_autobots_equipment_cost" ) );
+
+    if ( level.abes.forceLoadoutEnabled )
+    {
+        level.abes.botsAutoBuy = false;
+        level.abes.botsAutoUpgrade = false;
+        level.abes.botsAutoRestock = false;
+    }
 
     level.abes.enabled = level.abes.autoBotsEnabled;
 }
@@ -267,6 +290,7 @@ onPlayerConnected()
         {
             self.abesIsBot = true;
             self.abesSkill = level.abes.botSkill;
+            grantForcedBotLoadout();
             if ( !isdefined( self.abesLifeLoopStarted ) || !self.abesLifeLoopStarted )
             {
                 self.abesLifeLoopStarted = true;
@@ -398,6 +422,8 @@ botBrainLoop()
             continue;
         }
 
+        maintainForcedBotLoadout();
+
         if ( shouldRetreat() )
         {
             moveToRetreatAnchor();
@@ -443,6 +469,123 @@ botBrainLoop()
         }
 
         wait ABES_THINK_INTERVAL;
+    }
+}
+
+grantForcedBotLoadout()
+{
+    if ( !isBotEntity( self ) || !isdefined( level.abes ) || !level.abes.forceLoadoutEnabled )
+    {
+        return false;
+    }
+
+    self takeallweapons();
+    self giveweapon( ABES_FORCE_LOADOUT_PRIMARY );
+    self giveweapon( ABES_FORCE_LOADOUT_SECONDARY );
+    self giveweapon( ABES_FORCE_LOADOUT_LETHAL );
+    self givemaxammo( ABES_FORCE_LOADOUT_PRIMARY );
+    self givemaxammo( ABES_FORCE_LOADOUT_SECONDARY );
+    self switchtoweapon( ABES_FORCE_LOADOUT_PRIMARY );
+    applyForcedBotEnhancements();
+    self.abesForcedLoadoutGrantedAt = gettime();
+    self.abesForcedLoadoutMaintainedAt = self.abesForcedLoadoutGrantedAt;
+    return true;
+}
+
+maintainForcedBotLoadout()
+{
+    if ( !isBotEntity( self ) || !isdefined( level.abes ) || !level.abes.forceLoadoutEnabled )
+    {
+        return false;
+    }
+
+    if ( !isdefined( self.abesForcedLoadoutGrantedAt ) )
+    {
+        return grantForcedBotLoadout();
+    }
+
+    if ( isdefined( self.abesForcedLoadoutMaintainedAt ) && (gettime() - self.abesForcedLoadoutMaintainedAt) < 5000 )
+    {
+        return false;
+    }
+
+    previousWeapon = self getcurrentweapon();
+    self giveweapon( ABES_FORCE_LOADOUT_PRIMARY );
+    self giveweapon( ABES_FORCE_LOADOUT_SECONDARY );
+    self giveweapon( ABES_FORCE_LOADOUT_LETHAL );
+    self givemaxammo( ABES_FORCE_LOADOUT_PRIMARY );
+    self givemaxammo( ABES_FORCE_LOADOUT_SECONDARY );
+
+    if ( isdefined( previousWeapon ) && (previousWeapon == ABES_FORCE_LOADOUT_PRIMARY || previousWeapon == ABES_FORCE_LOADOUT_SECONDARY) )
+    {
+        self switchtoweapon( previousWeapon );
+    }
+    else
+    {
+        self switchtoweapon( ABES_FORCE_LOADOUT_PRIMARY );
+    }
+
+    applyForcedBotEnhancements();
+    self.abesForcedLoadoutMaintainedAt = gettime();
+    return true;
+}
+
+applyForcedBotEnhancements()
+{
+    if ( !isBotEntity( self ) || !isdefined( level.abes ) || !level.abes.forceLoadoutEnabled )
+    {
+        return;
+    }
+
+    applyForcedBotUpgradeAlias( "weaponProficiency", level.abes.forceWeaponProficiency );
+    applyForcedBotUpgradeAlias( "weaponProficiencyLevel", level.abes.forceWeaponProficiency );
+    applyForcedBotUpgradeAlias( "weapon_proficiency", level.abes.forceWeaponProficiency );
+    applyForcedBotUpgradeAlias( "armorLevel", level.abes.forceArmorLevel );
+    applyForcedBotUpgradeAlias( "armourLevel", level.abes.forceArmorLevel );
+    applyForcedBotUpgradeAlias( "armor", level.abes.forceArmorLevel );
+    applyForcedBotUpgradeAlias( "armour", level.abes.forceArmorLevel );
+    applyForcedBotUpgradeAlias( "exoBattery", level.abes.forceExoBatteryLevel );
+    applyForcedBotUpgradeAlias( "exoBatteryLevel", level.abes.forceExoBatteryLevel );
+    applyForcedBotUpgradeAlias( "exobattery", level.abes.forceExoBatteryLevel );
+    applyForcedBotUpgradeAlias( "exo_battery", level.abes.forceExoBatteryLevel );
+
+    if ( !isdefined( self.pers ) )
+    {
+        self.pers = [];
+    }
+
+    self.pers["abes_force_weapon_proficiency"] = level.abes.forceWeaponProficiency;
+    self.pers["abes_force_armor_level"] = level.abes.forceArmorLevel;
+    self.pers["abes_force_exo_battery"] = level.abes.forceExoBatteryLevel;
+    self.pers["weaponProficiency"] = level.abes.forceWeaponProficiency;
+    self.pers["weapon_proficiency"] = level.abes.forceWeaponProficiency;
+    self.pers["armorLevel"] = level.abes.forceArmorLevel;
+    self.pers["armourLevel"] = level.abes.forceArmorLevel;
+    self.pers["exoBattery"] = level.abes.forceExoBatteryLevel;
+    self.pers["exo_battery"] = level.abes.forceExoBatteryLevel;
+
+    if ( isdefined( self.maxhealth ) && isdefined( self.health ) && self.health < self.maxhealth )
+    {
+        self.health = self.maxhealth;
+    }
+}
+
+applyForcedBotUpgradeAlias( key, value )
+{
+    if ( !isdefined( key ) || key == "" || !isdefined( value ) )
+    {
+        return;
+    }
+
+    existingValue = 0;
+    if ( isdefined( self[key] ) )
+    {
+        existingValue = int( self[key] );
+    }
+
+    if ( value > existingValue )
+    {
+        self[key] = value;
     }
 }
 
@@ -682,6 +825,11 @@ performUnstickMove()
 
 attemptAmmoRestock()
 {
+    if ( isdefined( level.abes.forceLoadoutEnabled ) && level.abes.forceLoadoutEnabled )
+    {
+        return false;
+    }
+
     if ( !currentWeaponNeedsAmmo() )
     {
         return false;
@@ -698,6 +846,11 @@ attemptAmmoRestock()
 
 attemptWeaponPurchase()
 {
+    if ( isdefined( level.abes.forceLoadoutEnabled ) && level.abes.forceLoadoutEnabled )
+    {
+        return false;
+    }
+
     roundNumber = getCurrentSurvivalRound();
     if ( roundNumber < 10 && !currentWeaponNeedsAmmo() )
     {
@@ -729,6 +882,12 @@ attemptWeaponPurchase()
 
 attemptUpgradePurchase()
 {
+    if ( isdefined( level.abes.forceLoadoutEnabled ) && level.abes.forceLoadoutEnabled )
+    {
+        applyForcedBotEnhancements();
+        return false;
+    }
+
     if ( hasEnoughScore( self, level.abes.upgradeCost ) )
     {
         exoNode = getClosestInteractable( "exo_upgrade" );
