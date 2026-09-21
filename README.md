@@ -1,8 +1,8 @@
 combat training custom difficulty and campaign to
 
-EMZ/EMP zombies Nerf  
+EMZ/EMP zombies Nerf
 
-all weapons upgrade similar to the cell 3 culterizer 
+all weapons upgrade similar to the cell 3 culterizer
 
 make a folder in s1 call it scripts now in the scripts folder create 3 new folders 1 says mp 1 says sv 1 says zm
 
