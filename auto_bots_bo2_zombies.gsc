@@ -352,12 +352,6 @@ initializeBotPurchaseState()
 
 }
 
-resetBotPerkPurchaseState()
-{
-    self.abzmPerkPurchases = 0;
-    self.abzmPurchasedPerkNodes = [];
-}
-
 monitorPlayerConnections()
 {
     level endon( "game_ended" );
@@ -1093,6 +1087,11 @@ shouldPersistSharedPurchaseNode( node, kind )
     if ( !isdefined( node ) )
     {
         return false;
+    }
+
+    if ( !isDesiredInteractable( node, kind ) )
+    {
+        return true;
     }
 
     if ( isdefined( node.abzmSharedCooldownUntil ) && gettime() < node.abzmSharedCooldownUntil )
