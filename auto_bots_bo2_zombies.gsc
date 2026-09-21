@@ -58,6 +58,7 @@
 #define ABZM_BO2_REVIVE_TIME                  5
 #define ABZM_BO2_REVIVE_RANGE                 96
 #define ABZM_INTERACT_RANGE                   96
+#define ABZM_REVIVE_INTERACT_TIMEOUT_MS       750
 #define ABZM_PURCHASE_COOLDOWN_SEC            1.5
 #define ABZM_PERK_PURCHASE_COOLDOWN_SEC       5.0
 #define ABZM_BO2_RUN_ROUND                    3
@@ -742,7 +743,7 @@ attemptBotRevive()
     if ( downed.abzmDowned )
     {
         reviveResult = tryUseReviveInteraction( downed );
-        if ( reviveResult < 0 )
+        if ( reviveResult <= 0 )
         {
             if ( !isdefined( downed ) )
             {
@@ -752,12 +753,6 @@ attemptBotRevive()
 
             downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             signalReviveSuccess( downed, self );
-        }
-        else if ( reviveResult == 0 )
-        {
-            downed.abzmReviver = undefined;
-            self.abzmReviveTarget = undefined;
-            return false;
         }
 
         downed.abzmReviver = undefined;
@@ -788,7 +783,7 @@ tryUseReviveInteraction( downed )
     reviveNode notify( "use", self );
 
     start = gettime();
-    maxWaitMs = int( (ABZM_BO2_REVIVE_TIME + 0.5) * 1000 );
+    maxWaitMs = ABZM_REVIVE_INTERACT_TIMEOUT_MS;
     while ( isdefined( downed ) && downed.abzmDowned && (gettime() - start) < maxWaitMs )
     {
         wait 0.05;
@@ -876,12 +871,13 @@ attemptPerkPurchase()
     }
 
     perkNode = getBestPerkInteractable();
-    if ( !attemptPurchase( perkNode, level.abzm.perkCost ) )
+    if ( alreadyBoughtSharedNode( perkNode ) || !attemptPurchase( perkNode, level.abzm.perkCost ) )
     {
         return false;
     }
 
     markPerkPurchase( perkNode );
+    markSharedPurchase( perkNode );
     return true;
 }
 
@@ -2074,7 +2070,7 @@ isDesiredInteractable( entity, kind )
             return entityMatchesToken( entity, "weapon" ) || entityMatchesToken( entity, "wallbuy" ) || entityMatchesToken( entity, "armory" );
 
         case "mystery":
-            return entityMatchesToken( entity, "mystery" ) || entityMatchesToken( entity, "box" ) || entityMatchesToken( entity, "printer" );
+            return entityMatchesToken( entity, "mystery" ) || entityMatchesToken( entity, "printer" );
 
         case "revive":
             return entityMatchesToken( entity, "revive" ) || entityMatchesToken( entity, "laststand" ) || entityMatchesToken( entity, "downed" );
