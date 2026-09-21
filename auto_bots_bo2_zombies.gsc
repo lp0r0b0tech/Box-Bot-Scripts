@@ -241,13 +241,18 @@ initDvars()
 
 runSelfTestsIfEnabled()
 {
-    if ( getdvarint( "scr_zm_autobots_run_self_tests" ) <= 0 )
+    if ( getdvarint( "scr_zm_autobots_run_self_tests" ) <= 0 || !isDevelopmentModeEnabled() )
     {
         return;
     }
 
     runReviveOutcomeSelfTests();
     runBotLifecycleSelfTests();
+}
+
+isDevelopmentModeEnabled()
+{
+    return getdvarint( "developer" ) > 0 || getdvarint( "developer_script" ) > 0;
 }
 
 runReviveOutcomeSelfTests()
@@ -259,7 +264,7 @@ runReviveOutcomeSelfTests()
 
     downed = spawnstruct();
     downed.abzmDowned = true;
-    reportSelfTestResult( "revive_interaction_still_downed", getReviveInteractionCompletionStatus( downed ) == ABZM_REVIVE_STATUS_FALLBACK );
+    reportSelfTestResult( "revive_interaction_still_downed", getReviveInteractionCompletionStatus( downed ) == ABZM_REVIVE_STATUS_FAILED );
 }
 
 reportSelfTestResult( testName, passed )
@@ -873,7 +878,7 @@ tryUseReviveInteraction( downed )
 
     if ( !moveToAndUse( reviveNode ) )
     {
-        return ABZM_REVIVE_STATUS_FALLBACK;
+        return ABZM_REVIVE_STATUS_FAILED;
     }
 
     start = gettime();
@@ -898,7 +903,7 @@ getReviveInteractionCompletionStatus( downed )
         return ABZM_REVIVE_STATUS_SUCCESS;
     }
 
-    return ABZM_REVIVE_STATUS_FALLBACK;
+    return ABZM_REVIVE_STATUS_FAILED;
 }
 
 getReviveInteractableForPlayer( downed )
@@ -1012,17 +1017,19 @@ attemptWeaponPurchase()
 
     if ( roundNumber >= 7 )
     {
+        prePurchaseStateKey = getWeaponPurchaseStateKey();
         mysteryNode = getClosestPurchaseItemInteractable( "mystery" );
         if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
         {
-            markWeaponPurchase();
+            markWeaponPurchase( prePurchaseStateKey );
             return true;
         }
     }
 
+    prePurchaseStateKey = getWeaponPurchaseStateKey();
     if ( isdefined( weaponNode ) && hasEnoughPoints( self, level.abzm.weaponCost ) && attemptPurchase( weaponNode, level.abzm.weaponCost ) )
     {
-        markWeaponPurchase();
+        markWeaponPurchase( prePurchaseStateKey );
         return true;
     }
 
@@ -1094,9 +1101,15 @@ markGenericPurchase()
     self.abzmLastPurchaseTime = gettime();
 }
 
-markWeaponPurchase()
+markWeaponPurchase( previousStateKey )
 {
-    self.abzmLastWeaponPurchaseStateKey = getWeaponPurchaseStateKey();
+    currentStateKey = getWeaponPurchaseStateKey();
+    self.abzmLastWeaponPurchaseStateKey = "";
+    if ( currentStateKey != previousStateKey )
+    {
+        self.abzmLastWeaponPurchaseStateKey = currentStateKey;
+    }
+
     markGenericPurchase();
 }
 
