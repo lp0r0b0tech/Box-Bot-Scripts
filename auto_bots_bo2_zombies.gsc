@@ -285,15 +285,17 @@ runBotLifecycleSelfTests()
 {
     bot = spawnstruct();
     bot initializeBotPurchaseState();
-    reportSelfTestResult( "bot_lifecycle_purchase_state_init", bot.abzmPerkPurchases == 0 && bot.abzmPurchasedPerkNodes.size == 0 && bot.abzmLastWeaponPurchaseStateKey == "" );
+    reportSelfTestResult( "bot_lifecycle_purchase_state_init", bot.abzmPerkPurchases == 0 && bot.abzmPurchasedPerkNodes.size == 0 && bot.abzmLastWeaponPurchaseStateKey == "" && bot.abzmLastPackAPunchWeaponKey == "" && bot.abzmLastPackAPunchUpgradeLevel == 0 );
 
     bot.abzmPerkPurchases = 3;
     bot.abzmPurchasedPerkNodes[0] = "health|test";
     bot.abzmLastPerkPurchaseTime = 1;
     bot.abzmLastPurchaseTime = 2;
     bot.abzmLastWeaponPurchaseStateKey = "starter|true|true";
+    bot.abzmLastPackAPunchWeaponKey = "test_weapon";
+    bot.abzmLastPackAPunchUpgradeLevel = 1;
     bot clearBotPurchaseState();
-    reportSelfTestResult( "bot_lifecycle_purchase_state_reset", bot.abzmPerkPurchases == 0 && bot.abzmPurchasedPerkNodes.size == 0 && !isdefined( bot.abzmLastPerkPurchaseTime ) && !isdefined( bot.abzmLastPurchaseTime ) && bot.abzmLastWeaponPurchaseStateKey == "" );
+    reportSelfTestResult( "bot_lifecycle_purchase_state_reset", bot.abzmPerkPurchases == 0 && bot.abzmPurchasedPerkNodes.size == 0 && !isdefined( bot.abzmLastPerkPurchaseTime ) && !isdefined( bot.abzmLastPurchaseTime ) && bot.abzmLastWeaponPurchaseStateKey == "" && bot.abzmLastPackAPunchWeaponKey == "" && bot.abzmLastPackAPunchUpgradeLevel == 0 );
 
     reportSelfTestResult( "bot_lifecycle_difficulty_mapping", resolveBotSkillDifficulty( "ultra" ) == "veteran" );
 }
@@ -1318,14 +1320,16 @@ markPackAPunchPurchase()
         return;
     }
 
-    if ( self.abzmLastPackAPunchWeaponKey == currentWeaponKey )
-    {
-        self.abzmLastPackAPunchUpgradeLevel = max( self.abzmLastPackAPunchUpgradeLevel + 1, getCurrentWeaponUpgradeLevel() );
-    }
-    else
+    observedUpgradeLevel = getCurrentWeaponUpgradeLevel();
+    if ( observedUpgradeLevel > 0 )
     {
         self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
-        self.abzmLastPackAPunchUpgradeLevel = max( 1, getCurrentWeaponUpgradeLevel() );
+        self.abzmLastPackAPunchUpgradeLevel = observedUpgradeLevel;
+    }
+    else if ( self.abzmLastPackAPunchWeaponKey != currentWeaponKey || self.abzmLastPackAPunchUpgradeLevel <= 0 )
+    {
+        self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
+        self.abzmLastPackAPunchUpgradeLevel = 1;
     }
 }
 
