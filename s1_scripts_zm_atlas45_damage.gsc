@@ -68,8 +68,11 @@ atlas45_register_damage_modifier()
     }
 
     level.exo_damage_curve_registered = 1;
+    level.exo_damage_curve_previous_callbacks = [];
+    level.exo_damage_curve_delegate_compatible = [];
 
     registeredCount = 0;
+    delegatedCount = 0;
     weaponNames = getarraykeys(level.modifyweapondamage);
 
     for(i = 0; i < weaponNames.size; i++)
@@ -80,13 +83,24 @@ atlas45_register_damage_modifier()
             continue;
         }
 
+        previousCallback = level.modifyweapondamage[weaponName];
+        if(isdefined(previousCallback) &&
+           previousCallback != ::atlas45_modify_damage &&
+           atlas45_callback_shape_is_compatible(previousCallback))
+        {
+            level.exo_damage_curve_previous_callbacks[weaponName] =
+                previousCallback;
+            level.exo_damage_curve_delegate_compatible[weaponName] = true;
+            delegatedCount++;
+        }
+
         level.modifyweapondamage[weaponName] =
             ::atlas45_modify_damage;
 
         registeredCount++;
     }
 
-    println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons.");
+    println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated compatible callbacks: " + delegatedCount + ".");
 }
 
 atlas45_should_register_weapon(weaponName)
@@ -131,6 +145,12 @@ atlas45_modify_damage(
     }
 
     weaponName = atlas45_resolve_registered_weapon_name(weapon);
+    if(!isdefined(level.modifyweapondamage) ||
+       !isdefined(level.modifyweapondamage[weaponName]))
+    {
+        return damage;
+    }
+
     weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
         attacker,
         weaponName
@@ -141,7 +161,17 @@ atlas45_modify_damage(
         /*
             Keep Mk1 completely vanilla.
         */
-        return damage;
+        return atlas45_apply_compatible_previous_callback(
+            victim,
+            attacker,
+            damage,
+            meansOfDeath,
+            weapon,
+            weaponName,
+            point,
+            direction,
+            hitLocation
+        );
     }
 
     if(weaponLevel > 25)
@@ -158,6 +188,68 @@ atlas45_modify_damage(
         hit-location behavior.
     */
     return atlas45_get_base_damage(weaponLevel);
+}
+
+atlas45_callback_shape_is_compatible(callbackValue)
+{
+    if(!isdefined(callbackValue))
+    {
+        return false;
+    }
+
+    callbackText = tolower(callbackValue + "");
+    if(strlen(callbackText) <= 0)
+    {
+        return false;
+    }
+
+    if(issubstr(callbackText, "function") ||
+       issubstr(callbackText, "::") ||
+       issubstr(callbackText, "\\"))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+atlas45_apply_compatible_previous_callback(
+    victim,
+    attacker,
+    damage,
+    meansOfDeath,
+    weapon,
+    weaponName,
+    point,
+    direction,
+    hitLocation
+)
+{
+    if(!isdefined(level.exo_damage_curve_delegate_compatible) ||
+       !isdefined(level.exo_damage_curve_delegate_compatible[weaponName]) ||
+       !level.exo_damage_curve_delegate_compatible[weaponName] ||
+       !isdefined(level.exo_damage_curve_previous_callbacks) ||
+       !isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
+    {
+        return damage;
+    }
+
+    previousCallback = level.exo_damage_curve_previous_callbacks[weaponName];
+    if(!isdefined(previousCallback))
+    {
+        return damage;
+    }
+
+    return [[previousCallback]](
+        victim,
+        attacker,
+        damage,
+        meansOfDeath,
+        weapon,
+        point,
+        direction,
+        hitLocation
+    );
 }
 
 atlas45_resolve_registered_weapon_name(weapon)
