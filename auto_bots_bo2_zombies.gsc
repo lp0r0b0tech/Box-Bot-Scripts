@@ -743,6 +743,7 @@ attemptBotRevive()
         {
             downed.abzmReviver = undefined;
             self.abzmReviveTarget = undefined;
+            awardPlayerPoints( self, ABZM_BO2_REVIVE_POINTS );
             return true;
         }
 
@@ -1030,7 +1031,7 @@ markSharedPurchase( node, kind )
         return;
     }
 
-    if ( isdefined( node ) && kind == "exo" )
+    if ( isdefined( node ) && ( kind == "exo" || kind == "door" ) )
     {
         node.abzmSharedCooldownUntil = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
     }
@@ -1089,11 +1090,6 @@ alreadyBoughtSharedNode( node, kind )
 
 shouldPersistSharedPurchaseNode( node, kind )
 {
-    if ( kind == "door" )
-    {
-        return true;
-    }
-
     if ( !isdefined( node ) )
     {
         return false;
