@@ -753,7 +753,8 @@ attemptBotRevive()
             signalReviveSuccess( downed, self );
 
             fallbackStart = gettime();
-            while ( isdefined( downed ) && downed.abzmDowned && (gettime() - fallbackStart) < 500 )
+            fallbackMaxWaitMs = int( (ABZM_BO2_REVIVE_TIME + 0.5) * 1000 );
+            while ( isdefined( downed ) && downed.abzmDowned && (gettime() - fallbackStart) < fallbackMaxWaitMs )
             {
                 wait 0.05;
             }
@@ -1778,10 +1779,14 @@ getInteractableCandidates()
     appendUniqueEntArray( rawPurchaseNodes, getentarray( "weapon", "classname" ) );
     appendUniqueEntArray( rawPurchaseNodes, getentarray( "item", "classname" ) );
 
+    purchaseSourceNodes = [];
+    appendUniqueEntArray( purchaseSourceNodes, nodes );
+    appendUniqueEntArray( purchaseSourceNodes, rawPurchaseNodes );
+
     purchaseNodes = [];
-    for ( i = 0; i < rawPurchaseNodes.size; i++ )
+    for ( i = 0; i < purchaseSourceNodes.size; i++ )
     {
-        node = rawPurchaseNodes[i];
+        node = purchaseSourceNodes[i];
         if ( isDesiredInteractable( node, "weapon" ) || isDesiredInteractable( node, "mystery" ) )
         {
             purchaseNodes[purchaseNodes.size] = node;
