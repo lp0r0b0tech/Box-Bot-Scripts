@@ -75,7 +75,7 @@ initEasyRoundScalingDvars()
 buildEasyRoundScalingState()
 {
     state = spawnstruct();
-    state.round = 1;
+    state.round = readLiveEasyRoundScalingRound();
     state.trackedZombies = [];
     return state;
 }
@@ -231,9 +231,14 @@ getCurrentEasyRoundScalingRound()
 {
     if ( isdefined( level.ezrs ) && isdefined( level.ezrs.round ) )
     {
-        return max( 1, int( level.ezrs.round ) );
+        return max( int( level.ezrs.round ), readLiveEasyRoundScalingRound() );
     }
 
+    return readLiveEasyRoundScalingRound();
+}
+
+readLiveEasyRoundScalingRound()
+{
     if ( isdefined( level.round_number ) )
     {
         return max( 1, int( level.round_number ) );
