@@ -1034,7 +1034,7 @@ maintainForcedBotPackAPunchTracking()
 applyCurrentWeaponPackAPunchLevel( upgradeLevel )
 {
     weapon = self getcurrentweapon();
-    if ( !isdefined( weapon ) || !isdefined( upgradeLevel ) || upgradeLevel <= 0 )
+    if ( !isdefined( weapon ) || !isdefined( upgradeLevel ) )
     {
         return;
     }
@@ -1056,10 +1056,20 @@ applyCurrentWeaponPackAPunchLevel( upgradeLevel )
     }
 
     state = self.weaponstate[weapon];
-    state["pap_level"] = upgradeLevel;
-    state["upgrade_level"] = upgradeLevel;
-    state["weapon_level_increase"] = upgradeLevel;
-    state["is_upgraded"] = true;
+    if ( upgradeLevel <= 0 )
+    {
+        state["pap_level"] = 0;
+        state["upgrade_level"] = 0;
+        state["weapon_level_increase"] = 0;
+        state["is_upgraded"] = false;
+    }
+    else
+    {
+        state["pap_level"] = upgradeLevel;
+        state["upgrade_level"] = upgradeLevel;
+        state["weapon_level_increase"] = upgradeLevel;
+        state["is_upgraded"] = true;
+    }
     self.weaponstate[weapon] = state;
 }
 
@@ -1668,7 +1678,7 @@ attemptWeaponPurchase()
                 {
                     if ( waitForMysteryBoxConfirmation( previousMysteryWeaponKey, previousMysteryUpgradeLevel, 1000 ) )
                     {
-                        markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
+                        clearSharedPurchaseReservation( mysteryNode, "mystery" );
                         self.abzmLastWeaponPurchaseStateKey = "";
                         confirmedWeaponPurchase = true;
                         markGenericPurchase();
@@ -1765,7 +1775,7 @@ attemptUtilityPurchase()
                     }
                 }
 
-                markSharedPurchase( papNode, "packapunch", true );
+                clearSharedPurchaseReservation( papNode, "packapunch" );
                 return false;
             }
 
@@ -2256,7 +2266,7 @@ markSharedPurchase( node, kind, usedFallback )
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
     sharedEntry.isReservation = false;
-    sharedEntry.isPersistent = false;
+    sharedEntry.isPersistent = (kind == "door" || kind == "exo") && ( !isdefined( usedFallback ) || !usedFallback );
     sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS;
     if ( sharedEntry.isPersistent )
     {
