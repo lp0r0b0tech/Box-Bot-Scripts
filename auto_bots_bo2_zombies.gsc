@@ -1124,7 +1124,13 @@ alreadyBoughtSharedNode( node, kind )
         return false;
     }
 
-    if ( !isdefined( sharedEntry.expiresAt ) || sharedEntry.expiresAt < 0 || gettime() < sharedEntry.expiresAt )
+    if ( !isdefined( sharedEntry.expiresAt ) )
+    {
+        compactSharedPurchaseArray( sharedIndex );
+        return false;
+    }
+
+    if ( sharedEntry.expiresAt < 0 || gettime() < sharedEntry.expiresAt )
     {
         return true;
     }
@@ -1246,6 +1252,11 @@ getBestPerkInteractable()
     {
         node = nodes[i];
         if ( !isDesiredInteractable( node, "perk" ) || alreadyBoughtPerkNode( node ) )
+        {
+            continue;
+        }
+
+        if ( distance( self.origin, node.origin ) > ABZM_INTERACT_RANGE )
         {
             continue;
         }
