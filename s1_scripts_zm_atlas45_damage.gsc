@@ -133,16 +133,8 @@ atlas45_modify_damage(
     weaponName = atlas45_resolve_registered_weapon_name(weapon);
     weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
         attacker,
-        weapon + ""
+        weaponName
     );
-
-    if(!isdefined(weaponLevel))
-    {
-        weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
-            attacker,
-            weaponName
-        );
-    }
 
     if(!isdefined(weaponLevel) || weaponLevel < 2)
     {
