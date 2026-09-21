@@ -802,7 +802,7 @@ tryUseReviveInteraction( downed )
 {
     if ( !isdefined( downed ) || !downed.abzmDowned )
     {
-        return ABZM_REVIVE_STATUS_FAILED;
+        return ABZM_REVIVE_STATUS_FALLBACK;
     }
 
     reviveNode = getReviveInteractableForPlayer( downed );
@@ -2079,7 +2079,6 @@ getPurchaseItemCandidates()
     level.abzm.purchaseItemCandidates = purchaseNodes;
     level.abzm.purchaseItemCacheTime = gettime();
     level.abzm.purchaseItemSourceCacheTime = level.abzm.interactableCacheTime;
-    return level.abzm.purchaseItemCandidates;
     return level.abzm.purchaseItemCandidates;
 }
 isGenericWeaponPurchaseMarker( entity )
