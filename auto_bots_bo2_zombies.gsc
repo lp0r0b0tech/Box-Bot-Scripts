@@ -550,6 +550,11 @@ abzmBoot()
 
 refreshRuntimeConfig()
 {
+    if ( !isdefined( level.abzm.round ) || level.abzm.round < 1 )
+    {
+        level.abzm.round = 1;
+    }
+
     level.abzm.autoBotsEnabled = getdvarint( "scr_zm_autobots_enable" ) > 0;
     level.abzm.botCount = abzmClamp( getdvarint( "scr_zm_autobots_count" ), 0, 4 );
     level.abzm.botSkill = abzmClamp( getdvarfloat( "scr_zm_autobots_skill" ), 0.25, 3.0 );
@@ -1592,8 +1597,13 @@ alreadyPackAPunchedCurrentWeapon()
         liveWeaponKey = getCurrentWeaponIdentityKey();
         if ( liveWeaponKey == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey )
         {
-            updateTrackedPackAPunchWeaponLevel( entryIndex, currentUpgradeLevel );
-            return true;
+            if ( currentUpgradeLevel >= confirmedUpgradeLevel )
+            {
+                updateTrackedPackAPunchWeaponLevel( entryIndex, currentUpgradeLevel );
+                return true;
+            }
+
+            return false;
         }
 
         return false;
@@ -2832,7 +2842,7 @@ getCurrentWeaponUpgradeLevel()
 
     if ( isdefined( state["is_upgraded"] ) && state["is_upgraded"] )
     {
-        return 1;
+        return 0;
     }
 
     return 0;
