@@ -187,6 +187,7 @@ buildModState()
     state.interactableCacheTime = 0;
     state.purchaseItemCandidates = [];
     state.purchaseItemCacheTime = -999999;
+    state.purchaseItemSourceCacheTime = -999999;
     state.sharedPurchasedNodes = [];
     state.weakWeaponTokens = [];
     state.weakWeaponTokens[0] = ABZM_WEAK_WEAPON_TOKEN_ATLAS45;
@@ -2047,6 +2048,7 @@ getInteractableCandidates()
     level.abzm.interactableCandidates = nodes;
     level.abzm.interactableCacheTime = gettime();
     level.abzm.purchaseItemCacheTime = -999999;
+    level.abzm.purchaseItemSourceCacheTime = -999999;
     return level.abzm.interactableCandidates;
 }
 
@@ -2058,7 +2060,7 @@ getWeaponPurchaseCandidates()
         return nodes;
     }
 
-    if ( (gettime() - level.abzm.purchaseItemCacheTime) < 2000 )
+    if ( (gettime() - level.abzm.purchaseItemCacheTime) < 2000 && level.abzm.purchaseItemSourceCacheTime == level.abzm.interactableCacheTime )
     {
         return level.abzm.purchaseItemCandidates;
     }
@@ -2076,6 +2078,7 @@ getWeaponPurchaseCandidates()
 
     level.abzm.purchaseItemCandidates = purchaseNodes;
     level.abzm.purchaseItemCacheTime = gettime();
+    level.abzm.purchaseItemSourceCacheTime = level.abzm.interactableCacheTime;
     return level.abzm.purchaseItemCandidates;
 }
 
