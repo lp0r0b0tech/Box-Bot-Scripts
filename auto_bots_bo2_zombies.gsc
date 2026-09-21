@@ -305,6 +305,12 @@ applyBotCombatProfile()
         return;
     }
 
+    previousMaxHealth = level.abzm.botMaxHealth;
+    if ( isdefined( self.maxhealth ) )
+    {
+        previousMaxHealth = self.maxhealth;
+    }
+
     desiredDifficulty = resolveBotSkillDifficulty( level.abzm.botDifficulty );
     currentDifficulty = self botgetdifficulty();
 
@@ -320,7 +326,11 @@ applyBotCombatProfile()
     self.maxHealth = level.abzm.botMaxHealth;
     self.botAggression = level.abzm.botAggression;
 
-    if ( isdefined( self.health ) && self.health > self.maxhealth )
+    if ( !isdefined( self.health ) || level.abzm.botMaxHealth > previousMaxHealth )
+    {
+        self.health = self.maxhealth;
+    }
+    else if ( self.health > self.maxhealth )
     {
         self.health = self.maxhealth;
     }
@@ -731,7 +741,7 @@ attemptBotRevive()
     if ( downed.abzmDowned )
     {
         reviveResult = tryUseReviveInteraction( downed );
-        if ( reviveResult <= 0 )
+        if ( reviveResult < 0 )
         {
             if ( !isdefined( downed ) )
             {
@@ -742,6 +752,12 @@ attemptBotRevive()
             downed.abzmDowned = false;
             downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             signalReviveSuccess( downed, self );
+        }
+        else if ( reviveResult == 0 )
+        {
+            downed.abzmReviver = undefined;
+            self.abzmReviveTarget = undefined;
+            return false;
         }
 
         downed.abzmReviver = undefined;
@@ -770,6 +786,7 @@ tryUseReviveInteraction( downed )
 
     reviveNode notify( "trigger", self );
     reviveNode notify( "use", self );
+    self notify( "+activate" );
 
     start = gettime();
     maxWaitMs = int( (ABZM_BO2_REVIVE_TIME + 0.5) * 1000 );
@@ -777,6 +794,7 @@ tryUseReviveInteraction( downed )
     {
         wait 0.05;
     }
+    self notify( "-activate" );
 
     if ( isdefined( downed ) && !downed.abzmDowned )
     {
@@ -1741,8 +1759,8 @@ getInteractableCandidates()
     appendEntArray( nodes, getentarray( "script_brushmodel", "classname" ) );
 
     rawPurchaseNodes = [];
-    appendEntArray( rawPurchaseNodes, getentarray( "weapon", "classname" ) );
-    appendEntArray( rawPurchaseNodes, getentarray( "item", "classname" ) );
+    appendUniqueEntArray( rawPurchaseNodes, getentarray( "weapon", "classname" ) );
+    appendUniqueEntArray( rawPurchaseNodes, getentarray( "item", "classname" ) );
 
     purchaseNodes = [];
     for ( i = 0; i < rawPurchaseNodes.size; i++ )
