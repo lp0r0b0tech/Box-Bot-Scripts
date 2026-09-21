@@ -109,7 +109,7 @@ atlas45_register_damage_modifier()
         registeredCount++;
     }
 
-    println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated compatible callbacks: " + delegatedCount + ", skipped incompatible callbacks: " + skippedCount + ".");
+    println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".");
 }
 
 atlas45_should_register_weapon(weaponName)
