@@ -68,7 +68,6 @@ atlas45_register_damage_modifier()
     }
 
     level.exo_damage_curve_registered = 1;
-    level.exo_damage_curve_previous_callbacks = [];
 
     registeredCount = 0;
     weaponNames = getarraykeys(level.modifyweapondamage);
@@ -79,14 +78,6 @@ atlas45_register_damage_modifier()
         if(!atlas45_should_register_weapon(weaponName))
         {
             continue;
-        }
-
-        previousCallback = level.modifyweapondamage[weaponName];
-        if(isdefined(previousCallback) &&
-           previousCallback != ::atlas45_modify_damage)
-        {
-            level.exo_damage_curve_previous_callbacks[weaponName] =
-                previousCallback;
         }
 
         level.modifyweapondamage[weaponName] =
@@ -158,17 +149,7 @@ atlas45_modify_damage(
         /*
             Keep Mk1 completely vanilla.
         */
-        return atlas45_apply_previous_damage_callback(
-            victim,
-            attacker,
-            damage,
-            meansOfDeath,
-            weapon,
-            weaponName,
-            point,
-            direction,
-            hitLocation
-        );
+        return damage;
     }
 
     if(weaponLevel > 25)
@@ -177,47 +158,14 @@ atlas45_modify_damage(
     }
 
     /*
+        Returning a fixed Mk2-Mk25 base damage here avoids stacking
+        stock weapon-level bonus damage on top of this custom curve.
+
         Do not process hitLocation here. This intentionally avoids custom
         head/neck/helmet multipliers so the game can retain its normal
         hit-location behavior.
     */
     return atlas45_get_base_damage(weaponLevel);
-}
-
-atlas45_apply_previous_damage_callback(
-    victim,
-    attacker,
-    damage,
-    meansOfDeath,
-    weapon,
-    weaponName,
-    point,
-    direction,
-    hitLocation
-)
-{
-    if(!isdefined(level.exo_damage_curve_previous_callbacks) ||
-       !isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
-    {
-        return damage;
-    }
-
-    previousCallback = level.exo_damage_curve_previous_callbacks[weaponName];
-    if(!isdefined(previousCallback))
-    {
-        return damage;
-    }
-
-    return [[previousCallback]](
-        victim,
-        attacker,
-        damage,
-        meansOfDeath,
-        weapon,
-        point,
-        direction,
-        hitLocation
-    );
 }
 
 atlas45_resolve_registered_weapon_name(weapon)
@@ -228,28 +176,15 @@ atlas45_resolve_registered_weapon_name(weapon)
     }
 
     weaponName = weapon + "";
-    if(!isdefined(level.exo_damage_curve_previous_callbacks))
-    {
-        if(isdefined(level.modifyweapondamage) &&
-           isdefined(level.modifyweapondamage[tolower(weaponName)]))
-        {
-            return tolower(weaponName);
-        }
-
-        return weaponName;
-    }
-
-    if(isdefined(level.exo_damage_curve_previous_callbacks[weaponName]) ||
-       (isdefined(level.modifyweapondamage) &&
-        isdefined(level.modifyweapondamage[weaponName])))
+    if(isdefined(level.modifyweapondamage) &&
+       isdefined(level.modifyweapondamage[weaponName]))
     {
         return weaponName;
     }
 
     lowercaseWeaponName = tolower(weaponName);
-    if(isdefined(level.exo_damage_curve_previous_callbacks[lowercaseWeaponName]) ||
-       (isdefined(level.modifyweapondamage) &&
-        isdefined(level.modifyweapondamage[lowercaseWeaponName])))
+    if(isdefined(level.modifyweapondamage) &&
+       isdefined(level.modifyweapondamage[lowercaseWeaponName]))
     {
         return lowercaseWeaponName;
     }
