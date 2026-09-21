@@ -182,6 +182,14 @@ atlas45_modify_damage(
         hitLocation
     );
 
+    if(canSuppressStockLevelDamage)
+    {
+        atlas45_end_temporary_weaponlevel_override(
+            attacker,
+            restoreNonce
+        );
+    }
+
     if(!isdefined(weaponLevel) || weaponLevel < 2)
     {
         /*
@@ -205,14 +213,6 @@ atlas45_modify_damage(
             atlas45_get_base_damage(weaponLevel),
             damage,
             damageAfterStockCallback
-        );
-    }
-
-    if(canSuppressStockLevelDamage)
-    {
-        atlas45_end_temporary_weaponlevel_override(
-            attacker,
-            restoreNonce
         );
     }
 
@@ -260,18 +260,19 @@ atlas45_end_temporary_weaponlevel_override(attacker, nonce)
     restoreEntry = attacker.exo_damage_curve_restore_entries[nonce];
     if(!isdefined(restoreEntry.pending) || !restoreEntry.pending)
     {
+        atlas45_clear_restore_entry(attacker, nonce);
         return;
     }
 
     atlas45_restore_weapon_level_increase_from_entry(attacker, restoreEntry);
-    restoreEntry.pending = false;
+    atlas45_clear_restore_entry(attacker, nonce);
 }
 
 atlas45_fail_safe_restore_weapon_level_increase(nonce)
 {
     self endon("disconnect");
 
-    wait 0.05;
+    wait 0;
 
     if(!isdefined(self.exo_damage_curve_restore_entries) ||
        !isdefined(self.exo_damage_curve_restore_entries[nonce]))
@@ -282,11 +283,12 @@ atlas45_fail_safe_restore_weapon_level_increase(nonce)
     restoreEntry = self.exo_damage_curve_restore_entries[nonce];
     if(!isdefined(restoreEntry.pending) || !restoreEntry.pending)
     {
+        atlas45_clear_restore_entry(self, nonce);
         return;
     }
 
     atlas45_restore_weapon_level_increase_from_entry(self, restoreEntry);
-    restoreEntry.pending = false;
+    atlas45_clear_restore_entry(self, nonce);
 }
 
 atlas45_restore_weapon_level_increase_from_entry(attacker, restoreEntry)
@@ -304,6 +306,18 @@ atlas45_restore_weapon_level_increase_from_entry(attacker, restoreEntry)
         attacker.weaponstate[weaponName]["weapon_level_increase"] =
             restoreEntry.originalWeaponLevelIncrease;
     }
+}
+
+atlas45_clear_restore_entry(attacker, nonce)
+{
+    if(!isdefined(attacker) ||
+       !isdefined(attacker.exo_damage_curve_restore_entries) ||
+       !isdefined(attacker.exo_damage_curve_restore_entries[nonce]))
+    {
+        return;
+    }
+
+    attacker.exo_damage_curve_restore_entries[nonce] = undefined;
 }
 
 atlas45_apply_previous_damage_callback(
