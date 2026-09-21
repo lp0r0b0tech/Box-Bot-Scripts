@@ -375,6 +375,22 @@ runSharedPurchaseSelfTests()
     packAPunchPurchaseSurvivesReservationCleanup = alreadyBoughtSharedNode( node, "packapunch" );
     level.abzm.sharedPurchasedNodes = previousSharedNodes;
     reportSelfTestResult( "shared_purchase_packapunch_cleanup_preserves_confirmed_entry", packAPunchPurchaseSurvivesReservationCleanup );
+
+    previousSharedNodes = level.abzm.sharedPurchasedNodes;
+    level.abzm.sharedPurchasedNodes = [];
+    reserveSharedPurchase( node, "mystery" );
+    clearSharedPurchaseReservation( node, "mystery" );
+    fallbackMysteryStaysUnconfirmed = !alreadyBoughtSharedNode( node, "mystery" );
+    level.abzm.sharedPurchasedNodes = previousSharedNodes;
+    reportSelfTestResult( "shared_purchase_mystery_fallback_stays_unconfirmed", fallbackMysteryStaysUnconfirmed );
+
+    previousSharedNodes = level.abzm.sharedPurchasedNodes;
+    level.abzm.sharedPurchasedNodes = [];
+    reserveSharedPurchase( node, "packapunch" );
+    clearSharedPurchaseReservation( node, "packapunch" );
+    fallbackPackAPunchStaysUnconfirmed = !alreadyBoughtSharedNode( node, "packapunch" );
+    level.abzm.sharedPurchasedNodes = previousSharedNodes;
+    reportSelfTestResult( "shared_purchase_packapunch_fallback_stays_unconfirmed", fallbackPackAPunchStaysUnconfirmed );
 }
 
 runPerkPurchaseSelfTests()
@@ -1472,7 +1488,7 @@ markPackAPunchPurchase( weaponKey, previousUpgradeLevel )
     }
     else if ( entryIndex >= 0 && isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel ) && self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel > 0 )
     {
-        trackedUpgradeLevel = min( self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel + 1, ABZM_MAX_PACKAPUNCH_LEVEL );
+        trackedUpgradeLevel = self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel;
     }
     else
     {
@@ -1524,7 +1540,7 @@ alreadyPackAPunchedCurrentWeapon()
     confirmationActive = isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt ) && (gettime() - self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt) <= ABZM_PACKAPUNCH_CONFIRMATION_FALLBACK_MS;
     confirmationKeyMatches = isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey ) && self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey == getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
     currentUpgradeLevel = getCurrentWeaponUpgradeLevel();
-    if ( currentUpgradeLevel > 0 && confirmationActive && confirmationKeyMatches )
+    if ( currentUpgradeLevel > 0 )
     {
         liveWeaponKey = getCurrentWeaponIdentityKey();
         return liveWeaponKey == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey && currentUpgradeLevel >= trackedUpgradeLevel;
