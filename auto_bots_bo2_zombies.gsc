@@ -482,6 +482,7 @@ runPurchaseConfirmationSelfTests()
     reportSelfTestResult( "pap_confirmation_requires_same_weapon_upgrade", !isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_b", 1 ) && isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_a", 1 ) );
     reportSelfTestResult( "pap_wait_confirmation_rejects_weapon_swap", !doesPackAPunchConfirmationSequenceSucceed( "weapon_a", 0, [ "weapon_b", "weapon_b" ], [ 1, 1 ] ) );
     reportSelfTestResult( "pap_tracking_requires_live_upgrade_increase", resolveTrackedPackAPunchLevel( 1, 1, 0 ) == 1 );
+    reportSelfTestResult( "pap_tracking_accepts_high_observed_level", min( resolveTrackedPackAPunchLevel( 1, 1, 25 ), ABZM_MAX_PACKAPUNCH_LEVEL ) == 25 );
     reportSelfTestResult( "pap_level_cap_supports_requested_ceiling", min( 30, ABZM_MAX_PACKAPUNCH_LEVEL ) == 25 );
 }
 
@@ -1557,7 +1558,13 @@ alreadyPackAPunchedCurrentWeapon()
     if ( currentUpgradeLevel > 0 )
     {
         liveWeaponKey = getCurrentWeaponIdentityKey();
-        return liveWeaponKey == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey && currentUpgradeLevel >= trackedUpgradeLevel;
+        if ( liveWeaponKey == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey )
+        {
+            updateTrackedPackAPunchWeaponLevel( entryIndex, currentWeaponKey, currentUpgradeLevel );
+            return currentUpgradeLevel >= trackedUpgradeLevel;
+        }
+
+        return false;
     }
 
     if ( !confirmationKeyMatches )
@@ -1571,6 +1578,18 @@ alreadyPackAPunchedCurrentWeapon()
     }
 
     return getCurrentWeaponIdentityKey() == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey;
+}
+
+updateTrackedPackAPunchWeaponLevel( entryIndex, weaponKey, observedUpgradeLevel )
+{
+    if ( entryIndex < 0 || !isdefined( self.abzmPackAPunchWeaponEntries[entryIndex] ) || !isdefined( observedUpgradeLevel ) || observedUpgradeLevel <= 0 )
+    {
+        return;
+    }
+
+    self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel = min( observedUpgradeLevel, ABZM_MAX_PACKAPUNCH_LEVEL );
+    self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey = getPackAPunchConfirmationKey( weaponKey, self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel );
+    self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt = gettime();
 }
 
 isMysteryBoxRewardConfirmedForState( previousWeaponKey, previousUpgradeLevel, currentWeaponKey, currentUpgradeLevel )
