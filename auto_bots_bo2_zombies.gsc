@@ -277,7 +277,7 @@ initDvars()
     setdvarifuninitialized( "scr_zm_autobots_force_loadout", ABZM_DEFAULT_FORCE_LOADOUT );
     setdvarifuninitialized( "scr_zm_autobots_force_loadout_pap_level", ABZM_DEFAULT_FORCE_LOADOUT_PAP_LEVEL );
     // Teammate-only combat profile overrides. Difficulty accepts engine strings such as recruit/regular/hardened/veteran/ultra.
-    // Accuracy and aggression are scalar multipliers, reaction_time is the bot think delay in seconds, and max_health is applied per spawn.
+    // Accuracy and aggression are scalar multipliers, reaction_time is the bot think delay in seconds, and max_health is applied on spawn plus any later profile refresh.
     setdvarifuninitialized( "scr_zm_autobots_difficulty", "ultra" );
     setdvarifuninitialized( "scr_zm_autobots_accuracy", ABZM_DEFAULT_BOT_ACCURACY );
     setdvarifuninitialized( "scr_zm_autobots_reaction_time", ABZM_DEFAULT_BOT_REACTION_TIME );
@@ -753,6 +753,43 @@ applyBotCombatProfile()
     {
         self.health = self.maxhealth;
     }
+
+    self.abzmAppliedBotDifficulty = desiredDifficulty;
+    self.abzmAppliedBotAccuracy = level.abzm.botAccuracy;
+    self.abzmAppliedBotReactionTime = level.abzm.botReactionTime;
+    self.abzmAppliedBotMaxHealth = level.abzm.botMaxHealth;
+    self.abzmAppliedBotAggression = level.abzm.botAggression;
+}
+
+botCombatProfileNeedsRefresh()
+{
+    if ( !isBotEntity( self ) || !isdefined( level.abzm ) )
+    {
+        return false;
+    }
+
+    desiredDifficulty = resolveBotSkillDifficulty( level.abzm.botDifficulty );
+    if ( !isdefined( self.abzmAppliedBotDifficulty ) || self.abzmAppliedBotDifficulty != desiredDifficulty )
+    {
+        return true;
+    }
+
+    if ( !isdefined( self.abzmAppliedBotAccuracy ) || self.abzmAppliedBotAccuracy != level.abzm.botAccuracy )
+    {
+        return true;
+    }
+
+    if ( !isdefined( self.abzmAppliedBotReactionTime ) || self.abzmAppliedBotReactionTime != level.abzm.botReactionTime )
+    {
+        return true;
+    }
+
+    if ( !isdefined( self.abzmAppliedBotMaxHealth ) || self.abzmAppliedBotMaxHealth != level.abzm.botMaxHealth )
+    {
+        return true;
+    }
+
+    return !isdefined( self.abzmAppliedBotAggression ) || self.abzmAppliedBotAggression != level.abzm.botAggression;
 }
 
 initializeBotPurchaseState()
@@ -937,6 +974,12 @@ applyCurrentWeaponPackAPunchLevel( upgradeLevel )
 {
     weapon = self getcurrentweapon();
     if ( !isdefined( weapon ) || !isdefined( upgradeLevel ) || upgradeLevel <= 0 )
+    {
+        return;
+    }
+
+    weaponKey = toLower( weapon + "" );
+    if ( weaponKey != toLower( ABZM_FORCE_LOADOUT_PRIMARY ) && weaponKey != toLower( ABZM_FORCE_LOADOUT_SECONDARY ) )
     {
         return;
     }
@@ -1242,7 +1285,10 @@ botBrainLoop()
     for ( ;; )
     {
         refreshRuntimeConfig();
-        applyBotCombatProfile();
+        if ( botCombatProfileNeedsRefresh() )
+        {
+            applyBotCombatProfile();
+        }
 
         if ( level.abzm.botsCanRevive && attemptBotRevive() )
         {
@@ -2003,14 +2049,9 @@ isMysteryBoxRewardConfirmed( previousWeaponKey, previousUpgradeLevel )
 
 isPackAPunchUpgradeConfirmedForState( previousWeaponKey, previousUpgradeLevel, currentWeaponKey, currentUpgradeLevel )
 {
-    if ( currentWeaponKey == "" )
+    if ( !isdefined( currentWeaponKey ) || currentWeaponKey == "" )
     {
         return false;
-    }
-
-    if ( currentWeaponKey != previousWeaponKey )
-    {
-        return currentUpgradeLevel > previousUpgradeLevel;
     }
 
     return currentUpgradeLevel > previousUpgradeLevel;
