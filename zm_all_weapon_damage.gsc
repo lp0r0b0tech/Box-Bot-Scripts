@@ -96,8 +96,6 @@ awd_sync_weapon_callbacks()
             continue;
         }
 
-        processedBaseWeaponNames = [];
-
         foreach ( weaponName in weaponNames )
         {
             if ( !isdefined( weaponName ) || weaponName == "" )
@@ -123,22 +121,6 @@ awd_sync_weapon_callbacks()
                  level.modifyweapondamage[weaponName] != ::awd_modify_damage )
             {
                 level.modifyweapondamage[weaponName] = ::awd_modify_damage;
-            }
-
-            if ( isdefined( baseWeaponName ) &&
-                 baseWeaponName != "" &&
-                 isdefined( player.weaponstate[baseWeaponName] ) &&
-                 baseWeaponName != weaponName &&
-                 !isdefined( processedBaseWeaponNames[baseWeaponName] ) )
-            {
-                processedBaseWeaponNames[baseWeaponName] = 1;
-                awd_disable_stock_weapon_level_increase( player, baseWeaponName );
-
-                if ( !isdefined( level.modifyweapondamage[baseWeaponName] ) ||
-                     level.modifyweapondamage[baseWeaponName] != ::awd_modify_damage )
-                {
-                    level.modifyweapondamage[baseWeaponName] = ::awd_modify_damage;
-                }
             }
         }
     }
