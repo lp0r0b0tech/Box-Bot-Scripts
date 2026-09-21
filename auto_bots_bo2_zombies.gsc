@@ -117,6 +117,7 @@ abzmDeferredInit()
 
     level.abzm = buildModState();
     initDvars();
+    runSelfTestsIfEnabled();
     level thread abzmBoot();
 }
 
@@ -228,6 +229,7 @@ initDvars()
     setdvarifuninitialized( "scr_zm_autobots_door_cost", ABZM_DEFAULT_DOOR_COST );
     setdvarifuninitialized( "scr_zm_autobots_exo_cost", ABZM_DEFAULT_EXO_COST );
     setdvarifuninitialized( "scr_zm_autobots_max_perks", ABZM_DEFAULT_PERK_LIMIT );
+    setdvarifuninitialized( "scr_zm_autobots_run_self_tests", 0 );
 
     setdvarifuninitialized( "scr_zm_bo2_enable", ABZM_DEFAULT_BO2_TUNING_ENABLED );
     setdvarifuninitialized( "scr_zm_bo2_sprint_round", ABZM_DEFAULT_SPRINT_ROUND );
@@ -235,6 +237,39 @@ initDvars()
     setdvarifuninitialized( "scr_zm_bo2_special_round_interval", ABZM_DEFAULT_SPECIAL_ROUND_INTERVAL );
     setdvarifuninitialized( "scr_zm_bo2_special_round_offset", ABZM_DEFAULT_SPECIAL_ROUND_OFFSET );
     setdvarifuninitialized( "scr_zm_bo2_powerups_enable", ABZM_DEFAULT_DROPS_ENABLED );
+}
+
+runSelfTestsIfEnabled()
+{
+    if ( getdvarint( "scr_zm_autobots_run_self_tests" ) <= 0 )
+    {
+        return;
+    }
+
+    runReviveOutcomeSelfTests();
+}
+
+runReviveOutcomeSelfTests()
+{
+    downed = spawnstruct();
+    downed.abzmDowned = false;
+    reportSelfTestResult( "revive_interaction_cleared_downed", getReviveInteractionCompletionStatus( downed ) == ABZM_REVIVE_STATUS_SUCCESS );
+    reportSelfTestResult( "revive_interaction_missing_entity", getReviveInteractionCompletionStatus( undefined ) == ABZM_REVIVE_STATUS_SUCCESS );
+
+    downed = spawnstruct();
+    downed.abzmDowned = true;
+    reportSelfTestResult( "revive_interaction_still_downed", getReviveInteractionCompletionStatus( downed ) == ABZM_REVIVE_STATUS_FALLBACK );
+}
+
+reportSelfTestResult( testName, passed )
+{
+    result = "passed";
+    if ( !passed )
+    {
+        result = "FAILED";
+    }
+
+    println( "[ABZM][SELFTEST] " + testName + ": " + result );
 }
 
 abzmBoot()
@@ -367,6 +402,11 @@ initializeBotPurchaseState()
     {
         self.abzmPurchasedPerkNodes = [];
     }
+
+    if ( !isdefined( self.abzmLastWeaponPurchaseStateKey ) )
+    {
+        self.abzmLastWeaponPurchaseStateKey = "";
+    }
 }
 
 clearBotPurchaseState()
@@ -375,6 +415,7 @@ clearBotPurchaseState()
     self.abzmPurchasedPerkNodes = [];
     self.abzmLastPerkPurchaseTime = undefined;
     self.abzmLastPurchaseTime = undefined;
+    self.abzmLastWeaponPurchaseStateKey = "";
 }
 
 monitorPlayerConnections()
@@ -824,17 +865,22 @@ tryUseReviveInteraction( downed )
         wait 0.05;
     }
 
+    return getReviveInteractionCompletionStatus( downed );
+}
+
+getReviveInteractionCompletionStatus( downed )
+{
     if ( !isdefined( downed ) )
     {
         return ABZM_REVIVE_STATUS_SUCCESS;
     }
 
-    if ( isdefined( downed ) && !downed.abzmDowned )
+    if ( !downed.abzmDowned )
     {
         return ABZM_REVIVE_STATUS_SUCCESS;
     }
 
-    return ABZM_REVIVE_STATUS_FAILED;
+    return ABZM_REVIVE_STATUS_FALLBACK;
 }
 
 getReviveInteractableForPlayer( downed )
@@ -941,19 +987,24 @@ attemptWeaponPurchase()
         return false;
     }
 
+    if ( shouldSkipWeaponRepurchase() )
+    {
+        return false;
+    }
+
     if ( roundNumber >= 7 )
     {
         mysteryNode = getClosestPurchaseItemInteractable( "mystery" );
         if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
         {
-            markGenericPurchase();
+            markWeaponPurchase();
             return true;
         }
     }
 
     if ( isdefined( weaponNode ) && hasEnoughPoints( self, level.abzm.weaponCost ) && attemptPurchase( weaponNode, level.abzm.weaponCost ) )
     {
-        markGenericPurchase();
+        markWeaponPurchase();
         return true;
     }
 
@@ -1023,6 +1074,29 @@ botCanAttemptPerkPurchase( cooldownSec )
 markGenericPurchase()
 {
     self.abzmLastPurchaseTime = gettime();
+}
+
+markWeaponPurchase()
+{
+    self.abzmLastWeaponPurchaseStateKey = getWeaponPurchaseStateKey();
+    markGenericPurchase();
+}
+
+shouldSkipWeaponRepurchase()
+{
+    if ( !isdefined( self.abzmLastWeaponPurchaseStateKey ) || self.abzmLastWeaponPurchaseStateKey == "" )
+    {
+        return false;
+    }
+
+    currentStateKey = getWeaponPurchaseStateKey();
+    if ( currentStateKey != self.abzmLastWeaponPurchaseStateKey )
+    {
+        self.abzmLastWeaponPurchaseStateKey = "";
+        return false;
+    }
+
+    return true;
 }
 
 markPerkPurchase( node )
@@ -1205,6 +1279,7 @@ getStableInteractableKey( node, fallbackPrefix )
         return "";
     }
 
+    uniquePart = getStableInteractableIdentityPart( node );
     keyPart = "";
     if ( isdefined( node.targetname ) && node.targetname != "" )
     {
@@ -1242,7 +1317,52 @@ getStableInteractableKey( node, fallbackPrefix )
         originKey = int( node.origin[0] ) + "_" + int( node.origin[1] ) + "_" + int( node.origin[2] );
     }
 
+    if ( uniquePart != "" )
+    {
+        return uniquePart + "|" + keyPart + "|" + originKey;
+    }
+
     return keyPart + "|" + originKey;
+}
+
+getStableInteractableIdentityPart( node )
+{
+    if ( !isdefined( node ) )
+    {
+        return "";
+    }
+
+    if ( isdefined( node.target ) && node.target != "" )
+    {
+        return "target_" + toLower( node.target + "" );
+    }
+
+    if ( isdefined( node.script_targetname ) && node.script_targetname != "" )
+    {
+        return "script_targetname_" + toLower( node.script_targetname + "" );
+    }
+
+    if ( isdefined( node.script_target ) && node.script_target != "" )
+    {
+        return "script_target_" + toLower( node.script_target + "" );
+    }
+
+    if ( isdefined( node.script_id ) )
+    {
+        return "script_id_" + toLower( node.script_id + "" );
+    }
+
+    if ( isdefined( node.script_index ) )
+    {
+        return "script_index_" + toLower( node.script_index + "" );
+    }
+
+    if ( isdefined( node.name ) && node.name != "" )
+    {
+        return "name_" + toLower( node.name + "" );
+    }
+
+    return "";
 }
 
 getSharedPurchaseKey( node, kind )
@@ -1870,6 +1990,18 @@ currentWeaponNeedsAmmo()
     }
 
     return self getweaponammoclip( weapon ) <= 5;
+}
+
+getWeaponPurchaseStateKey()
+{
+    weapon = self getcurrentweapon();
+    if ( !isdefined( weapon ) )
+    {
+        weapon = "none";
+    }
+
+    weapon = toLower( weapon + "" );
+    return weapon + "|" + currentWeaponNeedsAmmo() + "|" + isCurrentWeaponWeak();
 }
 
 isCurrentWeaponWeak()
