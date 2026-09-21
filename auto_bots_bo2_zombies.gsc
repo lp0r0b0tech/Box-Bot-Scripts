@@ -249,6 +249,7 @@ runSelfTestsIfEnabled()
     runReviveOutcomeSelfTests();
     runBotLifecycleSelfTests();
     runSharedPurchaseSelfTests();
+    runPerkPurchaseSelfTests();
 }
 
 isDevelopmentModeEnabled()
@@ -316,6 +317,24 @@ runSharedPurchaseSelfTests()
     sharedPurchaseExpiresAndCompacts = !alreadyBoughtSharedNode( node, "door" ) && level.abzm.sharedPurchasedNodes.size == 0;
     level.abzm.sharedPurchasedNodes = previousSharedNodes;
     reportSelfTestResult( "shared_purchase_expires_and_compacts", sharedPurchaseExpiresAndCompacts );
+}
+
+runPerkPurchaseSelfTests()
+{
+    bot = spawnstruct();
+    bot initializeBotPurchaseState();
+
+    perkNode = spawnstruct();
+    perkNode.targetname = "health_perk_test";
+    bot markPerkPurchase( perkNode );
+    firstPerkCount = bot.abzmPerkPurchases;
+    firstPerkOwned = bot alreadyBoughtPerkNode( perkNode );
+
+    bot markPerkPurchase( perkNode );
+    duplicatePerkCount = bot.abzmPerkPurchases;
+
+    reportSelfTestResult( "perk_purchase_tracks_unique_node", firstPerkCount == 1 && firstPerkOwned );
+    reportSelfTestResult( "perk_purchase_suppresses_duplicates", duplicatePerkCount == 1 );
 }
 
 runDeferredSelfTests()
@@ -474,6 +493,11 @@ initializeBotPurchaseState()
     {
         self.abzmLastPackAPunchWeaponKey = "";
     }
+
+    if ( !isdefined( self.abzmLastPackAPunchUpgradeLevel ) )
+    {
+        self.abzmLastPackAPunchUpgradeLevel = 0;
+    }
 }
 
 clearBotPurchaseState()
@@ -484,6 +508,7 @@ clearBotPurchaseState()
     self.abzmLastPurchaseTime = undefined;
     self.abzmLastWeaponPurchaseStateKey = "";
     self.abzmLastPackAPunchWeaponKey = "";
+    self.abzmLastPackAPunchUpgradeLevel = 0;
 }
 
 monitorPlayerConnections()
@@ -1072,11 +1097,9 @@ attemptWeaponPurchase()
         mysteryNode = getClosestAvailableSharedInteractable( "mystery" );
         if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && reserveSharedPurchase( mysteryNode, "mystery" ) )
         {
-            preMysteryStateKey = getWeaponPurchaseStateKey();
             if ( attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
             {
-                postMysteryStateKey = getWeaponPurchaseStateKey();
-                if ( !self.abzmLastPurchaseUsedFallback && postMysteryStateKey != preMysteryStateKey )
+                if ( !self.abzmLastPurchaseUsedFallback )
                 {
                     markSharedPurchase( mysteryNode, "mystery", false );
                     self.abzmLastWeaponPurchaseStateKey = "";
@@ -1226,18 +1249,32 @@ shouldSkipWeaponRepurchase()
 
 markPackAPunchPurchase()
 {
-    self.abzmLastPackAPunchWeaponKey = getPackAPunchTrackingKey();
+    currentWeaponKey = getCurrentWeaponIdentityKey();
+    if ( currentWeaponKey == "" )
+    {
+        return;
+    }
+
+    if ( self.abzmLastPackAPunchWeaponKey == currentWeaponKey )
+    {
+        self.abzmLastPackAPunchUpgradeLevel++;
+    }
+    else
+    {
+        self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
+        self.abzmLastPackAPunchUpgradeLevel = 1;
+    }
 }
 
 alreadyPackAPunchedCurrentWeapon()
 {
-    currentWeaponKey = getPackAPunchTrackingKey();
+    currentWeaponKey = getCurrentWeaponIdentityKey();
     if ( !isdefined( currentWeaponKey ) || currentWeaponKey == "" )
     {
         return false;
     }
 
-    if ( !isdefined( self.abzmLastPackAPunchWeaponKey ) || self.abzmLastPackAPunchWeaponKey == "" )
+    if ( !isdefined( self.abzmLastPackAPunchWeaponKey ) || self.abzmLastPackAPunchWeaponKey == "" || !isdefined( self.abzmLastPackAPunchUpgradeLevel ) || self.abzmLastPackAPunchUpgradeLevel <= 0 )
     {
         return false;
     }
@@ -1245,6 +1282,7 @@ alreadyPackAPunchedCurrentWeapon()
     if ( self.abzmLastPackAPunchWeaponKey != currentWeaponKey )
     {
         self.abzmLastPackAPunchWeaponKey = "";
+        self.abzmLastPackAPunchUpgradeLevel = 0;
         return false;
     }
 
@@ -1332,9 +1370,20 @@ reserveSharedPurchase( node, kind )
         return true;
     }
 
-    if ( alreadyBoughtSharedNode( node, kind ) )
+    sharedIndex = findSharedPurchaseIndex( purchaseKey );
+    if ( sharedIndex >= 0 )
     {
-        return false;
+        sharedEntry = level.abzm.sharedPurchasedNodes[sharedIndex];
+        if ( !isdefined( sharedEntry ) || !isdefined( sharedEntry.expiresAt ) || ( sharedEntry.expiresAt >= 0 && gettime() >= sharedEntry.expiresAt ) )
+        {
+            level.abzm.sharedPurchasedNodes[sharedIndex] = undefined;
+            compactSharedPurchaseArray( sharedIndex );
+            sharedIndex = -1;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     sharedEntry = spawnstruct();
@@ -2215,17 +2264,6 @@ getCurrentWeaponIdentityKey()
     }
 
     return toLower( weapon + "" );
-}
-
-getPackAPunchTrackingKey()
-{
-    weaponKey = getCurrentWeaponIdentityKey();
-    if ( weaponKey == "" )
-    {
-        return "";
-    }
-
-    return weaponKey + "|" + self getweaponammoclip( self getcurrentweapon() ) + "|" + currentWeaponNeedsAmmo() + "|" + isCurrentWeaponWeak();
 }
 
 isCurrentWeaponWeak()
