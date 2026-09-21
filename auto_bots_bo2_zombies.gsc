@@ -1845,7 +1845,7 @@ markSharedPurchase( node, kind, usedFallback )
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
     sharedEntry.isReservation = false;
-    sharedEntry.isPersistent = kind == "door";
+    sharedEntry.isPersistent = kind == "door" || (kind == "packapunch" && (!isdefined( usedFallback ) || !usedFallback));
     sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS;
     if ( sharedEntry.isPersistent )
     {
