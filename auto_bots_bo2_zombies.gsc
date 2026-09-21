@@ -788,7 +788,7 @@ tryUseReviveInteraction( downed )
 
     if ( !moveToAndUse( reviveNode ) )
     {
-        return ABZM_REVIVE_STATUS_FAILED;
+        return ABZM_REVIVE_STATUS_FALLBACK;
     }
 
     start = gettime();
@@ -923,11 +923,6 @@ attemptWeaponPurchase()
             markGenericPurchase();
             return true;
         }
-    }
-
-    if ( !hasEnoughPoints( self, level.abzm.weaponCost ) )
-    {
-        return false;
     }
 
     if ( isdefined( weaponNode ) && attemptPurchase( weaponNode, level.abzm.weaponCost ) )
@@ -1118,23 +1113,12 @@ removeNodeFromArray( source, target )
         return;
     }
 
-    kept = [];
     for ( i = 0; i < source.size; i++ )
     {
-        if ( isdefined( source[i] ) && source[i] != target )
+        if ( isdefined( source[i] ) && source[i] == target )
         {
-            kept[kept.size] = source[i];
+            source[i] = undefined;
         }
-    }
-
-    for ( i = 0; i < kept.size; i++ )
-    {
-        source[i] = kept[i];
-    }
-
-    while ( source.size > kept.size )
-    {
-        source[source.size - 1] = undefined;
     }
 }
 
@@ -1841,6 +1825,11 @@ moveToAndUse( node )
 
 attemptPurchase( node, cost )
 {
+    if ( !hasEnoughPoints( self, cost ) )
+    {
+        return false;
+    }
+
     pointsBefore = getTrackedPlayerPoints( self );
     if ( isdefined( self.score ) )
     {
