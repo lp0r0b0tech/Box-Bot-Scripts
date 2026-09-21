@@ -142,11 +142,15 @@ awd_register_damage_key( weaponKey )
         return;
     }
 
-    if ( isdefined( level.modifyweapondamage[weaponKey] ) &&
-         level.modifyweapondamage[weaponKey] != ::awd_modify_damage )
+    currentCallback = level.modifyweapondamage[weaponKey];
+
+    if ( !isdefined( currentCallback ) )
     {
-        level.awd_previous_damage_callbacks[weaponKey] =
-            level.modifyweapondamage[weaponKey];
+        level.awd_previous_damage_callbacks[weaponKey] = undefined;
+    }
+    else if ( currentCallback != ::awd_modify_damage )
+    {
+        level.awd_previous_damage_callbacks[weaponKey] = currentCallback;
     }
 
     level.modifyweapondamage[weaponKey] = ::awd_modify_damage;
