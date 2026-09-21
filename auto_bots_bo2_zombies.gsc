@@ -348,10 +348,6 @@ initializeBotPurchaseState()
         self.abzmPurchasedPerkNodes = [];
     }
 
-    if ( !isdefined( self.abzmPurchasedUpgradeNodes ) )
-    {
-        self.abzmPurchasedUpgradeNodes = [];
-    }
 }
 
 resetBotPerkPurchaseState()
@@ -756,24 +752,6 @@ attemptBotRevive()
 
             downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             signalReviveSuccess( downed, self );
-
-            fallbackStart = gettime();
-            fallbackMaxWaitMs = int( (ABZM_BO2_REVIVE_TIME + 0.5) * 1000 );
-            while ( isdefined( downed ) && downed.abzmDowned && (gettime() - fallbackStart) < fallbackMaxWaitMs )
-            {
-                wait 0.05;
-            }
-
-            if ( !isdefined( downed ) || downed.abzmDowned )
-            {
-                if ( isdefined( downed ) )
-                {
-                    downed.abzmReviver = undefined;
-                }
-
-                self.abzmReviveTarget = undefined;
-                return false;
-            }
         }
         else if ( reviveResult == 0 )
         {
@@ -972,9 +950,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestInteractable( "exo" );
-        if ( !alreadyBoughtBotUpgradeNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        if ( !alreadyBoughtSharedNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
-            markBotUpgradePurchase( exoNode );
+            markSharedPurchase( exoNode );
             return true;
         }
     }
@@ -1049,16 +1027,6 @@ markSharedPurchase( node )
     markGenericPurchase();
 }
 
-markBotUpgradePurchase( node )
-{
-    if ( isdefined( node ) && !nodeArrayContains( self.abzmPurchasedUpgradeNodes, node ) )
-    {
-        self.abzmPurchasedUpgradeNodes[self.abzmPurchasedUpgradeNodes.size] = node;
-    }
-
-    markGenericPurchase();
-}
-
 alreadyBoughtPerkNode( node )
 {
     return nodeArrayContains( self.abzmPurchasedPerkNodes, node );
@@ -1072,11 +1040,6 @@ alreadyBoughtSharedNode( node )
     }
 
     return nodeArrayContains( level.abzm.sharedPurchasedNodes, node );
-}
-
-alreadyBoughtBotUpgradeNode( node )
-{
-    return nodeArrayContains( self.abzmPurchasedUpgradeNodes, node );
 }
 
 
@@ -1733,7 +1696,6 @@ moveToAndUse( node )
     self.abzmLastInteractTarget = node;
     self.abzmLastInteractTime = gettime();
     node notify( "trigger", self );
-    node notify( "use", self );
     return true;
 }
 
@@ -2024,24 +1986,24 @@ appendEntArray( destination, source )
             destination[destination.size] = source[i];
         }
     }
+}
 
-    nodeArrayContains( source, target )
+nodeArrayContains( source, target )
+{
+    if ( !isdefined( source ) || !isdefined( target ) )
     {
-        if ( !isdefined( source ) || !isdefined( target ) )
-        {
-            return false;
-        }
-
-        for ( i = 0; i < source.size; i++ )
-        {
-            if ( isdefined( source[i] ) && source[i] == target )
-            {
-                return true;
-            }
-        }
-
         return false;
     }
+
+    for ( i = 0; i < source.size; i++ )
+    {
+        if ( isdefined( source[i] ) && source[i] == target )
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 isZombieEntity( entity )
