@@ -815,11 +815,12 @@ getReviveInteractableForPlayer( downed )
             continue;
         }
 
-        dist = distance( downed.origin, node.origin );
-        if ( dist < bestDist && dist <= ABZM_BO2_REVIVE_RANGE )
+        targetDist = distance( downed.origin, node.origin );
+        botDist = distance( self.origin, node.origin );
+        if ( targetDist <= ABZM_BO2_REVIVE_RANGE && botDist < bestDist )
         {
             best = node;
-            bestDist = dist;
+            bestDist = botDist;
         }
     }
 
@@ -870,6 +871,11 @@ attemptPerkPurchase()
     }
 
     perkNode = getBestPerkInteractable();
+    if ( !isdefined( perkNode ) )
+    {
+        return false;
+    }
+
     if ( !attemptPurchase( perkNode, level.abzm.perkCost ) )
     {
         return false;
@@ -1061,6 +1067,11 @@ alreadyBoughtSharedNode( node, kind )
 
 shouldPersistSharedPurchaseNode( node, kind )
 {
+    if ( kind == "door" )
+    {
+        return true;
+    }
+
     if ( !isdefined( node ) )
     {
         return false;
