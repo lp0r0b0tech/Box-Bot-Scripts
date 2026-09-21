@@ -203,7 +203,7 @@ awd_modify_damage(
 
     baseWeaponName = getweaponbasename( weapon );
 
-    if ( !exactWeaponStateDefined &&
+    if ( !exactWeaponLevelDefined &&
          isdefined( baseWeaponName ) &&
          baseWeaponName != "" &&
          isdefined( attacker.weaponstate[baseWeaponName] ) &&
