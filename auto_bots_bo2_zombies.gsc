@@ -808,7 +808,6 @@ tryUseReviveInteraction( downed )
 
     reviveNode notify( "trigger", self );
     reviveNode notify( "use", self );
-    self notify( "+activate" );
 
     start = gettime();
     maxWaitMs = int( (ABZM_BO2_REVIVE_TIME + 0.5) * 1000 );
@@ -816,7 +815,6 @@ tryUseReviveInteraction( downed )
     {
         wait 0.05;
     }
-    self notify( "-activate" );
 
     if ( isdefined( downed ) && !downed.abzmDowned )
     {
@@ -2167,7 +2165,13 @@ getInteractableKey( entity )
     {
         if ( isdefined( entity.origin ) )
         {
-            return "origin_" + int( entity.origin[0] ) + "_" + int( entity.origin[1] ) + "_" + int( entity.origin[2] );
+            prefix = "origin";
+            if ( isdefined( entity.classname ) && entity.classname != "" )
+            {
+                prefix = entity.classname;
+            }
+
+            return prefix + "_" + int( entity.origin[0] * 100 ) + "_" + int( entity.origin[1] * 100 ) + "_" + int( entity.origin[2] * 100 );
         }
 
         return "";
@@ -2175,7 +2179,7 @@ getInteractableKey( entity )
 
     if ( isdefined( entity.origin ) )
     {
-        key += "_" + int( entity.origin[0] ) + "_" + int( entity.origin[1] ) + "_" + int( entity.origin[2] );
+        key += "_" + int( entity.origin[0] * 100 ) + "_" + int( entity.origin[1] * 100 ) + "_" + int( entity.origin[2] * 100 );
     }
 
     return key;
