@@ -157,6 +157,11 @@ awd_modify_damage(
         return damage;
     }
 
+    if ( !isdefined( weapon ) || weapon == "" )
+    {
+        return damage;
+    }
+
     weaponLevel = undefined;
     exactWeaponLevelDefined = false;
 
