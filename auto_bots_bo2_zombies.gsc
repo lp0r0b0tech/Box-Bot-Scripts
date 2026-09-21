@@ -30,6 +30,11 @@
 #define ABZM_REVIVE_STATUS_FAILED             0
 #define ABZM_REVIVE_STATUS_FALLBACK           -1
 #define ABZM_REVIVE_STATUS_SUCCESS            1
+#define ABZM_WEAK_WEAPON_TOKEN_ATLAS45        "atlas45"
+#define ABZM_WEAK_WEAPON_TOKEN_PISTOL         "pistol"
+#define ABZM_WEAK_WEAPON_TOKEN_STARTER        "starter"
+#define ABZM_WEAK_WEAPON_TOKEN_MP11           "mp11"
+#define ABZM_WEAK_WEAPON_TOKEN_RW1            "rw1"
 #define ABZM_PERK_PRIORITY_QUICK_REVIVE       10
 #define ABZM_PERK_PRIORITY_HEALTH             9
 #define ABZM_PERK_PRIORITY_SPEED              8
@@ -1035,13 +1040,6 @@ markSharedPurchase( node, kind )
         node.abzmSharedCooldownUntil = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
     }
 
-    if ( !shouldPersistSharedPurchaseNode( node, kind ) )
-    {
-        removeNodeFromArray( level.abzm.sharedPurchasedNodes, node );
-        markGenericPurchase();
-        return;
-    }
-
     if ( isdefined( node ) && !nodeArrayContains( level.abzm.sharedPurchasedNodes, node ) )
     {
         level.abzm.sharedPurchasedNodes[level.abzm.sharedPurchasedNodes.size] = node;
@@ -1725,7 +1723,7 @@ isCurrentWeaponWeak()
     }
 
     weapon = toLower( weapon + "" );
-    return stringContainsToken( weapon, "atlas45" ) || stringContainsToken( weapon, "pistol" ) || stringContainsToken( weapon, "starter" ) || stringContainsToken( weapon, "mp11" ) || stringContainsToken( weapon, "rw1" );
+    return stringContainsToken( weapon, ABZM_WEAK_WEAPON_TOKEN_ATLAS45 ) || stringContainsToken( weapon, ABZM_WEAK_WEAPON_TOKEN_PISTOL ) || stringContainsToken( weapon, ABZM_WEAK_WEAPON_TOKEN_STARTER ) || stringContainsToken( weapon, ABZM_WEAK_WEAPON_TOKEN_MP11 ) || stringContainsToken( weapon, ABZM_WEAK_WEAPON_TOKEN_RW1 );
 }
 
 getClosestDownedTeammate()
