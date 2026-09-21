@@ -630,16 +630,7 @@ applyForcedBotUpgradeAlias( key, value )
 
 removeNonForcedBotWeapons()
 {
-    for ( i = 0; i < 16; i++ )
-    {
-        currentWeapon = self getcurrentweapon();
-        if ( !isdefined( currentWeapon ) || currentWeapon == "" )
-        {
-            return;
-        }
-        self takeweapon( currentWeapon );
-        wait 0.05;
-    }
+    self takeallweapons();
 }
 
 attemptBotRevive()
