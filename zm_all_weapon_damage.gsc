@@ -89,6 +89,8 @@ awd_sync_weapon_callbacks()
             continue;
         }
 
+        processedBaseWeaponNames = [];
+
         foreach ( weaponName in weaponNames )
         {
             if ( !isdefined( weaponName ) || weaponName == "" )
@@ -108,8 +110,10 @@ awd_sync_weapon_callbacks()
 
             if ( isdefined( baseWeaponName ) &&
                  baseWeaponName != "" &&
-                 baseWeaponName != weaponName )
+                 baseWeaponName != weaponName &&
+                 !isdefined( processedBaseWeaponNames[baseWeaponName] ) )
             {
+                processedBaseWeaponNames[baseWeaponName] = 1;
                 awd_disable_stock_weapon_level_increase( player, baseWeaponName );
 
                 if ( !isdefined( level.modifyweapondamage[baseWeaponName] ) ||
