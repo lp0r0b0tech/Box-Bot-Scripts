@@ -191,7 +191,6 @@ awd_modify_damage(
     awd_disable_stock_weapon_level_increase( attacker, weapon );
 
     weaponLevel = undefined;
-    exactWeaponLevelDefined = false;
     exactWeaponStateDefined = isdefined( attacker.weaponstate[weapon] );
     exactWeaponLevelUsable = false;
 
@@ -199,7 +198,6 @@ awd_modify_damage(
          isdefined( attacker.weaponstate[weapon]["level"] ) )
     {
         weaponLevel = attacker.weaponstate[weapon]["level"];
-        exactWeaponLevelDefined = true;
         exactWeaponLevelUsable = weaponLevel >= 2;
     }
 
