@@ -97,14 +97,14 @@ atlas45_register_damage_modifier()
     for(i = 0; i < weaponNames.size; i++)
     {
         weaponName = weaponNames[i];
-        level.exo_damage_curve_weapon_key_cache[weaponName] = weaponName;
-        level.exo_damage_curve_weapon_key_cache[tolower(weaponName + "")] =
-            weaponName;
-
         if(!atlas45_should_register_weapon(weaponName))
         {
             continue;
         }
+
+        level.exo_damage_curve_weapon_key_cache[weaponName] = weaponName;
+        level.exo_damage_curve_weapon_key_cache[tolower(weaponName + "")] =
+            weaponName;
 
         previousCallback = level.modifyweapondamage[weaponName];
         if(isdefined(previousCallback) &&
