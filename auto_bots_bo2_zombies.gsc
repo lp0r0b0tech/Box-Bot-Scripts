@@ -342,7 +342,6 @@ applyBotCombatProfile()
     self.botAccuracy = level.abzm.botAccuracy;
     self.reactionTime = level.abzm.botReactionTime;
     self.maxhealth = level.abzm.botMaxHealth;
-    self.maxHealth = level.abzm.botMaxHealth;
     self.botAggression = level.abzm.botAggression;
 
     if ( !isdefined( self.health ) || level.abzm.botMaxHealth > previousMaxHealth )
@@ -373,6 +372,7 @@ clearBotPurchaseState()
     self.abzmPerkPurchases = 0;
     self.abzmPurchasedPerkNodes = [];
     self.abzmLastPerkPurchaseTime = undefined;
+    self.abzmLastPurchaseTime = undefined;
 }
 
 monitorPlayerConnections()
@@ -1279,50 +1279,25 @@ getBestPerkInteractable()
 
 perkPriorityForEntity( node )
 {
-    if ( isQuickRevivePerkNode( node ) )
+    perkType = classifyPerkType( node );
+    switch ( perkType )
     {
-        return ABZM_PERK_PRIORITY_QUICK_REVIVE;
-    }
-
-    if ( entityMatchesToken( node, "health" ) || entityMatchesToken( node, "jug" ) || entityMatchesToken( node, "tough" ) )
-    {
-        return ABZM_PERK_PRIORITY_HEALTH;
-    }
-
-    if ( entityMatchesToken( node, "speed" ) || entityMatchesToken( node, "reload" ) )
-    {
-        return ABZM_PERK_PRIORITY_SPEED;
-    }
-
-    if ( entityMatchesToken( node, "damage" ) || entityMatchesToken( node, "tap" ) || entityMatchesToken( node, "multishot" ) )
-    {
-        return ABZM_PERK_PRIORITY_DAMAGE;
-    }
-
-    if ( entityMatchesToken( node, "stamina" ) || entityMatchesToken( node, "move" ) || entityMatchesToken( node, "sprint" ) )
-    {
-        return ABZM_PERK_PRIORITY_STAMINA;
+        case "quick_revive":
+            return ABZM_PERK_PRIORITY_QUICK_REVIVE;
+        case "health":
+            return ABZM_PERK_PRIORITY_HEALTH;
+        case "speed":
+            return ABZM_PERK_PRIORITY_SPEED;
+        case "damage":
+            return ABZM_PERK_PRIORITY_DAMAGE;
+        case "stamina":
+            return ABZM_PERK_PRIORITY_STAMINA;
     }
 
     return ABZM_PERK_PRIORITY_DEFAULT;
 }
 
-isQuickRevivePerkNode( node )
-{
-    if ( !isdefined( node ) )
-    {
-        return false;
-    }
-
-    if ( entityMatchesToken( node, "quick" ) )
-    {
-        return true;
-    }
-
-    return entityMatchesToken( node, "revive" ) && ( entityMatchesToken( node, "perk" ) || entityMatchesToken( node, "vending" ) || entityMatchesToken( node, "perkacola" ) );
-}
-
-getPerkPurchaseKey( node )
+classifyPerkType( node )
 {
     if ( !isdefined( node ) )
     {
@@ -1349,14 +1324,50 @@ getPerkPurchaseKey( node )
         return "damage";
     }
 
-    if ( entityMatchesToken( node, "stamina" ) || entityMatchesToken( node, "move" ) || entityMatchesToken( node, "sprint" ) )
+    if ( entityMatchesToken( node, "stamina" ) || entityMatchesToken( node, "sprint" ) )
     {
         return "stamina";
     }
 
     if ( entityMatchesToken( node, "perk" ) || entityMatchesToken( node, "vending" ) || entityMatchesToken( node, "perkacola" ) )
     {
+        return "generic_perk";
+    }
+
+    return "";
+}
+
+isQuickRevivePerkNode( node )
+{
+    if ( !isdefined( node ) )
+    {
+        return false;
+    }
+
+    if ( entityMatchesToken( node, "quick" ) )
+    {
+        return true;
+    }
+
+    return entityMatchesToken( node, "revive" ) && ( entityMatchesToken( node, "perk" ) || entityMatchesToken( node, "vending" ) || entityMatchesToken( node, "perkacola" ) );
+}
+
+getPerkPurchaseKey( node )
+{
+    if ( !isdefined( node ) )
+    {
+        return "";
+    }
+
+    perkType = classifyPerkType( node );
+    if ( perkType == "generic_perk" )
+    {
         return getStableInteractableKey( node, "generic_perk" );
+    }
+
+    if ( perkType != "" )
+    {
+        return perkType;
     }
 
     return getStableInteractableKey( node, "perk" );
