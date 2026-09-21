@@ -1106,7 +1106,10 @@ onPlayerConnected()
 
         if ( self.abzmIsBot )
         {
-            initializeBotPurchaseState();
+            if ( !isdefined( self.abzmPerkPurchases ) || !isdefined( self.abzmPurchasedPerkNodes ) || !isdefined( self.abzmPackAPunchWeaponEntries ) )
+            {
+                initializeBotPurchaseState();
+            }
             applyBotCombatProfile();
         }
 
@@ -1470,6 +1473,7 @@ attemptBotRevive()
                 return false;
             }
 
+            wait ABZM_BO2_REVIVE_TIME;
             downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             signalReviveSuccess( downed, self );
         }
@@ -1761,12 +1765,6 @@ attemptUtilityPurchase()
                     }
                 }
 
-                currentPapWeaponKey = getCurrentWeaponIdentityKey();
-                if ( !isdefined( currentPapWeaponKey ) || currentPapWeaponKey == "" )
-                {
-                    currentPapWeaponKey = previousPapWeaponKey;
-                }
-                markPackAPunchPurchase( currentPapWeaponKey, previousPapUpgradeLevel );
                 markSharedPurchase( papNode, "packapunch", true );
                 return false;
             }
