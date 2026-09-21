@@ -741,6 +741,23 @@ attemptBotRevive()
 
             downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             signalReviveSuccess( downed, self );
+
+            fallbackStart = gettime();
+            while ( isdefined( downed ) && downed.abzmDowned && (gettime() - fallbackStart) < 500 )
+            {
+                wait 0.05;
+            }
+
+            if ( !isdefined( downed ) || downed.abzmDowned )
+            {
+                if ( isdefined( downed ) )
+                {
+                    downed.abzmReviver = undefined;
+                }
+
+                self.abzmReviveTarget = undefined;
+                return false;
+            }
         }
         else if ( reviveResult == 0 )
         {
@@ -1989,42 +2006,42 @@ appendEntArray( destination, source )
             destination[destination.size] = source[i];
         }
     }
+}
 
-    appendUniqueEntArray( destination, source )
+appendUniqueEntArray( destination, source )
+{
+    if ( !isdefined( source ) )
     {
-        if ( !isdefined( source ) )
-        {
-            return;
-        }
-
-        for ( i = 0; i < source.size; i++ )
-        {
-            if ( !isdefined( source[i] ) || entArrayContains( destination, source[i] ) )
-            {
-                continue;
-            }
-
-            destination[destination.size] = source[i];
-        }
+        return;
     }
 
-    entArrayContains( source, target )
+    for ( i = 0; i < source.size; i++ )
     {
-        if ( !isdefined( source ) || !isdefined( target ) )
+        if ( !isdefined( source[i] ) || entArrayContains( destination, source[i] ) )
         {
-            return false;
+            continue;
         }
 
-        for ( i = 0; i < source.size; i++ )
-        {
-            if ( isdefined( source[i] ) && source[i] == target )
-            {
-                return true;
-            }
-        }
+        destination[destination.size] = source[i];
+    }
+}
 
+entArrayContains( source, target )
+{
+    if ( !isdefined( source ) || !isdefined( target ) )
+    {
         return false;
     }
+
+    for ( i = 0; i < source.size; i++ )
+    {
+        if ( isdefined( source[i] ) && source[i] == target )
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 isZombieEntity( entity )
