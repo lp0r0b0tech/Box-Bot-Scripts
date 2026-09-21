@@ -1500,7 +1500,7 @@ markPackAPunchPurchase( weaponKey, previousUpgradeLevel )
     if ( entryIndex >= 0 )
     {
         self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel = trackedUpgradeLevel;
-        self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey = getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
+        self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey = getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel );
         self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt = gettime();
     }
     else
@@ -1508,7 +1508,7 @@ markPackAPunchPurchase( weaponKey, previousUpgradeLevel )
         entry = spawnstruct();
         entry.weaponKey = currentWeaponKey;
         entry.upgradeLevel = trackedUpgradeLevel;
-        entry.confirmedStateKey = getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
+        entry.confirmedStateKey = getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel );
         entry.confirmedAt = gettime();
         self.abzmPackAPunchWeaponEntries[self.abzmPackAPunchWeaponEntries.size] = entry;
     }
@@ -1538,7 +1538,7 @@ alreadyPackAPunchedCurrentWeapon()
     }
 
     confirmationActive = isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt ) && (gettime() - self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt) <= ABZM_PACKAPUNCH_CONFIRMATION_FALLBACK_MS;
-    confirmationKeyMatches = isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey ) && self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey == getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel, getWeaponPurchaseStateKey() );
+    confirmationKeyMatches = isdefined( self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey ) && self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey == getPackAPunchConfirmationKey( currentWeaponKey, trackedUpgradeLevel );
     currentUpgradeLevel = getCurrentWeaponUpgradeLevel();
     if ( currentUpgradeLevel > 0 )
     {
@@ -1603,9 +1603,9 @@ isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel )
     return isPackAPunchUpgradeConfirmedForState( previousWeaponKey, previousUpgradeLevel, currentWeaponKey, currentUpgradeLevel );
 }
 
-getPackAPunchConfirmationKey( weaponKey, upgradeLevel, stateKey )
+getPackAPunchConfirmationKey( weaponKey, upgradeLevel )
 {
-    return weaponKey + "|" + upgradeLevel + "|" + stateKey;
+    return weaponKey + "|" + upgradeLevel;
 }
 
 waitForPackAPunchConfirmation( previousWeaponKey, previousUpgradeLevel, maxWaitMs )
@@ -1763,6 +1763,18 @@ reserveSharedPurchase( node, kind )
     sharedEntry.kind = kind;
     sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RESERVATION_MS;
     sharedEntry.isReservation = true;
+
+    finalIndex = findSharedPurchaseIndex( purchaseKey );
+    if ( finalIndex >= 0 )
+    {
+        finalEntry = level.abzm.sharedPurchasedNodes[finalIndex];
+        if ( isdefined( finalEntry ) && isdefined( finalEntry.expiresAt ) && gettime() < finalEntry.expiresAt )
+        {
+            return false;
+        }
+
+        claimedIndex = finalIndex;
+    }
 
     if ( claimedIndex >= 0 )
     {
