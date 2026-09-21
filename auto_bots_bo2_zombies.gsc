@@ -318,7 +318,7 @@ runReviveOutcomeSelfTests()
     downed = spawnstruct();
     downed.abzmDowned = false;
     reportSelfTestResult( "revive_interaction_cleared_downed", getReviveInteractionCompletionStatus( downed ) == ABZM_REVIVE_STATUS_SUCCESS );
-    reportSelfTestResult( "revive_interaction_missing_entity", getReviveInteractionCompletionStatus( undefined ) == ABZM_REVIVE_STATUS_FALLBACK );
+    reportSelfTestResult( "revive_interaction_missing_entity", getReviveInteractionCompletionStatus( undefined ) == ABZM_REVIVE_STATUS_FAILED );
 
     downed = spawnstruct();
     downed.abzmDowned = true;
@@ -1209,7 +1209,7 @@ getReviveInteractionCompletionStatus( downed )
 {
     if ( !isdefined( downed ) )
     {
-        return ABZM_REVIVE_STATUS_FALLBACK;
+        return ABZM_REVIVE_STATUS_FAILED;
     }
 
     if ( !downed.abzmDowned )
@@ -1768,9 +1768,15 @@ getPackAPunchConfirmationKey( weaponKey, upgradeLevel )
 waitForPackAPunchConfirmation( previousWeaponKey, previousUpgradeLevel, maxWaitMs )
 {
     start = gettime();
+    observedWeaponKeys = [];
+    observedUpgradeLevels = [];
     while ( (gettime() - start) < maxWaitMs )
     {
-        if ( isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel ) )
+        currentWeaponKey = getCurrentWeaponIdentityKey();
+        currentUpgradeLevel = getCurrentWeaponUpgradeLevel();
+        observedWeaponKeys[observedWeaponKeys.size] = currentWeaponKey;
+        observedUpgradeLevels[observedUpgradeLevels.size] = currentUpgradeLevel;
+        if ( isPackAPunchUpgradeConfirmedForState( previousWeaponKey, previousUpgradeLevel, currentWeaponKey, currentUpgradeLevel ) )
         {
             return true;
         }
@@ -1778,7 +1784,11 @@ waitForPackAPunchConfirmation( previousWeaponKey, previousUpgradeLevel, maxWaitM
         wait 0.05;
     }
 
-    return isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel );
+    currentWeaponKey = getCurrentWeaponIdentityKey();
+    currentUpgradeLevel = getCurrentWeaponUpgradeLevel();
+    observedWeaponKeys[observedWeaponKeys.size] = currentWeaponKey;
+    observedUpgradeLevels[observedUpgradeLevels.size] = currentUpgradeLevel;
+    return doesPackAPunchConfirmationSequenceSucceed( previousWeaponKey, previousUpgradeLevel, observedWeaponKeys, observedUpgradeLevels );
 }
 
 findPackAPunchWeaponEntryIndex( weaponKey )
