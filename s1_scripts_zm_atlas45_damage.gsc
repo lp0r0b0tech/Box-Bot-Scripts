@@ -84,7 +84,6 @@ atlas45_register_damage_modifier()
         return;
     }
 
-    level.exo_damage_curve_registered = 1;
     if(!isdefined(level.exo_damage_curve_previous_callbacks))
     {
         level.exo_damage_curve_previous_callbacks = [];
@@ -131,9 +130,23 @@ atlas45_register_damage_modifier()
             ::atlas45_modify_damage;
         level.exo_damage_curve_registered_weapons[weaponName] = true;
 
+        lowercaseWeaponName = tolower(weaponName + "");
+        level.modifyweapondamage[lowercaseWeaponName] =
+            ::atlas45_modify_damage;
+        level.exo_damage_curve_registered_weapons[lowercaseWeaponName] = true;
+
         registeredCount++;
     }
 
+    if(registeredCount <= 0)
+    {
+        println("ExoWeaponDamage: no eligible zombie weapon callbacks found yet; registration will retry on next initialization attempt.");
+        level.exo_damage_curve_registered = false;
+        level.exo_damage_curve_registering_until = 0;
+        return;
+    }
+
+    level.exo_damage_curve_registered = 1;
     println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".");
     level.exo_damage_curve_registering_until = 0;
 }
