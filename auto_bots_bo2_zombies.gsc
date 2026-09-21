@@ -1042,8 +1042,8 @@ markPerkPurchase( node )
     if ( shouldCountPerk )
     {
         self.abzmPerkPurchases++;
+        self.abzmLastPerkPurchaseTime = gettime();
     }
-    self.abzmLastPerkPurchaseTime = gettime();
     markGenericPurchase();
 }
 
@@ -1247,7 +1247,8 @@ getBestPerkInteractable()
 {
     nodes = getInteractableCandidates();
     best = undefined;
-    bestScore = -999999;
+    bestPriority = -999999;
+    bestDist = 999999;
 
     for ( i = 0; i < nodes.size; i++ )
     {
@@ -1262,13 +1263,14 @@ getBestPerkInteractable()
             continue;
         }
 
-        score = perkPriorityForEntity( node ) * 1000;
-        score -= int( distance( self.origin, node.origin ) );
+        priority = perkPriorityForEntity( node );
+        dist = int( distance( self.origin, node.origin ) );
 
-        if ( score > bestScore )
+        if ( priority > bestPriority || ( priority == bestPriority && dist < bestDist ) )
         {
             best = node;
-            bestScore = score;
+            bestPriority = priority;
+            bestDist = dist;
         }
     }
 
