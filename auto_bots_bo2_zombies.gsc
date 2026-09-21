@@ -247,6 +247,7 @@ runSelfTestsIfEnabled()
     }
 
     runReviveOutcomeSelfTests();
+    runBotLifecycleSelfTests();
 }
 
 runReviveOutcomeSelfTests()
@@ -270,6 +271,23 @@ reportSelfTestResult( testName, passed )
     }
 
     println( "[ABZM][SELFTEST] " + testName + ": " + result );
+}
+
+runBotLifecycleSelfTests()
+{
+    bot = spawnstruct();
+    bot initializeBotPurchaseState();
+    reportSelfTestResult( "bot_lifecycle_purchase_state_init", bot.abzmPerkPurchases == 0 && bot.abzmPurchasedPerkNodes.size == 0 && bot.abzmLastWeaponPurchaseStateKey == "" );
+
+    bot.abzmPerkPurchases = 3;
+    bot.abzmPurchasedPerkNodes[0] = "health|test";
+    bot.abzmLastPerkPurchaseTime = 1;
+    bot.abzmLastPurchaseTime = 2;
+    bot.abzmLastWeaponPurchaseStateKey = "starter|true|true";
+    bot clearBotPurchaseState();
+    reportSelfTestResult( "bot_lifecycle_purchase_state_reset", bot.abzmPerkPurchases == 0 && bot.abzmPurchasedPerkNodes.size == 0 && !isdefined( bot.abzmLastPerkPurchaseTime ) && !isdefined( bot.abzmLastPurchaseTime ) && bot.abzmLastWeaponPurchaseStateKey == "" );
+
+    reportSelfTestResult( "bot_lifecycle_difficulty_mapping", resolveBotSkillDifficulty( "ultra" ) == "veteran" );
 }
 
 abzmBoot()
@@ -1487,17 +1505,13 @@ getPerkPurchaseKey( node )
     }
 
     perkType = classifyPerkType( node );
-    if ( perkType == "generic_perk" )
-    {
-        return getStableInteractableKey( node, "generic_perk" );
-    }
-
+    stablePerkKey = getStableInteractableKey( node, "perk" );
     if ( perkType != "" )
     {
-        return perkType;
+        return perkType + "|" + stablePerkKey;
     }
 
-    return getStableInteractableKey( node, "perk" );
+    return stablePerkKey;
 }
 
 useEquipmentIfNeeded()
