@@ -1,4 +1,4 @@
-combat training custom difficulty and campaign to
+This repository contains custom Box Bot and Exo Zombies script tweaks.
 
 EMZ/EMP zombies Nerf
 

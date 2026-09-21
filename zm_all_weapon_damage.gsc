@@ -100,22 +100,25 @@ awd_sync_weapon_callbacks()
             }
 
             baseWeaponName = getweaponbasename( weaponName );
-
-            if ( isdefined( player.weaponstate[weaponName] ) )
-            {
-                player.weaponstate[weaponName]["weapon_level_increase"] = 0;
-            }
-
-            if ( isdefined( baseWeaponName ) &&
-                 baseWeaponName != "" &&
-                 isdefined( player.weaponstate[baseWeaponName] ) )
-            {
-                player.weaponstate[baseWeaponName]["weapon_level_increase"] = 0;
-            }
+            awd_disable_stock_weapon_level_increase( player, weaponName );
+            awd_disable_stock_weapon_level_increase( player, baseWeaponName );
 
             awd_register_damage_key( weaponName );
             awd_register_damage_key( baseWeaponName );
         }
+    }
+}
+
+awd_disable_stock_weapon_level_increase( player, weaponKey )
+{
+    if ( !isdefined( player ) || !isdefined( weaponKey ) || weaponKey == "" )
+    {
+        return;
+    }
+
+    if ( isdefined( player.weaponstate[weaponKey] ) )
+    {
+        player.weaponstate[weaponKey]["weapon_level_increase"] = 0;
     }
 }
 
@@ -137,7 +140,7 @@ awd_register_damage_key( weaponKey )
     level.modifyweapondamage[weaponKey] = ::awd_modify_damage;
 }
 
-awd_apply_previous_damage_callback(
+damage = awd_apply_previous_damage_callback(
     victim,
     attacker,
     damage,
@@ -259,7 +262,14 @@ awd_modify_damage(
         head/neck/helmet multipliers so the game can retain its normal
         hit-location behavior.
     */
-    return awd_get_base_damage( weaponLevel );
+    customBaseDamage = awd_get_base_damage( weaponLevel );
+
+    if ( damage > customBaseDamage )
+    {
+        return damage;
+    }
+
+    return customBaseDamage;
 }
 
 /*
