@@ -260,7 +260,7 @@ runReviveOutcomeSelfTests()
     downed = spawnstruct();
     downed.abzmDowned = false;
     reportSelfTestResult( "revive_interaction_cleared_downed", getReviveInteractionCompletionStatus( downed ) == ABZM_REVIVE_STATUS_SUCCESS );
-    reportSelfTestResult( "revive_interaction_missing_entity", getReviveInteractionCompletionStatus( undefined ) == ABZM_REVIVE_STATUS_SUCCESS );
+        reportSelfTestResult( "revive_interaction_missing_entity", getReviveInteractionCompletionStatus( undefined ) == ABZM_REVIVE_STATUS_FALLBACK );
 
     downed = spawnstruct();
     downed.abzmDowned = true;
@@ -895,7 +895,7 @@ getReviveInteractionCompletionStatus( downed )
 {
     if ( !isdefined( downed ) )
     {
-        return ABZM_REVIVE_STATUS_SUCCESS;
+        return ABZM_REVIVE_STATUS_FALLBACK;
     }
 
     if ( !downed.abzmDowned )
@@ -1058,7 +1058,7 @@ attemptUtilityPurchase()
         exoNode = getClosestAvailableSharedInteractable( "exo" );
         if ( attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
-            markSharedPurchase( exoNode, "exo" );
+            markSharedPurchase( exoNode, "exo", self.abzmLastPurchaseUsedFallback );
             return true;
         }
     }
@@ -1068,7 +1068,7 @@ attemptUtilityPurchase()
         doorNode = getClosestAvailableSharedInteractable( "door" );
         if ( attemptPurchase( doorNode, level.abzm.doorCost ) )
         {
-            markSharedPurchase( doorNode, "door" );
+            markSharedPurchase( doorNode, "door", self.abzmLastPurchaseUsedFallback );
             return true;
         }
     }
@@ -1154,7 +1154,7 @@ markPerkPurchase( node )
     markGenericPurchase();
 }
 
-markSharedPurchase( node, kind )
+markSharedPurchase( node, kind, usedFallback )
 {
     if ( !isdefined( level.abzm ) )
     {
@@ -1177,7 +1177,7 @@ markSharedPurchase( node, kind )
     if ( kind == "exo" || kind == "door" )
     {
         sharedCooldown = ABZM_SHARED_PURCHASE_COOLDOWN_MS;
-        if ( isdefined( self.abzmLastPurchaseUsedFallback ) && self.abzmLastPurchaseUsedFallback )
+        if ( isdefined( usedFallback ) && usedFallback )
         {
             sharedCooldown = ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS;
         }
