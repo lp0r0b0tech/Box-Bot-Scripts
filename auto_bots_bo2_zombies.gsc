@@ -944,9 +944,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestInteractable( "exo" );
-        if ( !alreadyBoughtSharedNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        if ( !alreadyBoughtSharedNode( exoNode, "exo" ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
-            markSharedPurchase( exoNode );
+            markSharedPurchase( exoNode, "exo" );
             return true;
         }
     }
@@ -954,9 +954,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.doorCost ) )
     {
         doorNode = getClosestInteractable( "door" );
-        if ( !alreadyBoughtSharedNode( doorNode ) && attemptPurchase( doorNode, level.abzm.doorCost ) )
+        if ( !alreadyBoughtSharedNode( doorNode, "door" ) && attemptPurchase( doorNode, level.abzm.doorCost ) )
         {
-            markSharedPurchase( doorNode );
+            markSharedPurchase( doorNode, "door" );
             return true;
         }
     }
@@ -1006,10 +1006,17 @@ markPerkPurchase( node )
     markGenericPurchase();
 }
 
-markSharedPurchase( node )
+markSharedPurchase( node, kind )
 {
     if ( !isdefined( level.abzm ) )
     {
+        return;
+    }
+
+    if ( !shouldPersistSharedPurchaseNode( node, kind ) )
+    {
+        removeNodeFromArray( level.abzm.sharedPurchasedNodes, node );
+        markGenericPurchase();
         return;
     }
 
@@ -1026,16 +1033,68 @@ alreadyBoughtPerkNode( node )
     return nodeArrayContains( self.abzmPurchasedPerkNodes, node );
 }
 
-alreadyBoughtSharedNode( node )
+alreadyBoughtSharedNode( node, kind )
 {
     if ( !isdefined( level.abzm ) )
     {
         return false;
     }
 
-    return nodeArrayContains( level.abzm.sharedPurchasedNodes, node );
+    if ( !nodeArrayContains( level.abzm.sharedPurchasedNodes, node ) )
+    {
+        return false;
+    }
+
+    if ( !shouldPersistSharedPurchaseNode( node, kind ) )
+    {
+        removeNodeFromArray( level.abzm.sharedPurchasedNodes, node );
+        return false;
+    }
+
+    return true;
 }
 
+shouldPersistSharedPurchaseNode( node, kind )
+{
+    if ( !isdefined( node ) )
+    {
+        return true;
+    }
+
+    if ( !isDesiredInteractable( node, kind ) )
+    {
+        return true;
+    }
+
+    return false;
+}
+
+removeNodeFromArray( source, target )
+{
+    if ( !isdefined( source ) || !isdefined( target ) )
+    {
+        return;
+    }
+
+    kept = [];
+    for ( i = 0; i < source.size; i++ )
+    {
+        if ( isdefined( source[i] ) && source[i] != target )
+        {
+            kept[kept.size] = source[i];
+        }
+    }
+
+    for ( i = 0; i < kept.size; i++ )
+    {
+        source[i] = kept[i];
+    }
+
+    while ( source.size > kept.size )
+    {
+        source[source.size - 1] = undefined;
+    }
+}
 
 getBestPerkInteractable()
 {
@@ -1737,20 +1796,9 @@ getInteractableCandidates()
     appendEntArray( nodes, getentarray( "script_model", "classname" ) );
     appendEntArray( nodes, getentarray( "script_brushmodel", "classname" ) );
 
-    purchaseNodes = [];
-    for ( i = 0; i < nodes.size; i++ )
-    {
-        node = nodes[i];
-        if ( isDesiredInteractable( node, "weapon" ) || isDesiredInteractable( node, "mystery" ) )
-        {
-            purchaseNodes[purchaseNodes.size] = node;
-        }
-    }
-
     level.abzm.interactableCandidates = nodes;
-    level.abzm.purchaseItemCandidates = purchaseNodes;
     level.abzm.interactableCacheTime = gettime();
-    level.abzm.purchaseItemCacheTime = level.abzm.interactableCacheTime;
+    level.abzm.purchaseItemCacheTime = -999999;
     return level.abzm.interactableCandidates;
 }
 
@@ -1767,7 +1815,19 @@ getWeaponPurchaseCandidates()
         return level.abzm.purchaseItemCandidates;
     }
 
-    getInteractableCandidates();
+    nodes = getInteractableCandidates();
+    purchaseNodes = [];
+    for ( i = 0; i < nodes.size; i++ )
+    {
+        node = nodes[i];
+        if ( isDesiredInteractable( node, "weapon" ) || isDesiredInteractable( node, "mystery" ) )
+        {
+            purchaseNodes[purchaseNodes.size] = node;
+        }
+    }
+
+    level.abzm.purchaseItemCandidates = purchaseNodes;
+    level.abzm.purchaseItemCacheTime = gettime();
     return level.abzm.purchaseItemCandidates;
 }
 
