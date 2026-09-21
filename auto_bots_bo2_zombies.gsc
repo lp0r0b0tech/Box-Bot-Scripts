@@ -480,6 +480,7 @@ runPurchaseConfirmationSelfTests()
 {
     reportSelfTestResult( "mystery_confirmation_requires_change", !isMysteryBoxRewardConfirmedForState( "weapon_a", 0, "weapon_a", 0 ) );
     reportSelfTestResult( "pap_confirmation_requires_same_weapon_upgrade", !isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_b", 1 ) && isPackAPunchUpgradeConfirmedForState( "weapon_a", 0, "weapon_a", 1 ) );
+    reportSelfTestResult( "pap_wait_confirmation_accepts_upgrade", doesPackAPunchConfirmationSequenceSucceed( "weapon_a", 0, [ "weapon_a", "weapon_a" ], [ 0, 1 ] ) );
     reportSelfTestResult( "pap_wait_confirmation_rejects_weapon_swap", !doesPackAPunchConfirmationSequenceSucceed( "weapon_a", 0, [ "weapon_b", "weapon_b" ], [ 1, 1 ] ) );
     reportSelfTestResult( "pap_tracking_requires_live_upgrade_increase", resolveTrackedPackAPunchLevel( 1, 1, 0 ) == 1 );
     reportSelfTestResult( "pap_tracking_accepts_high_observed_level", min( resolveTrackedPackAPunchLevel( 1, 1, 25 ), ABZM_MAX_PACKAPUNCH_LEVEL ) == 25 );
@@ -1577,14 +1578,9 @@ alreadyPackAPunchedCurrentWeapon()
         return false;
     }
 
-    if ( !confirmationKeyMatches )
+    if ( confirmationKeyMatches && confirmationActive )
     {
-        return false;
-    }
-
-    if ( !confirmationActive )
-    {
-        return false;
+        return getCurrentWeaponIdentityKey() == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey;
     }
 
     return getCurrentWeaponIdentityKey() == self.abzmPackAPunchWeaponEntries[entryIndex].weaponKey;
@@ -2936,6 +2932,7 @@ moveToAndUse( node )
 
 attemptPurchase( node, cost )
 {
+    self initializeBotPurchaseState();
     self.abzmLastPurchaseUsedFallback = false;
 
     if ( !hasEnoughPoints( self, cost ) )
