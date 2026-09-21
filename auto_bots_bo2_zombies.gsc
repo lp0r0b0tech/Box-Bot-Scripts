@@ -15,6 +15,8 @@
 #define ABZM_DEFAULT_BOTS_AUTO_BUY_PERKS      1
 #define ABZM_DEFAULT_BOTS_AUTO_BUY_UPGRADES   1
 #define ABZM_DEFAULT_BOTS_USE_EQUIPMENT       1
+#define ABZM_DEFAULT_FORCE_LOADOUT            1
+#define ABZM_DEFAULT_FORCE_LOADOUT_PAP_LEVEL  25
 #define ABZM_DEFAULT_BO2_TUNING_ENABLED       1
 #define ABZM_DEFAULT_BOT_ACCURACY             9.99
 #define ABZM_DEFAULT_BOT_REACTION_TIME        0.0
@@ -92,6 +94,11 @@
 #define ABZM_BO2_DROP_WEIGHT_MAXAMMO          6
 #define ABZM_BO2_DROP_WEIGHT_CARPENTER        6
 #define ABZM_BO2_DROP_WEIGHT_2XP              0
+
+#define ABZM_FORCE_LOADOUT_PRIMARY            "iw5_fusionzm_mp"
+#define ABZM_FORCE_LOADOUT_SECONDARY          "iw5_exocrossbowzm_mp"
+#define ABZM_FORCE_LOADOUT_LETHAL             "contact_grenade_zombies_mp"
+#define ABZM_FORCE_LOADOUT_TACTICAL           "distraction_drone_zombie_mp"
 
 main()
 {
@@ -267,6 +274,8 @@ initDvars()
     setdvarifuninitialized( "scr_zm_autobots_auto_buy_perks", ABZM_DEFAULT_BOTS_AUTO_BUY_PERKS );
     setdvarifuninitialized( "scr_zm_autobots_auto_buy_upgrades", ABZM_DEFAULT_BOTS_AUTO_BUY_UPGRADES );
     setdvarifuninitialized( "scr_zm_autobots_use_equipment", ABZM_DEFAULT_BOTS_USE_EQUIPMENT );
+    setdvarifuninitialized( "scr_zm_autobots_force_loadout", ABZM_DEFAULT_FORCE_LOADOUT );
+    setdvarifuninitialized( "scr_zm_autobots_force_loadout_pap_level", ABZM_DEFAULT_FORCE_LOADOUT_PAP_LEVEL );
     // Teammate-only combat profile overrides. Difficulty accepts engine strings such as recruit/regular/hardened/veteran/ultra.
     // Accuracy and aggression are scalar multipliers, reaction_time is the bot think delay in seconds, and max_health is applied per spawn.
     setdvarifuninitialized( "scr_zm_autobots_difficulty", "ultra" );
@@ -615,6 +624,8 @@ refreshRuntimeConfig()
     level.abzm.botsAutoBuyPerks = getdvarint( "scr_zm_autobots_auto_buy_perks" ) > 0;
     level.abzm.botsAutoBuyUpgrades = getdvarint( "scr_zm_autobots_auto_buy_upgrades" ) > 0;
     level.abzm.botsUseEquipment = getdvarint( "scr_zm_autobots_use_equipment" ) > 0;
+    level.abzm.forceLoadoutEnabled = getdvarint( "scr_zm_autobots_force_loadout" ) > 0;
+    level.abzm.forceLoadoutPackLevel = max( 0, min( ABZM_MAX_PACKAPUNCH_LEVEL, getdvarint( "scr_zm_autobots_force_loadout_pap_level" ) ) );
     level.abzm.botDifficulty = normalizeBotDifficulty( getdvar( "scr_zm_autobots_difficulty" ) );
     level.abzm.botAccuracy = abzmClamp( getdvarfloat( "scr_zm_autobots_accuracy" ), 0.0, 9.99 );
     level.abzm.botReactionTime = abzmClamp( getdvarfloat( "scr_zm_autobots_reaction_time" ), 0.0, 1.0 );
@@ -634,6 +645,12 @@ refreshRuntimeConfig()
     level.abzm.specialRoundInterval = max( 0, getdvarint( "scr_zm_bo2_special_round_interval" ) );
     level.abzm.specialRoundOffset = max( 1, getdvarint( "scr_zm_bo2_special_round_offset" ) );
     level.abzm.bo2PowerupsEnabled = getdvarint( "scr_zm_bo2_powerups_enable" ) > 0;
+
+    if ( level.abzm.forceLoadoutEnabled )
+    {
+        level.abzm.botsAutoBuyPerks = false;
+        level.abzm.botsAutoBuyUpgrades = false;
+    }
 
     level.abzm.enabled = level.abzm.autoBotsEnabled || level.abzm.bo2Enabled;
 }
@@ -774,6 +791,119 @@ clearBotPurchaseState()
     self.abzmLastPackAPunchWeaponKey = "";
     self.abzmLastPackAPunchUpgradeLevel = 0;
     self.abzmPackAPunchWeaponEntries = [];
+    self.abzmForcedLoadoutGrantedAt = undefined;
+    self.abzmForcedLoadoutMaintainedAt = undefined;
+}
+
+grantForcedBotLoadout()
+{
+    if ( !isBotEntity( self ) || !isdefined( level.abzm ) || !level.abzm.forceLoadoutEnabled )
+    {
+        return false;
+    }
+
+    self initializeBotPurchaseState();
+    self takeallweapons();
+    self giveweapon( ABZM_FORCE_LOADOUT_PRIMARY );
+    self giveweapon( ABZM_FORCE_LOADOUT_SECONDARY );
+    self giveweapon( ABZM_FORCE_LOADOUT_LETHAL );
+    self giveweapon( ABZM_FORCE_LOADOUT_TACTICAL );
+    self givemaxammo( ABZM_FORCE_LOADOUT_PRIMARY );
+    self givemaxammo( ABZM_FORCE_LOADOUT_SECONDARY );
+    self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
+    applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
+    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_PRIMARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    self switchtoweapon( ABZM_FORCE_LOADOUT_SECONDARY );
+    applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
+    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_SECONDARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
+    applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
+    grantForcedBotPerks();
+    self.abzmForcedLoadoutGrantedAt = gettime();
+    self.abzmForcedLoadoutMaintainedAt = self.abzmForcedLoadoutGrantedAt;
+    return true;
+}
+
+grantForcedBotPerks()
+{
+    if ( !isBotEntity( self ) || !isdefined( level.abzm ) || !level.abzm.forceLoadoutEnabled )
+    {
+        return;
+    }
+
+    self givePerk( "specialty_exo_health", false );
+    self givePerk( "specialty_exo_reload", false );
+    self givePerk( "specialty_exo_medic", false );
+    self givePerk( "specialty_exo_slamboots", false );
+    self givePerk( "specialty_exo_soldier", false );
+    self givePerk( "specialty_exo_stockpile", false );
+    self.abzmPurchasedPerkNodes = [];
+    self.abzmPurchasedPerkNodes[0] = "specialty_exo_health";
+    self.abzmPurchasedPerkNodes[1] = "specialty_exo_reload";
+    self.abzmPurchasedPerkNodes[2] = "specialty_exo_medic";
+    self.abzmPurchasedPerkNodes[3] = "specialty_exo_slamboots";
+    self.abzmPurchasedPerkNodes[4] = "specialty_exo_soldier";
+    self.abzmPurchasedPerkNodes[5] = "specialty_exo_stockpile";
+    self.abzmPerkPurchases = self.abzmPurchasedPerkNodes.size;
+}
+
+maintainForcedBotLoadout()
+{
+    if ( !isBotEntity( self ) || !isdefined( level.abzm ) || !level.abzm.forceLoadoutEnabled )
+    {
+        return false;
+    }
+
+    if ( !isdefined( self.abzmForcedLoadoutGrantedAt ) )
+    {
+        return grantForcedBotLoadout();
+    }
+
+    if ( isdefined( self.abzmForcedLoadoutMaintainedAt ) && (gettime() - self.abzmForcedLoadoutMaintainedAt) < 5000 )
+    {
+        return false;
+    }
+
+    self giveweapon( ABZM_FORCE_LOADOUT_LETHAL );
+    self giveweapon( ABZM_FORCE_LOADOUT_TACTICAL );
+    self givemaxammo( ABZM_FORCE_LOADOUT_PRIMARY );
+    self givemaxammo( ABZM_FORCE_LOADOUT_SECONDARY );
+    grantForcedBotPerks();
+    currentWeaponKey = getCurrentWeaponIdentityKey();
+    if ( currentWeaponKey == toLower( ABZM_FORCE_LOADOUT_PRIMARY ) || currentWeaponKey == toLower( ABZM_FORCE_LOADOUT_SECONDARY ) )
+    {
+        applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
+        markPackAPunchPurchase( currentWeaponKey, max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    }
+
+    self.abzmForcedLoadoutMaintainedAt = gettime();
+    return true;
+}
+
+applyCurrentWeaponPackAPunchLevel( upgradeLevel )
+{
+    weapon = self getcurrentweapon();
+    if ( !isdefined( weapon ) || !isdefined( upgradeLevel ) || upgradeLevel <= 0 )
+    {
+        return;
+    }
+
+    if ( !isdefined( self.weaponstate ) )
+    {
+        self.weaponstate = [];
+    }
+
+    if ( !isdefined( self.weaponstate[weapon] ) )
+    {
+        self.weaponstate[weapon] = spawnstruct();
+    }
+
+    state = self.weaponstate[weapon];
+    state["pap_level"] = upgradeLevel;
+    state["upgrade_level"] = upgradeLevel;
+    state["weapon_level_increase"] = upgradeLevel;
+    state["is_upgraded"] = true;
+    self.weaponstate[weapon] = state;
 }
 
 monitorPlayerConnections()
@@ -821,6 +951,7 @@ onPlayerConnected()
         {
             initializeBotPurchaseState();
             applyBotCombatProfile();
+            grantForcedBotLoadout();
         }
 
         if ( self.abzmIsBot && ( !isdefined( self.abzmLifeLoopStarted ) || !self.abzmLifeLoopStarted ) )
@@ -1058,6 +1189,7 @@ botBrainLoop()
     {
         refreshRuntimeConfig();
         applyBotCombatProfile();
+        maintainForcedBotLoadout();
 
         if ( level.abzm.botsCanRevive && attemptBotRevive() )
         {
@@ -1081,7 +1213,7 @@ botBrainLoop()
             attemptPerkPurchase();
         }
 
-        if ( level.abzm.botsAutoBuyUpgrades )
+        if ( level.abzm.botsAutoBuyUpgrades || level.abzm.forceLoadoutEnabled )
         {
             attemptUtilityPurchase();
         }
@@ -1300,6 +1432,11 @@ moveToRetreatAnchor()
 
 attemptPerkPurchase()
 {
+    if ( isdefined( level.abzm.forceLoadoutEnabled ) && level.abzm.forceLoadoutEnabled )
+    {
+        return false;
+    }
+
     if ( !botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC ) || !botCanAttemptPerkPurchase( ABZM_PERK_PURCHASE_COOLDOWN_SEC ) )
     {
         return false;
@@ -1338,6 +1475,11 @@ attemptPerkPurchase()
 
 attemptWeaponPurchase()
 {
+    if ( isdefined( level.abzm.forceLoadoutEnabled ) && level.abzm.forceLoadoutEnabled )
+    {
+        return false;
+    }
+
     roundNumber = getCurrentRoundNumber();
     confirmedWeaponPurchase = false;
     weaponNode = getClosestWeaponPurchaseItemInteractable();
@@ -1420,7 +1562,7 @@ attemptUtilityPurchase()
         return false;
     }
 
-    if ( level.abzm.botsAutoBuyUpgrades && currentWeaponCanUsePackAPunch() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
+    if ( !level.abzm.forceLoadoutEnabled && level.abzm.botsAutoBuyUpgrades && currentWeaponCanUsePackAPunch() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
         papNode = getClosestAvailableSharedInteractable( "packapunch" );
         if ( isdefined( papNode ) && reserveSharedPurchase( papNode, "packapunch" ) )
@@ -1474,7 +1616,7 @@ attemptUtilityPurchase()
         }
     }
 
-    if ( hasEnoughPoints( self, level.abzm.exoCost ) )
+    if ( !level.abzm.forceLoadoutEnabled && hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestAvailableSharedInteractable( "exo" );
         if ( isdefined( exoNode ) && reserveSharedPurchase( exoNode, "exo" ) )
