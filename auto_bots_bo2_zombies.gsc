@@ -318,6 +318,13 @@ runSharedPurchaseSelfTests()
     sharedPurchaseExpiresAndCompacts = !alreadyBoughtSharedNode( node, "door" ) && level.abzm.sharedPurchasedNodes.size == 0;
     level.abzm.sharedPurchasedNodes = previousSharedNodes;
     reportSelfTestResult( "shared_purchase_expires_and_compacts", sharedPurchaseExpiresAndCompacts );
+
+    previousSharedNodes = level.abzm.sharedPurchasedNodes;
+    level.abzm.sharedPurchasedNodes = [];
+    bot markSharedPurchase( node, "door", true );
+    fallbackSharedCooldownMs = level.abzm.sharedPurchasedNodes[0].expiresAt - gettime();
+    level.abzm.sharedPurchasedNodes = previousSharedNodes;
+    reportSelfTestResult( "shared_purchase_fallback_uses_retry_cooldown", fallbackSharedCooldownMs <= ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS && fallbackSharedCooldownMs > 0 );
 }
 
 runPerkPurchaseSelfTests()
@@ -1080,11 +1087,6 @@ attemptPerkPurchase()
         return false;
     }
 
-    if ( isdefined( self.abzmPerkPurchases ) && self.abzmPerkPurchases >= level.abzm.maxPerks )
-    {
-        return false;
-    }
-
     perkNode = getBestPerkInteractable();
     if ( !isdefined( perkNode ) )
     {
@@ -1196,7 +1198,10 @@ attemptUtilityPurchase()
                 }
 
                 clearSharedPurchaseReservation( papNode, "packapunch" );
-                markGenericPurchase();
+                if ( isdefined( self.abzmLastPurchaseUsedFallback ) && self.abzmLastPurchaseUsedFallback )
+                {
+                    markGenericPurchase();
+                }
                 return false;
             }
 
@@ -1344,7 +1349,13 @@ alreadyPackAPunchedCurrentWeapon()
         return false;
     }
 
-    return getCurrentWeaponUpgradeLevel() >= self.abzmLastPackAPunchUpgradeLevel;
+    currentUpgradeLevel = getCurrentWeaponUpgradeLevel();
+    if ( currentUpgradeLevel <= 0 )
+    {
+        return self.abzmLastPackAPunchUpgradeLevel > 0;
+    }
+
+    return currentUpgradeLevel >= self.abzmLastPackAPunchUpgradeLevel;
 }
 
 isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel )
