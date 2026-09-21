@@ -1170,7 +1170,7 @@ attemptWeaponPurchase()
             {
                 if ( !self.abzmLastPurchaseUsedFallback )
                 {
-                    markSharedPurchase( mysteryNode, "mystery", false );
+                    markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
                     self.abzmLastWeaponPurchaseStateKey = "";
                     purchasedWeaponUpgrade = true;
                 }
@@ -1195,8 +1195,18 @@ attemptWeaponPurchase()
     prePurchaseStateKey = getWeaponPurchaseStateKey();
     if ( isdefined( weaponNode ) && hasEnoughPoints( self, level.abzm.weaponCost ) && attemptPurchase( weaponNode, level.abzm.weaponCost ) )
     {
-        markWeaponPurchase( prePurchaseStateKey );
-        return true;
+        if ( self.abzmLastPurchaseUsedFallback )
+        {
+            markGenericPurchase();
+            return false;
+        }
+
+        postPurchaseStateKey = getWeaponPurchaseStateKey();
+        if ( postPurchaseStateKey != prePurchaseStateKey )
+        {
+            markWeaponPurchase( prePurchaseStateKey );
+            return true;
+        }
     }
 
     return false;
@@ -1222,7 +1232,7 @@ attemptUtilityPurchase()
                 {
                     if ( waitForPackAPunchConfirmation( previousPapWeaponKey, previousPapUpgradeLevel, 1000 ) )
                     {
-                        markSharedPurchase( papNode, "packapunch", false );
+                        markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
                         self.abzmLastWeaponPurchaseStateKey = "";
                         markPackAPunchPurchase();
                         return true;
@@ -1250,7 +1260,7 @@ attemptUtilityPurchase()
             {
                 if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
                 {
-                    markSharedPurchase( doorNode, "door", false );
+                    markSharedPurchase( doorNode, "door", self.abzmLastPurchaseUsedFallback );
                     return true;
                 }
 
@@ -1272,7 +1282,7 @@ attemptUtilityPurchase()
             {
                 if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
                 {
-                    markSharedPurchase( exoNode, "exo", false );
+                    markSharedPurchase( exoNode, "exo", self.abzmLastPurchaseUsedFallback );
                     return true;
                 }
 
@@ -1510,7 +1520,7 @@ markSharedPurchase( node, kind, usedFallback )
     sharedEntry = spawnstruct();
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
-    sharedEntry.expiresAt = -1;
+    sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS;
     sharedEntry.isReservation = false;
     if ( isTimedSharedPurchaseKind( kind ) )
     {
