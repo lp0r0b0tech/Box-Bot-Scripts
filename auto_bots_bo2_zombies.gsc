@@ -8,7 +8,7 @@
 // - Use polling fallbacks for zombies/power-ups because notify names can vary by build.
 // - Keep interactable matching token-driven so AW/S1x map trigger names are easy to retune.
 
-#define ABZM_DEFAULT_AUTOBOTS_ENABLED         0
+#define ABZM_DEFAULT_AUTOBOTS_ENABLED         1
 #define ABZM_DEFAULT_BOT_COUNT                3
 #define ABZM_DEFAULT_BOT_SKILL                1.0
 #define ABZM_DEFAULT_BOTS_CAN_REVIVE          1
@@ -16,6 +16,17 @@
 #define ABZM_DEFAULT_BOTS_AUTO_BUY_UPGRADES   1
 #define ABZM_DEFAULT_BOTS_USE_EQUIPMENT       1
 #define ABZM_DEFAULT_BO2_TUNING_ENABLED       1
+#define ABZM_DEFAULT_BOT_ACCURACY             9.99
+#define ABZM_DEFAULT_BOT_REACTION_TIME        0.0
+#define ABZM_DEFAULT_BOT_MAX_HEALTH           2500
+#define ABZM_DEFAULT_BOT_AGGRESSION           9.99
+#define ABZM_DEFAULT_PERK_COST                2000
+#define ABZM_DEFAULT_WEAPON_COST              1500
+#define ABZM_DEFAULT_MYSTERY_COST             950
+#define ABZM_DEFAULT_PACKAPUNCH_COST          5000
+#define ABZM_DEFAULT_DOOR_COST                1250
+#define ABZM_DEFAULT_EXO_COST                 2000
+#define ABZM_DEFAULT_PERK_LIMIT               6
 #define ABZM_DEFAULT_SPRINT_ROUND             6
 #define ABZM_DEFAULT_CRAWLER_CHANCE           0.10
 #define ABZM_DEFAULT_SPECIAL_ROUND_INTERVAL   5
@@ -47,6 +58,8 @@
 #define ABZM_BO2_REVIVE_TIME                  5
 #define ABZM_BO2_REVIVE_RANGE                 96
 #define ABZM_INTERACT_RANGE                   96
+#define ABZM_PURCHASE_COOLDOWN_SEC            1.5
+#define ABZM_PERK_PURCHASE_COOLDOWN_SEC       5.0
 #define ABZM_BO2_RUN_ROUND                    3
 #define ABZM_BO2_SPECIAL_HEALTH_SCALE          0.75
 #define ABZM_BO2_SPECIAL_SPEED_BONUS           20
@@ -154,6 +167,11 @@ buildModState()
     state.round = 1;
     state.lastSpecialRound = 0;
     state.forceSpecialRound = false;
+    state.botDifficulty = "ultra";
+    state.botAccuracy = ABZM_DEFAULT_BOT_ACCURACY;
+    state.botReactionTime = ABZM_DEFAULT_BOT_REACTION_TIME;
+    state.botMaxHealth = ABZM_DEFAULT_BOT_MAX_HEALTH;
+    state.botAggression = ABZM_DEFAULT_BOT_AGGRESSION;
     state.trackedZombies = [];
     state.interactableCandidates = [];
     state.interactableCacheTime = 0;
@@ -174,6 +192,18 @@ initDvars()
     setdvarifuninitialized( "scr_zm_autobots_auto_buy_perks", ABZM_DEFAULT_BOTS_AUTO_BUY_PERKS );
     setdvarifuninitialized( "scr_zm_autobots_auto_buy_upgrades", ABZM_DEFAULT_BOTS_AUTO_BUY_UPGRADES );
     setdvarifuninitialized( "scr_zm_autobots_use_equipment", ABZM_DEFAULT_BOTS_USE_EQUIPMENT );
+    setdvarifuninitialized( "scr_zm_autobots_difficulty", "ultra" );
+    setdvarifuninitialized( "scr_zm_autobots_accuracy", ABZM_DEFAULT_BOT_ACCURACY );
+    setdvarifuninitialized( "scr_zm_autobots_reaction_time", ABZM_DEFAULT_BOT_REACTION_TIME );
+    setdvarifuninitialized( "scr_zm_autobots_max_health", ABZM_DEFAULT_BOT_MAX_HEALTH );
+    setdvarifuninitialized( "scr_zm_autobots_aggression", ABZM_DEFAULT_BOT_AGGRESSION );
+    setdvarifuninitialized( "scr_zm_autobots_perk_cost", ABZM_DEFAULT_PERK_COST );
+    setdvarifuninitialized( "scr_zm_autobots_weapon_cost", ABZM_DEFAULT_WEAPON_COST );
+    setdvarifuninitialized( "scr_zm_autobots_mystery_cost", ABZM_DEFAULT_MYSTERY_COST );
+    setdvarifuninitialized( "scr_zm_autobots_packapunch_cost", ABZM_DEFAULT_PACKAPUNCH_COST );
+    setdvarifuninitialized( "scr_zm_autobots_door_cost", ABZM_DEFAULT_DOOR_COST );
+    setdvarifuninitialized( "scr_zm_autobots_exo_cost", ABZM_DEFAULT_EXO_COST );
+    setdvarifuninitialized( "scr_zm_autobots_max_perks", ABZM_DEFAULT_PERK_LIMIT );
 
     setdvarifuninitialized( "scr_zm_bo2_enable", ABZM_DEFAULT_BO2_TUNING_ENABLED );
     setdvarifuninitialized( "scr_zm_bo2_sprint_round", ABZM_DEFAULT_SPRINT_ROUND );
@@ -213,6 +243,18 @@ refreshRuntimeConfig()
     level.abzm.botsAutoBuyPerks = getdvarint( "scr_zm_autobots_auto_buy_perks" ) > 0;
     level.abzm.botsAutoBuyUpgrades = getdvarint( "scr_zm_autobots_auto_buy_upgrades" ) > 0;
     level.abzm.botsUseEquipment = getdvarint( "scr_zm_autobots_use_equipment" ) > 0;
+    level.abzm.botDifficulty = normalizeBotDifficulty( getdvar( "scr_zm_autobots_difficulty" ) );
+    level.abzm.botAccuracy = abzmClamp( getdvarfloat( "scr_zm_autobots_accuracy" ), 0.0, 9.99 );
+    level.abzm.botReactionTime = abzmClamp( getdvarfloat( "scr_zm_autobots_reaction_time" ), 0.0, 1.0 );
+    level.abzm.botMaxHealth = max( 100, min( 2500, getdvarint( "scr_zm_autobots_max_health" ) ) );
+    level.abzm.botAggression = abzmClamp( getdvarfloat( "scr_zm_autobots_aggression" ), 0.0, 9.99 );
+    level.abzm.perkCost = max( 0, getdvarint( "scr_zm_autobots_perk_cost" ) );
+    level.abzm.weaponCost = max( 0, getdvarint( "scr_zm_autobots_weapon_cost" ) );
+    level.abzm.mysteryCost = max( 0, getdvarint( "scr_zm_autobots_mystery_cost" ) );
+    level.abzm.packapunchCost = max( 0, getdvarint( "scr_zm_autobots_packapunch_cost" ) );
+    level.abzm.doorCost = max( 0, getdvarint( "scr_zm_autobots_door_cost" ) );
+    level.abzm.exoCost = max( 0, getdvarint( "scr_zm_autobots_exo_cost" ) );
+    level.abzm.maxPerks = max( 1, getdvarint( "scr_zm_autobots_max_perks" ) );
 
     level.abzm.bo2Enabled = getdvarint( "scr_zm_bo2_enable" ) > 0;
     level.abzm.sprintRound = max( 1, getdvarint( "scr_zm_bo2_sprint_round" ) );
@@ -222,6 +264,72 @@ refreshRuntimeConfig()
     level.abzm.bo2PowerupsEnabled = getdvarint( "scr_zm_bo2_powerups_enable" ) > 0;
 
     level.abzm.enabled = level.abzm.autoBotsEnabled || level.abzm.bo2Enabled;
+}
+
+normalizeBotDifficulty( difficulty )
+{
+    if ( !isdefined( difficulty ) )
+    {
+        return "ultra";
+    }
+
+    difficulty = toLower( difficulty );
+
+    if ( difficulty == "recruit" || difficulty == "regular" || difficulty == "hardened" || difficulty == "veteran" || difficulty == "ultra" )
+    {
+        return difficulty;
+    }
+
+    return "ultra";
+}
+
+resolveBotSkillDifficulty( difficulty )
+{
+    difficulty = normalizeBotDifficulty( difficulty );
+
+    if ( difficulty == "ultra" )
+    {
+        return "veteran";
+    }
+
+    return difficulty;
+}
+
+applyBotCombatProfile()
+{
+    if ( !isBotEntity( self ) || !isdefined( level.abzm ) )
+    {
+        return;
+    }
+
+    desiredDifficulty = resolveBotSkillDifficulty( level.abzm.botDifficulty );
+    currentDifficulty = self botgetdifficulty();
+
+    if ( !isdefined( currentDifficulty ) || currentDifficulty != desiredDifficulty )
+    {
+        self botsetdifficulty( desiredDifficulty );
+    }
+
+    self.abzmSkill = level.abzm.botSkill;
+    self.botAccuracy = level.abzm.botAccuracy;
+    self.reactionTime = level.abzm.botReactionTime;
+    self.maxhealth = level.abzm.botMaxHealth;
+    self.maxHealth = level.abzm.botMaxHealth;
+    self.botAggression = level.abzm.botAggression;
+
+    if ( isdefined( self.health ) && self.health > self.maxhealth )
+    {
+        self.health = self.maxhealth;
+    }
+}
+
+resetBotPurchaseState()
+{
+    self.abzmPerkPurchases = 0;
+    self.abzmPurchasedPerkKeys = [];
+    self.abzmPurchasedUpgradeKeys = [];
+    self.abzmLastPurchaseTime = 0;
+    self.abzmLastPerkPurchaseTime = 0;
 }
 
 monitorPlayerConnections()
@@ -267,8 +375,15 @@ onPlayerConnected()
 
         if ( self.abzmIsBot && ( !isdefined( self.abzmLifeLoopStarted ) || !self.abzmLifeLoopStarted ) )
         {
+            resetBotPurchaseState();
+            applyBotCombatProfile();
             self.abzmLifeLoopStarted = true;
             self thread botLifeLoop();
+        }
+        else if ( self.abzmIsBot )
+        {
+            resetBotPurchaseState();
+            applyBotCombatProfile();
         }
     }
 }
@@ -405,8 +520,26 @@ spawnAutoBot( botIndex )
     bot.pers["isBot"] = true;
     bot.name = level.abzm.botNames[nameIndex];
     bot.abzmSkill = level.abzm.botSkill;
+    bot thread applyBotPostSpawnSetup();
     bot thread onPlayerConnected();
     return true;
+}
+
+applyBotPostSpawnSetup()
+{
+    self endon( "disconnect" );
+
+    for ( ;; )
+    {
+        self waittill( "spawned_player" );
+        if ( !isBotEntity( self ) )
+        {
+            continue;
+        }
+
+        resetBotPurchaseState();
+        applyBotCombatProfile();
+    }
 }
 
 trimAutoBots( targetBotCount )
@@ -477,6 +610,7 @@ botBrainLoop()
     for ( ;; )
     {
         refreshRuntimeConfig();
+        applyBotCombatProfile();
 
         if ( level.abzm.botsCanRevive && attemptBotRevive() )
         {
@@ -491,6 +625,11 @@ botBrainLoop()
         else
         {
             runTrainingMovement();
+        }
+
+        if ( level.abzm.botsAutoBuyUpgrades )
+        {
+            attemptWeaponPurchase();
         }
 
         if ( level.abzm.botsAutoBuyPerks )
@@ -618,43 +757,235 @@ moveToRetreatAnchor()
 
 attemptPerkPurchase()
 {
-    if ( !hasEnoughPoints( self, 2000 ) )
+    if ( !botCanAttemptPurchase( ABZM_PERK_PURCHASE_COOLDOWN_SEC ) )
     {
-        return;
+        return false;
     }
 
-    perkNode = getClosestInteractable( "perk" );
-    attemptPurchase( perkNode, 2000 );
+    if ( !hasEnoughPoints( self, level.abzm.perkCost ) )
+    {
+        return false;
+    }
+
+    if ( isdefined( self.abzmPerkPurchases ) && self.abzmPerkPurchases >= level.abzm.maxPerks )
+    {
+        return false;
+    }
+
+    perkNode = getBestPerkInteractable();
+    if ( !attemptPurchase( perkNode, level.abzm.perkCost ) )
+    {
+        return false;
+    }
+
+    markPerkPurchase( perkNode );
+    return true;
+}
+
+attemptWeaponPurchase()
+{
+    roundNumber = max( 1, level.abzm.round );
+    if ( roundNumber < 5 && !currentWeaponNeedsAmmo() )
+    {
+        return false;
+    }
+
+    if ( roundNumber >= 8 && !isCurrentWeaponWeak() && !currentWeaponNeedsAmmo() )
+    {
+        return false;
+    }
+
+    if ( !botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC ) )
+    {
+        return false;
+    }
+
+    if ( roundNumber >= 7 && hasEnoughPoints( self, level.abzm.mysteryCost ) )
+    {
+        mysteryNode = getClosestInteractable( "mystery" );
+        if ( attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
+        {
+            markGenericPurchase();
+            return true;
+        }
+    }
+
+    if ( !hasEnoughPoints( self, level.abzm.weaponCost ) )
+    {
+        return false;
+    }
+
+    weaponNode = getClosestInteractable( "weapon" );
+    if ( attemptPurchase( weaponNode, level.abzm.weaponCost ) )
+    {
+        markGenericPurchase();
+        return true;
+    }
+
+    return false;
 }
 
 attemptUtilityPurchase()
 {
-    if ( hasEnoughPoints( self, 5000 ) )
+    if ( !botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC ) )
+    {
+        return false;
+    }
+
+    if ( hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
         papNode = getClosestInteractable( "packapunch" );
-        if ( attemptPurchase( papNode, 5000 ) )
+        if ( !alreadyBoughtUpgradeNode( papNode ) && attemptPurchase( papNode, level.abzm.packapunchCost ) )
         {
-            return;
+            markUpgradePurchase( papNode );
+            return true;
         }
     }
 
-    if ( hasEnoughPoints( self, 1250 ) )
-    {
-        doorNode = getClosestInteractable( "door" );
-        if ( attemptPurchase( doorNode, 1250 ) )
-        {
-            return;
-        }
-    }
-
-    if ( hasEnoughPoints( self, 2000 ) )
+    if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestInteractable( "exo" );
-        if ( attemptPurchase( exoNode, 2000 ) )
+        if ( !alreadyBoughtUpgradeNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
-            return;
+            markUpgradePurchase( exoNode );
+            return true;
         }
     }
+
+    if ( hasEnoughPoints( self, level.abzm.doorCost ) )
+    {
+        doorNode = getClosestInteractable( "door" );
+        if ( !alreadyBoughtUpgradeNode( doorNode ) && attemptPurchase( doorNode, level.abzm.doorCost ) )
+        {
+            markUpgradePurchase( doorNode );
+            return true;
+        }
+    }
+
+    return false;
+}
+
+botCanAttemptPurchase( cooldownSec )
+{
+    if ( !isdefined( self.abzmLastPurchaseTime ) )
+    {
+        return true;
+    }
+
+    return ((gettime() - self.abzmLastPurchaseTime) / 1000.0) >= cooldownSec;
+}
+
+markGenericPurchase()
+{
+    self.abzmLastPurchaseTime = gettime();
+}
+
+markPerkPurchase( node )
+{
+    key = getInteractableKey( node );
+    if ( isdefined( key ) && key != "" )
+    {
+        self.abzmPurchasedPerkKeys[key] = true;
+    }
+
+    if ( !isdefined( self.abzmPerkPurchases ) )
+    {
+        self.abzmPerkPurchases = 0;
+    }
+
+    self.abzmPerkPurchases++;
+    self.abzmLastPerkPurchaseTime = gettime();
+    markGenericPurchase();
+}
+
+markUpgradePurchase( node )
+{
+    key = getInteractableKey( node );
+    if ( isdefined( key ) && key != "" )
+    {
+        self.abzmPurchasedUpgradeKeys[key] = true;
+    }
+
+    markGenericPurchase();
+}
+
+alreadyBoughtPerkNode( node )
+{
+    key = getInteractableKey( node );
+    if ( !isdefined( key ) || key == "" )
+    {
+        return false;
+    }
+
+    return isdefined( self.abzmPurchasedPerkKeys[key] ) && self.abzmPurchasedPerkKeys[key];
+}
+
+alreadyBoughtUpgradeNode( node )
+{
+    key = getInteractableKey( node );
+    if ( !isdefined( key ) || key == "" )
+    {
+        return false;
+    }
+
+    return isdefined( self.abzmPurchasedUpgradeKeys[key] ) && self.abzmPurchasedUpgradeKeys[key];
+}
+
+getBestPerkInteractable()
+{
+    nodes = getInteractableCandidates();
+    best = undefined;
+    bestScore = -999999;
+
+    for ( i = 0; i < nodes.size; i++ )
+    {
+        node = nodes[i];
+        if ( !isDesiredInteractable( node, "perk" ) || alreadyBoughtPerkNode( node ) )
+        {
+            continue;
+        }
+
+        score = perkPriorityForEntity( node ) * 1000;
+        score -= int( distance( self.origin, node.origin ) );
+
+        if ( score > bestScore )
+        {
+            best = node;
+            bestScore = score;
+        }
+    }
+
+    return best;
+}
+
+perkPriorityForEntity( node )
+{
+    if ( entityMatchesToken( node, "quick" ) || entityMatchesToken( node, "revive" ) )
+    {
+        return 10;
+    }
+
+    if ( entityMatchesToken( node, "health" ) || entityMatchesToken( node, "jug" ) || entityMatchesToken( node, "tough" ) )
+    {
+        return 9;
+    }
+
+    if ( entityMatchesToken( node, "speed" ) || entityMatchesToken( node, "reload" ) )
+    {
+        return 8;
+    }
+
+    if ( entityMatchesToken( node, "damage" ) || entityMatchesToken( node, "tap" ) || entityMatchesToken( node, "multishot" ) )
+    {
+        return 7;
+    }
+
+    if ( entityMatchesToken( node, "stamina" ) || entityMatchesToken( node, "move" ) || entityMatchesToken( node, "sprint" ) )
+    {
+        return 6;
+    }
+
+    return 5;
 }
 
 useEquipmentIfNeeded()
@@ -1149,6 +1480,18 @@ currentWeaponNeedsAmmo()
     return self getweaponammoclip( weapon ) <= 5;
 }
 
+isCurrentWeaponWeak()
+{
+    weapon = self getcurrentweapon();
+    if ( !isdefined( weapon ) )
+    {
+        return true;
+    }
+
+    weapon = toLower( weapon + "" );
+    return stringContainsToken( weapon, "atlas45" ) || stringContainsToken( weapon, "pistol" ) || stringContainsToken( weapon, "starter" ) || stringContainsToken( weapon, "mp11" ) || stringContainsToken( weapon, "rw1" );
+}
+
 getClosestDownedTeammate()
 {
     players = getentarray( "player", "classname" );
@@ -1234,6 +1577,8 @@ moveToAndUse( node )
     self.abzmLastInteractTarget = node;
     self.abzmLastInteractTime = gettime();
     node notify( "trigger", self );
+    node notify( "use", self );
+    self notify( "+activate" );
     return true;
 }
 
@@ -1280,6 +1625,8 @@ getInteractableCandidates()
     appendEntArray( nodes, getentarray( "trigger_use", "classname" ) );
     appendEntArray( nodes, getentarray( "script_model", "classname" ) );
     appendEntArray( nodes, getentarray( "script_brushmodel", "classname" ) );
+    appendEntArray( nodes, getentarray( "weapon", "classname" ) );
+    appendEntArray( nodes, getentarray( "item", "classname" ) );
 
     level.abzm.interactableCandidates = nodes;
     level.abzm.interactableCacheTime = gettime();
@@ -1561,6 +1908,12 @@ isDesiredInteractable( entity, kind )
 
     switch ( kind )
     {
+        case "weapon":
+            return entityMatchesToken( entity, "weapon" ) || entityMatchesToken( entity, "wallbuy" ) || entityMatchesToken( entity, "armory" );
+
+        case "mystery":
+            return entityMatchesToken( entity, "mystery" ) || entityMatchesToken( entity, "box" ) || entityMatchesToken( entity, "printer" );
+
         case "perk":
             return entityMatchesToken( entity, "perk" ) || entityMatchesToken( entity, "vending" ) || entityMatchesToken( entity, "perkacola" );
 
@@ -1575,6 +1928,46 @@ isDesiredInteractable( entity, kind )
     }
 
     return false;
+}
+
+getInteractableKey( entity )
+{
+    if ( !isdefined( entity ) )
+    {
+        return "";
+    }
+
+    if ( isdefined( entity.targetname ) && entity.targetname != "" )
+    {
+        return entity.targetname;
+    }
+
+    if ( isdefined( entity.script_noteworthy ) && entity.script_noteworthy != "" )
+    {
+        return entity.script_noteworthy;
+    }
+
+    if ( isdefined( entity.script_linkname ) && entity.script_linkname != "" )
+    {
+        return entity.script_linkname;
+    }
+
+    if ( isdefined( entity.script_string ) && entity.script_string != "" )
+    {
+        return entity.script_string;
+    }
+
+    if ( isdefined( entity.model ) && entity.model != "" )
+    {
+        return entity.model;
+    }
+
+    if ( isdefined( entity.classname ) && entity.classname != "" )
+    {
+        return entity.classname;
+    }
+
+    return "";
 }
 
 entityMatchesToken( entity, token )
