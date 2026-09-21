@@ -168,11 +168,6 @@ buildModState()
     state.round = 1;
     state.lastSpecialRound = 0;
     state.forceSpecialRound = false;
-    state.botDifficulty = "ultra";
-    state.botAccuracy = ABZM_DEFAULT_BOT_ACCURACY;
-    state.botReactionTime = ABZM_DEFAULT_BOT_REACTION_TIME;
-    state.botMaxHealth = ABZM_DEFAULT_BOT_MAX_HEALTH;
-    state.botAggression = ABZM_DEFAULT_BOT_AGGRESSION;
     state.trackedZombies = [];
     state.interactableCandidates = [];
     state.interactableCacheTime = 0;
@@ -223,7 +218,6 @@ abzmBoot()
 
     wait 0.25;
     refreshRuntimeConfig();
-    level.abzm.sharedPurchasedNodes = [];
 
     if ( !level.abzm.enabled )
     {
@@ -350,10 +344,6 @@ initializeBotPurchaseState()
         self.abzmPurchasedPerkNodes = [];
     }
 
-    if ( !isdefined( self.abzmPurchasedUpgradeNodes ) )
-    {
-        self.abzmPurchasedUpgradeNodes = [];
-    }
 }
 
 resetBotPerkPurchaseState()
@@ -954,9 +944,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestInteractable( "exo" );
-        if ( !alreadyBoughtBotUpgradeNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        if ( !alreadyBoughtSharedNode( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
         {
-            markBotUpgradePurchase( exoNode );
+            markSharedPurchase( exoNode );
             return true;
         }
     }
@@ -1031,16 +1021,6 @@ markSharedPurchase( node )
     markGenericPurchase();
 }
 
-markBotUpgradePurchase( node )
-{
-    if ( isdefined( node ) && !nodeArrayContains( self.abzmPurchasedUpgradeNodes, node ) )
-    {
-        self.abzmPurchasedUpgradeNodes[self.abzmPurchasedUpgradeNodes.size] = node;
-    }
-
-    markGenericPurchase();
-}
-
 alreadyBoughtPerkNode( node )
 {
     return nodeArrayContains( self.abzmPurchasedPerkNodes, node );
@@ -1054,11 +1034,6 @@ alreadyBoughtSharedNode( node )
     }
 
     return nodeArrayContains( level.abzm.sharedPurchasedNodes, node );
-}
-
-alreadyBoughtBotUpgradeNode( node )
-{
-    return nodeArrayContains( self.abzmPurchasedUpgradeNodes, node );
 }
 
 
@@ -1091,7 +1066,7 @@ getBestPerkInteractable()
 
 perkPriorityForEntity( node )
 {
-    if ( entityMatchesToken( node, "quick" ) || entityMatchesToken( node, "revive" ) )
+    if ( entityMatchesToken( node, "quick" ) || ( entityMatchesToken( node, "revive" ) && isDesiredInteractable( node, "perk" ) ) )
     {
         return 10;
     }
@@ -2096,7 +2071,7 @@ isDesiredInteractable( entity, kind )
             return entityMatchesToken( entity, "mystery" ) || entityMatchesToken( entity, "printer" );
 
         case "revive":
-            return entityMatchesToken( entity, "revive" ) || entityMatchesToken( entity, "laststand" ) || entityMatchesToken( entity, "downed" );
+            return ( entityMatchesToken( entity, "revive" ) || entityMatchesToken( entity, "laststand" ) || entityMatchesToken( entity, "downed" ) ) && !entityMatchesToken( entity, "perk" ) && !entityMatchesToken( entity, "vending" ) && !entityMatchesToken( entity, "perkacola" );
 
         case "perk":
             return entityMatchesToken( entity, "perk" ) || entityMatchesToken( entity, "vending" ) || entityMatchesToken( entity, "perkacola" );
