@@ -74,6 +74,7 @@
 #define ABZM_INTERACT_RANGE                   96
 #define ABZM_SHARED_PURCHASE_COOLDOWN_MS      15000
 #define ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS 2000
+#define ABZM_SHARED_PURCHASE_RESERVATION_MS   1500
 #define ABZM_PURCHASE_COOLDOWN_SEC            1.5
 #define ABZM_PERK_PURCHASE_COOLDOWN_SEC       5.0
 #define ABZM_BO2_RUN_ROUND                    3
@@ -1069,11 +1070,28 @@ attemptWeaponPurchase()
     if ( roundNumber >= 7 && !needsStandardWeaponPurchase )
     {
         mysteryNode = getClosestAvailableSharedInteractable( "mystery" );
-        if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
+        if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && reserveSharedPurchase( mysteryNode, "mystery" ) )
         {
-            markSharedPurchase( mysteryNode, "mystery", self.abzmLastPurchaseUsedFallback );
-            self.abzmLastWeaponPurchaseStateKey = "";
-            purchasedWeaponUpgrade = true;
+            preMysteryStateKey = getWeaponPurchaseStateKey();
+            if ( attemptPurchase( mysteryNode, level.abzm.mysteryCost ) )
+            {
+                postMysteryStateKey = getWeaponPurchaseStateKey();
+                if ( !self.abzmLastPurchaseUsedFallback && postMysteryStateKey != preMysteryStateKey )
+                {
+                    markSharedPurchase( mysteryNode, "mystery", false );
+                    self.abzmLastWeaponPurchaseStateKey = "";
+                    purchasedWeaponUpgrade = true;
+                }
+                else
+                {
+                    clearSharedPurchaseReservation( mysteryNode, "mystery" );
+                    markGenericPurchase();
+                }
+            }
+            else
+            {
+                clearSharedPurchaseReservation( mysteryNode, "mystery" );
+            }
         }
     }
 
@@ -1102,35 +1120,50 @@ attemptUtilityPurchase()
     if ( level.abzm.botsAutoBuyUpgrades && !isCurrentWeaponWeak() && !currentWeaponNeedsAmmo() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
         papNode = getClosestAvailableSharedInteractable( "packapunch" );
-        if ( isdefined( papNode ) && attemptPurchase( papNode, level.abzm.packapunchCost ) )
+        if ( isdefined( papNode ) && reserveSharedPurchase( papNode, "packapunch" ) )
         {
-            markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
-            self.abzmLastWeaponPurchaseStateKey = "";
-            if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
+            if ( attemptPurchase( papNode, level.abzm.packapunchCost ) )
             {
-                markPackAPunchPurchase();
+                markSharedPurchase( papNode, "packapunch", self.abzmLastPurchaseUsedFallback );
+                self.abzmLastWeaponPurchaseStateKey = "";
+                if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
+                {
+                    markPackAPunchPurchase();
+                }
+                return true;
             }
-            return true;
+
+            clearSharedPurchaseReservation( papNode, "packapunch" );
         }
     }
 
     if ( hasEnoughPoints( self, level.abzm.doorCost ) )
     {
         doorNode = getClosestAvailableSharedInteractable( "door" );
-        if ( isdefined( doorNode ) && attemptPurchase( doorNode, level.abzm.doorCost ) )
+        if ( isdefined( doorNode ) && reserveSharedPurchase( doorNode, "door" ) )
         {
-            markSharedPurchase( doorNode, "door", self.abzmLastPurchaseUsedFallback );
-            return true;
+            if ( attemptPurchase( doorNode, level.abzm.doorCost ) )
+            {
+                markSharedPurchase( doorNode, "door", self.abzmLastPurchaseUsedFallback );
+                return true;
+            }
+
+            clearSharedPurchaseReservation( doorNode, "door" );
         }
     }
 
     if ( hasEnoughPoints( self, level.abzm.exoCost ) )
     {
         exoNode = getClosestAvailableSharedInteractable( "exo" );
-        if ( isdefined( exoNode ) && attemptPurchase( exoNode, level.abzm.exoCost ) )
+        if ( isdefined( exoNode ) && reserveSharedPurchase( exoNode, "exo" ) )
         {
-            markSharedPurchase( exoNode, "exo", self.abzmLastPurchaseUsedFallback );
-            return true;
+            if ( attemptPurchase( exoNode, level.abzm.exoCost ) )
+            {
+                markSharedPurchase( exoNode, "exo", self.abzmLastPurchaseUsedFallback );
+                return true;
+            }
+
+            clearSharedPurchaseReservation( exoNode, "exo" );
         }
     }
 
@@ -1193,12 +1226,12 @@ shouldSkipWeaponRepurchase()
 
 markPackAPunchPurchase()
 {
-    self.abzmLastPackAPunchWeaponKey = getCurrentWeaponIdentityKey();
+    self.abzmLastPackAPunchWeaponKey = getPackAPunchTrackingKey();
 }
 
 alreadyPackAPunchedCurrentWeapon()
 {
-    currentWeaponKey = getCurrentWeaponIdentityKey();
+    currentWeaponKey = getPackAPunchTrackingKey();
     if ( !isdefined( currentWeaponKey ) || currentWeaponKey == "" )
     {
         return false;
@@ -1262,6 +1295,7 @@ markSharedPurchase( node, kind, usedFallback )
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
     sharedEntry.expiresAt = -1;
+    sharedEntry.isReservation = false;
     if ( isTimedSharedPurchaseKind( kind ) )
     {
         sharedCooldown = ABZM_SHARED_PURCHASE_COOLDOWN_MS;
@@ -1283,6 +1317,54 @@ markSharedPurchase( node, kind, usedFallback )
     }
 
     markGenericPurchase();
+}
+
+reserveSharedPurchase( node, kind )
+{
+    if ( !isdefined( level.abzm ) )
+    {
+        return true;
+    }
+
+    purchaseKey = getSharedPurchaseKey( node, kind );
+    if ( !isdefined( purchaseKey ) || purchaseKey == "" )
+    {
+        return true;
+    }
+
+    if ( alreadyBoughtSharedNode( node, kind ) )
+    {
+        return false;
+    }
+
+    sharedEntry = spawnstruct();
+    sharedEntry.key = purchaseKey;
+    sharedEntry.kind = kind;
+    sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RESERVATION_MS;
+    sharedEntry.isReservation = true;
+
+    level.abzm.sharedPurchasedNodes[level.abzm.sharedPurchasedNodes.size] = sharedEntry;
+    return true;
+}
+
+clearSharedPurchaseReservation( node, kind )
+{
+    if ( !isdefined( level.abzm ) )
+    {
+        return;
+    }
+
+    purchaseKey = getSharedPurchaseKey( node, kind );
+    if ( !isdefined( purchaseKey ) || purchaseKey == "" )
+    {
+        return;
+    }
+
+    sharedIndex = findSharedPurchaseIndex( purchaseKey );
+    if ( sharedIndex >= 0 )
+    {
+        compactSharedPurchaseArray( sharedIndex );
+    }
 }
 
 isTimedSharedPurchaseKind( kind )
@@ -2133,6 +2215,17 @@ getCurrentWeaponIdentityKey()
     }
 
     return toLower( weapon + "" );
+}
+
+getPackAPunchTrackingKey()
+{
+    weaponKey = getCurrentWeaponIdentityKey();
+    if ( weaponKey == "" )
+    {
+        return "";
+    }
+
+    return weaponKey + "|" + self getweaponammoclip( self getcurrentweapon() ) + "|" + currentWeaponNeedsAmmo() + "|" + isCurrentWeaponWeak();
 }
 
 isCurrentWeaponWeak()
