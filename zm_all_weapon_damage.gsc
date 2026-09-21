@@ -105,11 +105,19 @@ awd_sync_weapon_callbacks()
             awd_disable_stock_weapon_level_increase( player, weaponName );
             awd_disable_stock_weapon_level_increase( player, baseWeaponName );
 
-            level.modifyweapondamage[weaponName] = ::awd_modify_damage;
+            if ( !isdefined( level.modifyweapondamage[weaponName] ) ||
+                 level.modifyweapondamage[weaponName] != ::awd_modify_damage )
+            {
+                level.modifyweapondamage[weaponName] = ::awd_modify_damage;
+            }
 
             if ( isdefined( baseWeaponName ) && baseWeaponName != "" )
             {
-                level.modifyweapondamage[baseWeaponName] = ::awd_modify_damage;
+                if ( !isdefined( level.modifyweapondamage[baseWeaponName] ) ||
+                     level.modifyweapondamage[baseWeaponName] != ::awd_modify_damage )
+                {
+                    level.modifyweapondamage[baseWeaponName] = ::awd_modify_damage;
+                }
             }
         }
     }
@@ -122,7 +130,9 @@ awd_disable_stock_weapon_level_increase( player, weaponKey )
         return;
     }
 
-    if ( isdefined( player.weaponstate[weaponKey] ) )
+    if ( isdefined( player.weaponstate[weaponKey] ) &&
+         ( !isdefined( player.weaponstate[weaponKey]["weapon_level_increase"] ) ||
+           player.weaponstate[weaponKey]["weapon_level_increase"] != 0 ) )
     {
         player.weaponstate[weaponKey]["weapon_level_increase"] = 0;
     }
