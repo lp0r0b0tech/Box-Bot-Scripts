@@ -543,6 +543,14 @@ runPurchaseConfirmationSelfTests()
     entry.confirmedAt = gettime() - (ABZM_PACKAPUNCH_CONFIRMATION_FALLBACK_MS + 1);
     bot setCurrentWeaponSelfTestState( "weapon_a", 0 );
     reportSelfTestResult( "pap_fallback_expires_without_live_upgrade", !bot alreadyPackAPunchedCurrentWeapon() );
+    bot = spawnstruct();
+    bot initializeBotPurchaseState();
+    bot setPackAPunchWeaponLevel( "weapon_zero", 0 );
+    zeroLevelIndex = bot findPackAPunchWeaponEntryIndex( "weapon_zero" );
+    reportSelfTestResult( "pap_forced_tracking_preserves_level_zero", zeroLevelIndex >= 0 && bot.abzmPackAPunchWeaponEntries[zeroLevelIndex].upgradeLevel == 0 && bot.abzmPackAPunchWeaponEntries[zeroLevelIndex].confirmedUpgradeLevel == 0 );
+    bot setPackAPunchWeaponLevel( "weapon_one", 1 );
+    oneLevelIndex = bot findPackAPunchWeaponEntryIndex( "weapon_one" );
+    reportSelfTestResult( "pap_forced_tracking_preserves_level_one", oneLevelIndex >= 0 && bot.abzmPackAPunchWeaponEntries[oneLevelIndex].upgradeLevel == 1 && bot.abzmPackAPunchWeaponEntries[oneLevelIndex].confirmedUpgradeLevel == 1 );
 }
 
 doesMysteryTimeoutPathKeepRetryWithoutConfirmation()
@@ -813,10 +821,10 @@ grantForcedBotLoadout()
     self givemaxammo( ABZM_FORCE_LOADOUT_SECONDARY );
     self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
     applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
-    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_PRIMARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    setPackAPunchWeaponLevel( toLower( ABZM_FORCE_LOADOUT_PRIMARY ), level.abzm.forceLoadoutPackLevel );
     self switchtoweapon( ABZM_FORCE_LOADOUT_SECONDARY );
     applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
-    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_SECONDARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    setPackAPunchWeaponLevel( toLower( ABZM_FORCE_LOADOUT_SECONDARY ), level.abzm.forceLoadoutPackLevel );
     self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
     applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
     grantForcedBotPerks();
@@ -865,6 +873,8 @@ maintainForcedBotLoadout()
         return false;
     }
 
+    self giveweapon( ABZM_FORCE_LOADOUT_PRIMARY );
+    self giveweapon( ABZM_FORCE_LOADOUT_SECONDARY );
     self giveweapon( ABZM_FORCE_LOADOUT_LETHAL );
     self giveweapon( ABZM_FORCE_LOADOUT_TACTICAL );
     self givemaxammo( ABZM_FORCE_LOADOUT_PRIMARY );
@@ -873,10 +883,10 @@ maintainForcedBotLoadout()
     previousWeapon = self getcurrentweapon();
     self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
     applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
-    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_PRIMARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    setPackAPunchWeaponLevel( toLower( ABZM_FORCE_LOADOUT_PRIMARY ), level.abzm.forceLoadoutPackLevel );
     self switchtoweapon( ABZM_FORCE_LOADOUT_SECONDARY );
     applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
-    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_SECONDARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    setPackAPunchWeaponLevel( toLower( ABZM_FORCE_LOADOUT_SECONDARY ), level.abzm.forceLoadoutPackLevel );
     if ( isdefined( previousWeapon ) && previousWeapon != "" )
     {
         self switchtoweapon( previousWeapon );
@@ -906,10 +916,10 @@ maintainForcedBotPackAPunchTracking()
     previousWeapon = self getcurrentweapon();
     self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
     applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
-    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_PRIMARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    setPackAPunchWeaponLevel( toLower( ABZM_FORCE_LOADOUT_PRIMARY ), level.abzm.forceLoadoutPackLevel );
     self switchtoweapon( ABZM_FORCE_LOADOUT_SECONDARY );
     applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
-    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_SECONDARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    setPackAPunchWeaponLevel( toLower( ABZM_FORCE_LOADOUT_SECONDARY ), level.abzm.forceLoadoutPackLevel );
     if ( isdefined( previousWeapon ) && previousWeapon != "" )
     {
         self switchtoweapon( previousWeapon );
@@ -1503,7 +1513,7 @@ attemptPerkPurchase()
         return false;
     }
 
-    if ( !attemptPurchase( perkNode, level.abzm.perkCost, true ) )
+    if ( !attemptPurchase( perkNode, level.abzm.perkCost, false ) )
     {
         return false;
     }
@@ -1602,14 +1612,14 @@ attemptWeaponPurchase()
 
 attemptUtilityPurchase()
 {
-    if ( !botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC ) )
-    {
-        return false;
-    }
-
     if ( level.abzm.forceLoadoutEnabled )
     {
         maintainForcedBotPackAPunchTracking();
+    }
+
+    if ( !botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC ) )
+    {
+        return false;
     }
 
     if ( !level.abzm.forceLoadoutEnabled && level.abzm.botsAutoBuyUpgrades && currentWeaponCanUsePackAPunch() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
@@ -1846,6 +1856,44 @@ markPackAPunchPurchase( weaponKey, previousUpgradeLevel )
 
     self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
     self.abzmLastPackAPunchUpgradeLevel = trackedUpgradeLevel;
+}
+
+setPackAPunchWeaponLevel( weaponKey, upgradeLevel )
+{
+    self initializeBotPurchaseState();
+    currentWeaponKey = weaponKey;
+    if ( !isdefined( currentWeaponKey ) || currentWeaponKey == "" )
+    {
+        return;
+    }
+
+    exactUpgradeLevel = 0;
+    if ( isdefined( upgradeLevel ) )
+    {
+        exactUpgradeLevel = min( max( 0, int( upgradeLevel ) ), ABZM_MAX_PACKAPUNCH_LEVEL );
+    }
+
+    entryIndex = findPackAPunchWeaponEntryIndex( currentWeaponKey );
+    if ( entryIndex >= 0 )
+    {
+        self.abzmPackAPunchWeaponEntries[entryIndex].upgradeLevel = exactUpgradeLevel;
+        self.abzmPackAPunchWeaponEntries[entryIndex].confirmedUpgradeLevel = exactUpgradeLevel;
+        self.abzmPackAPunchWeaponEntries[entryIndex].confirmedStateKey = getPackAPunchConfirmationKey( currentWeaponKey, exactUpgradeLevel );
+        self.abzmPackAPunchWeaponEntries[entryIndex].confirmedAt = gettime();
+    }
+    else
+    {
+        entry = spawnstruct();
+        entry.weaponKey = currentWeaponKey;
+        entry.upgradeLevel = exactUpgradeLevel;
+        entry.confirmedUpgradeLevel = exactUpgradeLevel;
+        entry.confirmedStateKey = getPackAPunchConfirmationKey( currentWeaponKey, exactUpgradeLevel );
+        entry.confirmedAt = gettime();
+        self.abzmPackAPunchWeaponEntries[self.abzmPackAPunchWeaponEntries.size] = entry;
+    }
+
+    self.abzmLastPackAPunchWeaponKey = currentWeaponKey;
+    self.abzmLastPackAPunchUpgradeLevel = exactUpgradeLevel;
 }
 
 alreadyPackAPunchedCurrentWeapon()
