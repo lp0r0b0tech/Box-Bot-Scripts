@@ -15,9 +15,15 @@
 #define ABES_DEFAULT_BOTS_USE_EXO_ABILITIES     1
 #define ABES_DEFAULT_BOTS_FOLLOW_TEAM           1
 #define ABES_DEFAULT_FORCE_LOADOUT              1
-#define ABES_DEFAULT_FORCE_WEAPON_PROFICIENCY   4
-#define ABES_DEFAULT_FORCE_ARMOR_LEVEL          4
-#define ABES_DEFAULT_FORCE_EXO_BATTERY_LEVEL    4
+#define ABES_DEFAULT_FORCE_WEAPON_PROFICIENCY   10
+#define ABES_DEFAULT_FORCE_ARMOR_LEVEL          10
+#define ABES_DEFAULT_FORCE_EXO_BATTERY_LEVEL    5
+#define ABES_FORCE_WEAPON_PROFICIENCY_MAX       10
+#define ABES_FORCE_ARMOR_LEVEL_MAX              10
+#define ABES_FORCE_EXO_BATTERY_LEVEL_MAX        5
+#define ABES_FORCE_WEAPON_PROFICIENCY_UNLOCK_ROUND 5
+#define ABES_FORCE_ARMOR_UNLOCK_ROUND           10
+#define ABES_FORCE_EXO_BATTERY_UNLOCK_ROUND     15
 
 #define ABES_MAX_BOTS                            4
 #define ABES_INTERACT_RANGE                      96
@@ -160,9 +166,9 @@ refreshRuntimeConfig()
     level.abes.botsUseExoAbilities = getdvarint( "scr_es_autobots_exo" ) > 0;
     level.abes.botsFollowTeam = getdvarint( "scr_es_autobots_follow" ) > 0;
     level.abes.forceLoadoutEnabled = getdvarint( "scr_es_autobots_force_loadout" ) > 0;
-    level.abes.forceWeaponProficiency = abesClamp( getdvarint( "scr_es_autobots_force_weapon_proficiency" ), 0, 4 );
-    level.abes.forceArmorLevel = abesClamp( getdvarint( "scr_es_autobots_force_armor_level" ), 0, 4 );
-    level.abes.forceExoBatteryLevel = abesClamp( getdvarint( "scr_es_autobots_force_exo_battery" ), 0, 4 );
+    level.abes.forceWeaponProficiency = abesClamp( getdvarint( "scr_es_autobots_force_weapon_proficiency" ), 0, ABES_FORCE_WEAPON_PROFICIENCY_MAX );
+    level.abes.forceArmorLevel = abesClamp( getdvarint( "scr_es_autobots_force_armor_level" ), 0, ABES_FORCE_ARMOR_LEVEL_MAX );
+    level.abes.forceExoBatteryLevel = abesClamp( getdvarint( "scr_es_autobots_force_exo_battery" ), 0, ABES_FORCE_EXO_BATTERY_LEVEL_MAX );
 
     level.abes.weaponCost = max( 0, getdvarint( "scr_es_autobots_weapon_cost" ) );
     level.abes.mysteryCost = max( 0, getdvarint( "scr_es_autobots_mystery_cost" ) );
@@ -542,37 +548,74 @@ applyForcedBotEnhancements()
         return;
     }
 
-    applyForcedBotUpgradeAlias( "weaponProficiency", level.abes.forceWeaponProficiency );
-    applyForcedBotUpgradeAlias( "weaponProficiencyLevel", level.abes.forceWeaponProficiency );
-    applyForcedBotUpgradeAlias( "weapon_proficiency", level.abes.forceWeaponProficiency );
-    applyForcedBotUpgradeAlias( "armorLevel", level.abes.forceArmorLevel );
-    applyForcedBotUpgradeAlias( "armourLevel", level.abes.forceArmorLevel );
-    applyForcedBotUpgradeAlias( "armor", level.abes.forceArmorLevel );
-    applyForcedBotUpgradeAlias( "armour", level.abes.forceArmorLevel );
-    applyForcedBotUpgradeAlias( "exoBattery", level.abes.forceExoBatteryLevel );
-    applyForcedBotUpgradeAlias( "exoBatteryLevel", level.abes.forceExoBatteryLevel );
-    applyForcedBotUpgradeAlias( "exobattery", level.abes.forceExoBatteryLevel );
-    applyForcedBotUpgradeAlias( "exo_battery", level.abes.forceExoBatteryLevel );
+    forcedWeaponProficiencyLevel = getForcedWeaponProficiencyLevel();
+    forcedArmorLevel = getForcedArmorLevel();
+    forcedExoBatteryLevel = getForcedExoBatteryLevel();
+
+    applyForcedBotUpgradeAlias( "weaponProficiency", forcedWeaponProficiencyLevel );
+    applyForcedBotUpgradeAlias( "weaponProficiencyLevel", forcedWeaponProficiencyLevel );
+    applyForcedBotUpgradeAlias( "weapon_proficiency", forcedWeaponProficiencyLevel );
+    applyForcedBotUpgradeAlias( "armorLevel", forcedArmorLevel );
+    applyForcedBotUpgradeAlias( "armourLevel", forcedArmorLevel );
+    applyForcedBotUpgradeAlias( "armor", forcedArmorLevel );
+    applyForcedBotUpgradeAlias( "armour", forcedArmorLevel );
+    applyForcedBotUpgradeAlias( "exoBattery", forcedExoBatteryLevel );
+    applyForcedBotUpgradeAlias( "exoBatteryLevel", forcedExoBatteryLevel );
+    applyForcedBotUpgradeAlias( "exobattery", forcedExoBatteryLevel );
+    applyForcedBotUpgradeAlias( "exo_battery", forcedExoBatteryLevel );
 
     if ( !isdefined( self.pers ) )
     {
         self.pers = [];
     }
 
-    self.pers["abes_force_weapon_proficiency"] = level.abes.forceWeaponProficiency;
-    self.pers["abes_force_armor_level"] = level.abes.forceArmorLevel;
-    self.pers["abes_force_exo_battery"] = level.abes.forceExoBatteryLevel;
-    self.pers["weaponProficiency"] = level.abes.forceWeaponProficiency;
-    self.pers["weapon_proficiency"] = level.abes.forceWeaponProficiency;
-    self.pers["armorLevel"] = level.abes.forceArmorLevel;
-    self.pers["armourLevel"] = level.abes.forceArmorLevel;
-    self.pers["exoBattery"] = level.abes.forceExoBatteryLevel;
-    self.pers["exo_battery"] = level.abes.forceExoBatteryLevel;
+    self.pers["abes_force_weapon_proficiency"] = forcedWeaponProficiencyLevel;
+    self.pers["abes_force_armor_level"] = forcedArmorLevel;
+    self.pers["abes_force_exo_battery"] = forcedExoBatteryLevel;
+    self.pers["weaponProficiency"] = forcedWeaponProficiencyLevel;
+    self.pers["weapon_proficiency"] = forcedWeaponProficiencyLevel;
+    self.pers["armorLevel"] = forcedArmorLevel;
+    self.pers["armourLevel"] = forcedArmorLevel;
+    self.pers["exoBattery"] = forcedExoBatteryLevel;
+    self.pers["exo_battery"] = forcedExoBatteryLevel;
 
     if ( isdefined( self.maxhealth ) && isdefined( self.health ) && self.health < self.maxhealth )
     {
         self.health = self.maxhealth;
     }
+}
+
+getForcedWeaponProficiencyLevel()
+{
+    roundNumber = getCurrentSurvivalRound();
+    if ( roundNumber < ABES_FORCE_WEAPON_PROFICIENCY_UNLOCK_ROUND )
+    {
+        return 0;
+    }
+
+    return min( level.abes.forceWeaponProficiency, ABES_FORCE_WEAPON_PROFICIENCY_MAX );
+}
+
+getForcedArmorLevel()
+{
+    roundNumber = getCurrentSurvivalRound();
+    if ( roundNumber < ABES_FORCE_ARMOR_UNLOCK_ROUND )
+    {
+        return 0;
+    }
+
+    return min( level.abes.forceArmorLevel, ABES_FORCE_ARMOR_LEVEL_MAX );
+}
+
+getForcedExoBatteryLevel()
+{
+    roundNumber = getCurrentSurvivalRound();
+    if ( roundNumber < ABES_FORCE_EXO_BATTERY_UNLOCK_ROUND )
+    {
+        return 0;
+    }
+
+    return min( level.abes.forceExoBatteryLevel, ABES_FORCE_EXO_BATTERY_LEVEL_MAX );
 }
 
 applyForcedBotUpgradeAlias( key, value )
