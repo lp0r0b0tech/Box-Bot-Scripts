@@ -27,6 +27,7 @@ main()
     }
 
     level.awd_started = 1;
+    level.awd_registered_damage_keys = [];
 
     println( "AllWeaponDamage: Zombies script initialized." );
 
@@ -62,7 +63,7 @@ awd_register_damage_modifiers()
     for ( ;; )
     {
         awd_sync_weapon_callbacks();
-        wait 0.25;
+        wait 0.5;
     }
 }
 
@@ -84,17 +85,49 @@ awd_sync_weapon_callbacks()
             continue;
         }
 
-        weaponNames = getarraykeys( player.weaponstate );
+        weaponNames = player getweaponslistprimaries();
 
-        foreach ( baseWeaponName in weaponNames )
+        if ( !isdefined( weaponNames ) )
         {
-            if ( isdefined( baseWeaponName ) && baseWeaponName != "" )
+            continue;
+        }
+
+        foreach ( weaponName in weaponNames )
+        {
+            if ( !isdefined( weaponName ) || weaponName == "" )
+            {
+                continue;
+            }
+
+            baseWeaponName = getweaponbasename( weaponName );
+
+            if ( isdefined( baseWeaponName ) &&
+                 baseWeaponName != "" &&
+                 isdefined( player.weaponstate[baseWeaponName] ) )
             {
                 player.weaponstate[baseWeaponName]["weapon_level_increase"] = 0;
-                level.modifyweapondamage[baseWeaponName] = ::awd_modify_damage;
             }
+
+            awd_register_damage_key( weaponName );
+            awd_register_damage_key( baseWeaponName );
         }
     }
+}
+
+awd_register_damage_key( weaponKey )
+{
+    if ( !isdefined( weaponKey ) || weaponKey == "" )
+    {
+        return;
+    }
+
+    if ( isdefined( level.awd_registered_damage_keys[weaponKey] ) )
+    {
+        return;
+    }
+
+    level.modifyweapondamage[weaponKey] = ::awd_modify_damage;
+    level.awd_registered_damage_keys[weaponKey] = 1;
 }
 
 /*
