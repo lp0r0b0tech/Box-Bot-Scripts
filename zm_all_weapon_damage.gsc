@@ -163,16 +163,18 @@ awd_modify_damage(
     }
 
     weaponLevel = undefined;
+    exactWeaponLevelDefined = false;
 
     if ( isdefined( attacker.weaponstate[weapon] ) &&
          isdefined( attacker.weaponstate[weapon]["level"] ) )
     {
         weaponLevel = attacker.weaponstate[weapon]["level"];
+        exactWeaponLevelDefined = true;
     }
 
     baseWeaponName = getweaponbasename( weapon );
 
-    if ( ( !isdefined( weaponLevel ) || weaponLevel < 2 ) &&
+    if ( !exactWeaponLevelDefined &&
          isdefined( baseWeaponName ) &&
          baseWeaponName != "" &&
          isdefined( attacker.weaponstate[baseWeaponName] ) &&
@@ -206,5 +208,6 @@ awd_get_cauterizer_damage( baseDamage, mark )
         mark = AWD_MAX_WEAPON_LEVEL;
     }
 
-    return int( baseDamage + ( baseDamage * AWD_CAUTERIZER_LEVEL_MULTIPLIER * ( mark - 1 ) ) );
+    scaledDamage = baseDamage + ( baseDamage * AWD_CAUTERIZER_LEVEL_MULTIPLIER * ( mark - 1 ) );
+    return int( scaledDamage + 0.5 );
 }
