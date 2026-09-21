@@ -86,7 +86,7 @@ awd_sync_weapon_callbacks()
             continue;
         }
 
-        weaponNames = player getweaponslistprimaries();
+        weaponNames = getarraykeys( player.weaponstate );
 
         if ( !isdefined( weaponNames ) )
         {
@@ -161,17 +161,17 @@ awd_modify_damage(
         return damage;
     }
 
-    weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
-        attacker,
-        weapon
-    );
+    weaponLevel = undefined;
 
-    if ( !isdefined( weaponLevel ) || weaponLevel < 2 )
+    if ( isdefined( attacker.weaponstate[weapon] ) )
     {
-        weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
-            attacker,
-            baseWeaponName
-        );
+        weaponLevel = attacker.weaponstate[weapon]["level"];
+    }
+
+    if ( ( !isdefined( weaponLevel ) || weaponLevel < 2 ) &&
+         isdefined( attacker.weaponstate[baseWeaponName] ) )
+    {
+        weaponLevel = attacker.weaponstate[baseWeaponName]["level"];
     }
 
     if ( !isdefined( weaponLevel ) || weaponLevel < 2 )
