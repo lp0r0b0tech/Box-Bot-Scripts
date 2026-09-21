@@ -90,6 +90,7 @@ awd_sync_weapon_callbacks()
         {
             if ( isdefined( baseWeaponName ) && baseWeaponName != "" )
             {
+                player.weaponstate[baseWeaponName]["weapon_level_increase"] = 0;
                 level.modifyweapondamage[baseWeaponName] = ::awd_modify_damage;
             }
         }
@@ -145,18 +146,6 @@ awd_modify_damage(
     if ( weaponLevel > 25 )
     {
         weaponLevel = 25;
-    }
-
-    /*
-        Prevent the stock weapon-level damage increase from being applied
-        in addition to this script's custom base-damage curve.
-
-        This does not alter normal magazine-size or reserve-ammo upgrades.
-    */
-    if ( isdefined( attacker.weaponstate ) &&
-         isdefined( attacker.weaponstate[baseWeaponName] ) )
-    {
-        attacker.weaponstate[baseWeaponName]["weapon_level_increase"] = 0;
     }
 
     /*
