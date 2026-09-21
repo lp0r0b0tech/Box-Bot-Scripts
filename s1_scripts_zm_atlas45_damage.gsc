@@ -147,18 +147,11 @@ atlas45_modify_damage(
     hitLocation
 )
 {
-    /*
-        Only change damage caused by a player.
-    */
-    if(!isdefined(attacker) || !isplayer(attacker))
-    {
-        return damage;
-    }
-
     if(!isdefined(weapon) || !atlas45_should_register_weapon(weapon))
     {
         return damage;
     }
+
     weaponName = atlas45_resolve_registered_weapon_name(weapon);
     if(!isdefined(weaponName) || weaponName == "")
     {
@@ -169,6 +162,24 @@ atlas45_modify_damage(
        !level.exo_damage_curve_registered_weapons[weaponName])
     {
         return damage;
+    }
+
+    /*
+        Only change damage caused by a player.
+    */
+    if(!isdefined(attacker) || !isplayer(attacker))
+    {
+        return atlas45_apply_compatible_previous_callback(
+            victim,
+            attacker,
+            damage,
+            meansOfDeath,
+            weapon,
+            weaponName,
+            point,
+            direction,
+            hitLocation
+        );
     }
 
     weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
