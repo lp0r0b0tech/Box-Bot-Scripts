@@ -731,7 +731,7 @@ attemptBotRevive()
     if ( downed.abzmDowned )
     {
         reviveResult = tryUseReviveInteraction( downed );
-        if ( reviveResult < 0 )
+        if ( reviveResult <= 0 )
         {
             if ( !isdefined( downed ) )
             {
@@ -742,12 +742,6 @@ attemptBotRevive()
             downed.abzmDowned = false;
             downed.abzmBleedoutTime = ABZM_BO2_BLEEDOUT_TIME;
             signalReviveSuccess( downed, self );
-        }
-        else if ( reviveResult == 0 )
-        {
-            downed.abzmReviver = undefined;
-            self.abzmReviveTarget = undefined;
-            return false;
         }
 
         downed.abzmReviver = undefined;
@@ -1638,11 +1632,13 @@ getClosestDownedTeammate()
 
 getClosestInteractable( kind )
 {
-    nodes = getInteractableCandidates();
-
     if ( kind == "weapon" || kind == "mystery" )
     {
-        appendUniqueEntArray( nodes, getWeaponPurchaseCandidates() );
+        nodes = getWeaponPurchaseCandidates();
+    }
+    else
+    {
+        nodes = getInteractableCandidates();
     }
 
     best = undefined;
