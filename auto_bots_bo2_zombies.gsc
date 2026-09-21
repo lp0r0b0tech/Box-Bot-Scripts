@@ -188,6 +188,12 @@ buildModState()
     state.purchaseItemCandidates = [];
     state.purchaseItemCacheTime = -999999;
     state.sharedPurchasedNodes = [];
+    state.weakWeaponTokens = [];
+    state.weakWeaponTokens[0] = ABZM_WEAK_WEAPON_TOKEN_ATLAS45;
+    state.weakWeaponTokens[1] = ABZM_WEAK_WEAPON_TOKEN_PISTOL;
+    state.weakWeaponTokens[2] = ABZM_WEAK_WEAPON_TOKEN_STARTER;
+    state.weakWeaponTokens[3] = ABZM_WEAK_WEAPON_TOKEN_MP11;
+    state.weakWeaponTokens[4] = ABZM_WEAK_WEAPON_TOKEN_RW1;
     state.botNames = [];
     state.botNames[0] = "Atlas-1";
     state.botNames[1] = "Atlas-2";
@@ -1035,14 +1041,30 @@ markSharedPurchase( node, kind )
         return;
     }
 
-    if ( isdefined( node ) && ( kind == "exo" || kind == "door" ) )
+    purchaseKey = getSharedPurchaseKey( node, kind );
+    if ( !isdefined( purchaseKey ) || purchaseKey == "" )
     {
-        node.abzmSharedCooldownUntil = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
+        markGenericPurchase();
+        return;
     }
 
-    if ( isdefined( node ) && !nodeArrayContains( level.abzm.sharedPurchasedNodes, node ) )
+    sharedIndex = findSharedPurchaseIndex( purchaseKey );
+    sharedEntry = spawnstruct();
+    sharedEntry.key = purchaseKey;
+    sharedEntry.kind = kind;
+    sharedEntry.expiresAt = -1;
+    if ( kind == "exo" )
     {
-        level.abzm.sharedPurchasedNodes[level.abzm.sharedPurchasedNodes.size] = node;
+        sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_COOLDOWN_MS;
+    }
+
+    if ( sharedIndex >= 0 )
+    {
+        level.abzm.sharedPurchasedNodes[sharedIndex] = sharedEntry;
+    }
+    else
+    {
+        level.abzm.sharedPurchasedNodes[level.abzm.sharedPurchasedNodes.size] = sharedEntry;
     }
 
     markGenericPurchase();
@@ -1071,53 +1093,125 @@ alreadyBoughtSharedNode( node, kind )
         return false;
     }
 
-    if ( !nodeArrayContains( level.abzm.sharedPurchasedNodes, node ) )
+    purchaseKey = getSharedPurchaseKey( node, kind );
+    if ( !isdefined( purchaseKey ) || purchaseKey == "" )
     {
         return false;
     }
 
-    if ( !shouldPersistSharedPurchaseNode( node, kind ) )
-    {
-        removeNodeFromArray( level.abzm.sharedPurchasedNodes, node );
-        return false;
-    }
-
-    return true;
-}
-
-shouldPersistSharedPurchaseNode( node, kind )
-{
-    if ( !isdefined( node ) )
+    sharedIndex = findSharedPurchaseIndex( purchaseKey );
+    if ( sharedIndex < 0 )
     {
         return false;
     }
 
-    if ( isdefined( node.abzmSharedCooldownUntil ) && gettime() < node.abzmSharedCooldownUntil )
+    sharedEntry = level.abzm.sharedPurchasedNodes[sharedIndex];
+    if ( !isdefined( sharedEntry ) )
+    {
+        compactSharedPurchaseArray( sharedIndex );
+        return false;
+    }
+
+    if ( !isdefined( sharedEntry.expiresAt ) || sharedEntry.expiresAt < 0 || gettime() < sharedEntry.expiresAt )
     {
         return true;
     }
 
-    if ( !isDesiredInteractable( node, kind ) )
-    {
-        return true;
-    }
+    compactSharedPurchaseArray( sharedIndex );
     return false;
 }
 
-removeNodeFromArray( source, target )
+findSharedPurchaseIndex( purchaseKey )
 {
-    if ( !isdefined( source ) || !isdefined( target ) )
+    if ( !isdefined( level.abzm ) || !isdefined( level.abzm.sharedPurchasedNodes ) || !isdefined( purchaseKey ) || purchaseKey == "" )
+    {
+        return -1;
+    }
+
+    for ( i = 0; i < level.abzm.sharedPurchasedNodes.size; i++ )
+    {
+        entry = level.abzm.sharedPurchasedNodes[i];
+        if ( isdefined( entry ) && isdefined( entry.key ) && entry.key == purchaseKey )
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+compactSharedPurchaseArray( purchaseIndex )
+{
+    if ( !isdefined( level.abzm ) || !isdefined( level.abzm.sharedPurchasedNodes ) )
     {
         return;
     }
 
-    for ( i = 0; i < source.size; i++ )
+    newArray = [];
+    for ( i = 0; i < level.abzm.sharedPurchasedNodes.size; i++ )
     {
-        if ( isdefined( source[i] ) && source[i] == target )
+        if ( i == purchaseIndex )
         {
-            source[i] = undefined;
+            continue;
         }
+
+        entry = level.abzm.sharedPurchasedNodes[i];
+        if ( !isdefined( entry ) || !isdefined( entry.key ) || entry.key == "" )
+        {
+            continue;
+        }
+
+        newArray[newArray.size] = entry;
     }
+
+    level.abzm.sharedPurchasedNodes = newArray;
+}
+
+getSharedPurchaseKey( node, kind )
+{
+    if ( !isdefined( node ) )
+    {
+        return "";
+    }
+
+    keyPart = "";
+    if ( isdefined( node.targetname ) && node.targetname != "" )
+    {
+        keyPart = toLower( node.targetname + "" );
+    }
+    else if ( isdefined( node.script_noteworthy ) && node.script_noteworthy != "" )
+    {
+        keyPart = toLower( node.script_noteworthy + "" );
+    }
+    else if ( isdefined( node.script_linkname ) && node.script_linkname != "" )
+    {
+        keyPart = toLower( node.script_linkname + "" );
+    }
+    else if ( isdefined( node.script_string ) && node.script_string != "" )
+    {
+        keyPart = toLower( node.script_string + "" );
+    }
+    else if ( isdefined( node.model ) && node.model != "" )
+    {
+        keyPart = toLower( node.model + "" );
+    }
+    else if ( isdefined( node.classname ) && node.classname != "" )
+    {
+        keyPart = toLower( node.classname + "" );
+    }
+
+    if ( keyPart == "" )
+    {
+        return "";
+    }
+
+    originKey = "0_0_0";
+    if ( isdefined( node.origin ) )
+    {
+        originKey = int( node.origin[0] ) + "_" + int( node.origin[1] ) + "_" + int( node.origin[2] );
+    }
+
+    return toLower( kind + "" ) + "|" + keyPart + "|" + originKey;
 }
 
 getBestPerkInteractable()
@@ -1723,7 +1817,21 @@ isCurrentWeaponWeak()
     }
 
     weapon = toLower( weapon + "" );
-    return stringContainsToken( weapon, ABZM_WEAK_WEAPON_TOKEN_ATLAS45 ) || stringContainsToken( weapon, ABZM_WEAK_WEAPON_TOKEN_PISTOL ) || stringContainsToken( weapon, ABZM_WEAK_WEAPON_TOKEN_STARTER ) || stringContainsToken( weapon, ABZM_WEAK_WEAPON_TOKEN_MP11 ) || stringContainsToken( weapon, ABZM_WEAK_WEAPON_TOKEN_RW1 );
+    if ( !isdefined( level.abzm ) || !isdefined( level.abzm.weakWeaponTokens ) )
+    {
+        return false;
+    }
+
+    for ( i = 0; i < level.abzm.weakWeaponTokens.size; i++ )
+    {
+        weakToken = level.abzm.weakWeaponTokens[i];
+        if ( isdefined( weakToken ) && weakToken != "" && stringContainsToken( weapon, weakToken ) )
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 getClosestDownedTeammate()
