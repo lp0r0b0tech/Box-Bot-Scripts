@@ -323,11 +323,26 @@ applyBotCombatProfile()
     }
 }
 
-resetBotPurchaseState()
+initializeBotPurchaseState()
 {
-    self.abzmPerkPurchases = 0;
-    self.abzmPurchasedPerkKeys = [];
-    self.abzmPurchasedUpgradeKeys = [];
+    if ( !isdefined( self.abzmPerkPurchases ) )
+    {
+        self.abzmPerkPurchases = 0;
+    }
+
+    if ( !isdefined( self.abzmPurchasedPerkKeys ) )
+    {
+        self.abzmPurchasedPerkKeys = [];
+    }
+
+    if ( !isdefined( self.abzmPurchasedUpgradeKeys ) )
+    {
+        self.abzmPurchasedUpgradeKeys = [];
+    }
+}
+
+resetBotPurchaseCooldowns()
+{
     self.abzmLastPurchaseTime = 0;
     self.abzmLastPerkPurchaseTime = 0;
 }
@@ -375,7 +390,8 @@ onPlayerConnected()
 
         if ( self.abzmIsBot )
         {
-            resetBotPurchaseState();
+            initializeBotPurchaseState();
+            resetBotPurchaseCooldowns();
             applyBotCombatProfile();
         }
 
@@ -536,7 +552,8 @@ applyBotPostSpawnSetup()
             continue;
         }
 
-        resetBotPurchaseState();
+        initializeBotPurchaseState();
+        resetBotPurchaseCooldowns();
         applyBotCombatProfile();
     }
 }
@@ -813,7 +830,7 @@ attemptPerkPurchase()
 attemptWeaponPurchase()
 {
     roundNumber = max( 1, level.abzm.round );
-    if ( roundNumber < 5 && !currentWeaponNeedsAmmo() )
+    if ( roundNumber < 5 && !currentWeaponNeedsAmmo() && !isCurrentWeaponWeak() )
     {
         return false;
     }
@@ -863,9 +880,9 @@ attemptUtilityPurchase()
     if ( hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
         papNode = getClosestInteractable( "packapunch" );
-        if ( !alreadyBoughtUpgradeNode( papNode ) && attemptPurchase( papNode, level.abzm.packapunchCost ) )
+        if ( attemptPurchase( papNode, level.abzm.packapunchCost ) )
         {
-            markUpgradePurchase( papNode );
+            markGenericPurchase();
             return true;
         }
     }
@@ -1554,6 +1571,12 @@ getClosestInteractable( kind )
 {
     nodes = getInteractableCandidates();
 
+    if ( kind == "weapon" || kind == "mystery" )
+    {
+        appendEntArray( nodes, getentarray( "weapon", "classname" ) );
+        appendEntArray( nodes, getentarray( "item", "classname" ) );
+    }
+
     best = undefined;
     bestDist = 999999;
 
@@ -1652,8 +1675,6 @@ getInteractableCandidates()
     appendEntArray( nodes, getentarray( "trigger_use", "classname" ) );
     appendEntArray( nodes, getentarray( "script_model", "classname" ) );
     appendEntArray( nodes, getentarray( "script_brushmodel", "classname" ) );
-    appendEntArray( nodes, getentarray( "weapon", "classname" ) );
-    appendEntArray( nodes, getentarray( "item", "classname" ) );
 
     level.abzm.interactableCandidates = nodes;
     level.abzm.interactableCacheTime = gettime();
