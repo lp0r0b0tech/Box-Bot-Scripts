@@ -157,22 +157,38 @@ atlas45_modify_damage(
         weaponName
     );
 
+    /*
+        Prevent the stock weapon-level damage increase from being applied
+        in addition to this script's custom base-damage curve.
+
+        This does not alter normal magazine-size or reserve-ammo upgrades.
+    */
+    if(isdefined(weaponLevel) && weaponLevel >= 2 &&
+       isdefined(attacker.weaponstate) &&
+       isdefined(attacker.weaponstate[weaponName]))
+    {
+        attacker.weaponstate[weaponName]
+            ["weapon_level_increase"] = 0;
+    }
+
+    damageAfterStockCallback = atlas45_apply_previous_damage_callback(
+        victim,
+        attacker,
+        damage,
+        meansOfDeath,
+        weapon,
+        weaponName,
+        point,
+        direction,
+        hitLocation
+    );
+
     if(!isdefined(weaponLevel) || weaponLevel < 2)
     {
         /*
             Keep Mk1 completely vanilla.
         */
-        return atlas45_apply_previous_damage_callback(
-            victim,
-            attacker,
-            damage,
-            meansOfDeath,
-            weapon,
-            weaponName,
-            point,
-            direction,
-            hitLocation
-        );
+        return damageAfterStockCallback;
     }
 
     if(weaponLevel > 25)
@@ -181,24 +197,15 @@ atlas45_modify_damage(
     }
 
     /*
-        Prevent the stock weapon-level damage increase from being applied
-        in addition to this script's custom base-damage curve.
-
-        This does not alter normal magazine-size or reserve-ammo upgrades.
-    */
-    if(isdefined(attacker.weaponstate) &&
-       isdefined(attacker.weaponstate[weaponName]))
-    {
-        attacker.weaponstate[weaponName]
-            ["weapon_level_increase"] = 0;
-    }
-
-    /*
         Do not process hitLocation here. This intentionally avoids custom
         head/neck/helmet multipliers so the game can retain its normal
         hit-location behavior.
     */
-    return atlas45_get_base_damage(weaponLevel);
+    return atlas45_apply_callback_modifiers(
+        atlas45_get_base_damage(weaponLevel),
+        damage,
+        damageAfterStockCallback
+    );
 }
 
 atlas45_apply_previous_damage_callback(
@@ -235,6 +242,28 @@ atlas45_apply_previous_damage_callback(
         direction,
         hitLocation
     );
+}
+
+atlas45_apply_callback_modifiers(baseDamage, originalDamage, callbackDamage)
+{
+    if(!isdefined(baseDamage))
+    {
+        return originalDamage;
+    }
+
+    if(!isdefined(callbackDamage) || !isdefined(originalDamage) ||
+       originalDamage <= 0)
+    {
+        return baseDamage;
+    }
+
+    adjustedDamage = int((baseDamage * callbackDamage) / originalDamage);
+    if(adjustedDamage < 1)
+    {
+        adjustedDamage = 1;
+    }
+
+    return adjustedDamage;
 }
 
 /*
