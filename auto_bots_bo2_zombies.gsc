@@ -137,6 +137,11 @@ doesPackAPunchConfirmationSequenceSucceed( previousWeaponKey, previousUpgradeLev
         return false;
     }
 
+    shouldAttemptMysteryBoxPurchase( roundNumber, needsStandardWeaponPurchase )
+    {
+        return roundNumber >= 7 && !needsStandardWeaponPurchase;
+    }
+
     steps = weaponKeys.size;
     if ( upgradeLevels.size < steps )
     {
@@ -442,9 +447,25 @@ runPerkPurchaseSelfTests()
 
     bot markPerkPurchase( perkNode );
     duplicatePerkCount = bot.abzmPerkPurchases;
+    bot.abzmLastPurchaseTime = gettime();
+    globalPerkCooldownBlocksPurchase = !bot botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC );
+    bot.abzmLastPurchaseTime = undefined;
+    bot.abzmLastPerkPurchaseTime = gettime();
+    perkCooldownBlocksPurchase = !bot botCanAttemptPerkPurchase( ABZM_PERK_PURCHASE_COOLDOWN_SEC );
+    bot.abzmLastPerkPurchaseTime = undefined;
+    maxPerkNodes = [];
+    for ( i = 0; i < level.abzm.maxPerks; i++ )
+    {
+        maxPerkNodes[i] = "perk_" + i;
+    }
+    bot.abzmPurchasedPerkNodes = maxPerkNodes;
+    perkCapBlocksPurchase = bot.abzmPurchasedPerkNodes.size >= level.abzm.maxPerks;
 
     reportSelfTestResult( "perk_purchase_tracks_unique_node", firstPerkCount == 1 && firstPerkOwned );
     reportSelfTestResult( "perk_purchase_suppresses_duplicates", duplicatePerkCount == 1 );
+    reportSelfTestResult( "perk_purchase_global_cooldown_blocks_recent_buy", globalPerkCooldownBlocksPurchase );
+    reportSelfTestResult( "perk_purchase_specific_cooldown_blocks_recent_buy", perkCooldownBlocksPurchase );
+    reportSelfTestResult( "perk_purchase_respects_max_perk_cap", perkCapBlocksPurchase );
 }
 
 runCombatProfileSelfTests()
@@ -519,6 +540,8 @@ runWeaponPurchaseRoutingSelfTests()
     level.abzm.sharedPurchasedNodes = previousSharedNodes;
     level.abzm.sharedPurchaseStateVersion = previousSharedStateVersion;
     reportSelfTestResult( "weapon_routing_skip_shared_chooses_unblocked_node", nearestWithoutSkip == genericWeaponNode && nearestWithSkip == secondaryGenericWeaponNode );
+    reportSelfTestResult( "weapon_routing_mystery_box_waits_for_round_gate", !shouldAttemptMysteryBoxPurchase( 6, false ) && shouldAttemptMysteryBoxPurchase( 7, false ) && !shouldAttemptMysteryBoxPurchase( 7, true ) );
+    reportSelfTestResult( "weapon_routing_standard_purchase_confirms_on_state_change", shouldResetWeaponPurchaseStateKey( "starter|true|true", "stronger|false|false" ) );
 }
 
 runPurchaseConfirmationSelfTests()
@@ -1047,7 +1070,6 @@ onPlayerConnected()
         {
             initializeBotPurchaseState();
             applyBotCombatProfile();
-            grantForcedBotLoadout();
         }
 
         if ( self.abzmIsBot && ( !isdefined( self.abzmLifeLoopStarted ) || !self.abzmLifeLoopStarted ) )
@@ -1213,6 +1235,7 @@ applyBotPostSpawnSetup()
 
         initializeBotPurchaseState();
         applyBotCombatProfile();
+        grantForcedBotLoadout();
     }
 }
 
@@ -1595,7 +1618,7 @@ attemptWeaponPurchase()
         return false;
     }
 
-    if ( roundNumber >= 7 && !needsStandardWeaponPurchase )
+    if ( shouldAttemptMysteryBoxPurchase( roundNumber, needsStandardWeaponPurchase ) )
     {
         mysteryNode = getClosestAvailableSharedInteractable( "mystery" );
         if ( isdefined( mysteryNode ) && hasEnoughPoints( self, level.abzm.mysteryCost ) && reserveSharedPurchase( mysteryNode, "mystery" ) )
@@ -2179,6 +2202,8 @@ markSharedPurchase( node, kind, usedFallback )
         {
             if ( !isdefined( existingEntry.owner ) || existingEntry.owner != self )
             {
+                clearSharedPurchaseReservation( node, kind );
+                markGenericPurchase();
                 return;
             }
         }
