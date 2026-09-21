@@ -486,6 +486,11 @@ runWeaponPurchaseRoutingSelfTests()
     reportSelfTestResult( "weapon_routing_state_change_reopens_purchase", shouldResetWeaponPurchaseStateKey( "starter|true|true", "starter|false|false" ) );
     reportSelfTestResult( "weapon_routing_weak_weapon_token_matches", isWeakWeaponName( "atlas45_pistol_mp" ) );
     reportSelfTestResult( "weapon_routing_strong_weapon_stays_strong", !isWeakWeaponName( "bal27_ar" ) );
+    bot = spawnstruct();
+    bot setCurrentWeaponSelfTestState( "atlas45_pistol_mp", 0 );
+    reportSelfTestResult( "weapon_routing_weak_weapon_prefers_replacement", bot currentWeaponReplacementPreferred() && !bot currentWeaponCanUsePackAPunch() );
+    bot setCurrentWeaponSelfTestState( "bal27_ar", 0 );
+    reportSelfTestResult( "weapon_routing_strong_weapon_allows_upgrade", !bot currentWeaponReplacementPreferred() && bot currentWeaponCanUsePackAPunch() );
 }
 
 runPurchaseConfirmationSelfTests()
@@ -1272,7 +1277,7 @@ attemptWeaponPurchase()
     }
     confirmedWeaponPurchase = false;
     weaponNode = getClosestWeaponPurchaseItemInteractable();
-    needsStandardWeaponPurchase = isCurrentWeaponWeak() || currentWeaponNeedsAmmo();
+    needsStandardWeaponPurchase = currentWeaponReplacementPreferred() || currentWeaponNeedsAmmo();
 
     if ( !botCanAttemptPurchase( ABZM_PURCHASE_COOLDOWN_SEC ) )
     {
@@ -1350,7 +1355,7 @@ attemptUtilityPurchase()
         return false;
     }
 
-    if ( level.abzm.botsAutoBuyUpgrades && !isCurrentWeaponWeak() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
+    if ( level.abzm.botsAutoBuyUpgrades && currentWeaponCanUsePackAPunch() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
         papNode = getClosestAvailableSharedInteractable( "packapunch" );
         if ( isdefined( papNode ) && reserveSharedPurchase( papNode, "packapunch" ) )
@@ -1764,9 +1769,14 @@ markSharedPurchase( node, kind, usedFallback )
     sharedEntry = spawnstruct();
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
-    sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS;
     sharedEntry.isReservation = false;
-    if ( isTimedSharedPurchaseKind( kind ) )
+    sharedEntry.isPersistent = kind == "door";
+    sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS;
+    if ( sharedEntry.isPersistent )
+    {
+        sharedEntry.expiresAt = 0;
+    }
+    else if ( isTimedSharedPurchaseKind( kind ) )
     {
         sharedCooldown = ABZM_SHARED_PURCHASE_COOLDOWN_MS;
         if ( isdefined( usedFallback ) && usedFallback )
@@ -1827,7 +1837,7 @@ reserveSharedPurchase( node, kind )
             break;
         }
 
-        if ( gettime() < sharedEntry.expiresAt )
+        if ( isSharedPurchaseEntryActive( sharedEntry ) )
         {
             return false;
         }
@@ -1846,7 +1856,7 @@ reserveSharedPurchase( node, kind )
     if ( finalIndex >= 0 )
     {
         finalEntry = level.abzm.sharedPurchasedNodes[finalIndex];
-        if ( isdefined( finalEntry ) && isdefined( finalEntry.expiresAt ) && gettime() < finalEntry.expiresAt )
+        if ( isSharedPurchaseEntryActive( finalEntry ) )
         {
             if ( !isdefined( finalEntry.isReservation ) || !finalEntry.isReservation )
             {
@@ -1901,7 +1911,7 @@ clearSharedPurchaseReservation( node, kind )
 
 isTimedSharedPurchaseKind( kind )
 {
-    return kind == "exo" || kind == "door" || kind == "mystery" || kind == "packapunch";
+    return kind == "exo" || kind == "mystery" || kind == "packapunch";
 }
 
 alreadyBoughtPerkNode( node )
@@ -1950,7 +1960,7 @@ alreadyBoughtSharedNode( node, kind )
         return invalidateSharedPurchaseEntry( sharedIndex );
     }
 
-    if ( gettime() < sharedEntry.expiresAt )
+    if ( isSharedPurchaseEntryActive( sharedEntry ) )
     {
         return !isdefined( sharedEntry.isReservation ) || !sharedEntry.isReservation;
     }
@@ -1993,7 +2003,7 @@ isSharedPurchaseBlocked( node, kind )
         return invalidateSharedPurchaseEntry( sharedIndex );
     }
 
-    if ( gettime() < sharedEntry.expiresAt )
+    if ( isSharedPurchaseEntryActive( sharedEntry ) )
     {
         return true;
     }
@@ -2067,6 +2077,26 @@ touchSharedPurchaseState()
     }
 
     level.abzm.sharedPurchaseStateVersion++;
+}
+
+isSharedPurchaseEntryActive( sharedEntry )
+{
+    if ( !isdefined( sharedEntry ) )
+    {
+        return false;
+    }
+
+    if ( isdefined( sharedEntry.isPersistent ) && sharedEntry.isPersistent )
+    {
+        return true;
+    }
+
+    if ( !isdefined( sharedEntry.expiresAt ) )
+    {
+        return false;
+    }
+
+    return gettime() < sharedEntry.expiresAt;
 }
 
 getStableInteractableKey( node, fallbackPrefix )
@@ -2880,14 +2910,23 @@ isCurrentWeaponUpgradeLevelApproximate()
 
 isCurrentWeaponWeak()
 {
-    weapon = self getcurrentweapon();
+    weapon = getCurrentWeaponIdentityKey();
     if ( !isdefined( weapon ) )
     {
         return true;
     }
 
-    weapon = toLower( weapon + "" );
     return isWeakWeaponName( weapon );
+}
+
+currentWeaponReplacementPreferred()
+{
+    return isCurrentWeaponWeak();
+}
+
+currentWeaponCanUsePackAPunch()
+{
+    return !isCurrentWeaponWeak();
 }
 
 isWeakWeaponName( weapon )
@@ -3146,6 +3185,11 @@ getPurchaseItemCandidates()
 isGenericWeaponPurchaseMarker( entity )
 {
     if ( !isdefined( entity ) || !entityMatchesToken( entity, "buy" ) )
+    {
+        return false;
+    }
+
+    if ( !entityMatchesToken( entity, "weapon" ) && !entityMatchesToken( entity, "gun" ) && !entityMatchesToken( entity, "wall" ) )
     {
         return false;
     }
