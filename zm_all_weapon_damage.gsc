@@ -173,6 +173,8 @@ awd_modify_damage(
         return damage;
     }
 
+    awd_disable_stock_weapon_level_increase( attacker, weapon );
+
     weaponLevel = undefined;
     exactWeaponLevelDefined = false;
 
@@ -184,6 +186,8 @@ awd_modify_damage(
     }
 
     baseWeaponName = getweaponbasename( weapon );
+
+    awd_disable_stock_weapon_level_increase( attacker, baseWeaponName );
 
     if ( !exactWeaponLevelDefined &&
          isdefined( baseWeaponName ) &&
