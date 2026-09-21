@@ -517,6 +517,7 @@ maintainForcedBotLoadout()
     }
 
     previousWeapon = self getcurrentweapon();
+    removeNonForcedBotWeapons();
     self giveweapon( ABES_FORCE_LOADOUT_PRIMARY );
     self giveweapon( ABES_FORCE_LOADOUT_SECONDARY );
     self giveweapon( ABES_FORCE_LOADOUT_LETHAL );
@@ -631,15 +632,10 @@ removeNonForcedBotWeapons()
 {
     previousWeapon = "";
 
-    for ( i = 0; i < 8; i++ )
+    for ( i = 0; i < 16; i++ )
     {
         currentWeapon = self getcurrentweapon();
         if ( !isdefined( currentWeapon ) || currentWeapon == "" )
-        {
-            return;
-        }
-
-        if ( currentWeapon == ABES_FORCE_LOADOUT_PRIMARY || currentWeapon == ABES_FORCE_LOADOUT_SECONDARY || currentWeapon == ABES_FORCE_LOADOUT_LETHAL )
         {
             return;
         }
