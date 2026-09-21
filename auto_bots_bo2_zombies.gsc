@@ -1100,6 +1100,11 @@ attemptPerkPurchase()
         return false;
     }
 
+    if ( isdefined( self.abzmPurchasedPerkNodes ) && self.abzmPurchasedPerkNodes.size >= level.abzm.maxPerks )
+    {
+        return false;
+    }
+
     perkNode = getBestPerkInteractable();
     if ( !isdefined( perkNode ) )
     {
@@ -1201,7 +1206,7 @@ attemptUtilityPurchase()
             {
                 if ( !isdefined( self.abzmLastPurchaseUsedFallback ) || !self.abzmLastPurchaseUsedFallback )
                 {
-                    if ( isPackAPunchUpgradeConfirmed( previousPapWeaponKey, previousPapUpgradeLevel ) )
+                    if ( waitForPackAPunchConfirmation( previousPapWeaponKey, previousPapUpgradeLevel, 1000 ) )
                     {
                         markSharedPurchase( papNode, "packapunch", false );
                         self.abzmLastWeaponPurchaseStateKey = "";
@@ -1405,6 +1410,22 @@ isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel )
     }
 
     return getCurrentWeaponUpgradeLevel() > previousUpgradeLevel;
+}
+
+waitForPackAPunchConfirmation( previousWeaponKey, previousUpgradeLevel, maxWaitMs )
+{
+    start = gettime();
+    while ( (gettime() - start) < maxWaitMs )
+    {
+        if ( isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel ) )
+        {
+            return true;
+        }
+
+        wait 0.05;
+    }
+
+    return isPackAPunchUpgradeConfirmed( previousWeaponKey, previousUpgradeLevel );
 }
 
 findPackAPunchWeaponEntryIndex( weaponKey )
