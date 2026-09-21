@@ -114,26 +114,26 @@ awd_sync_weapon_callbacks()
             awd_register_damage_key( baseWeaponName );
         }
     }
+}
 
-    awd_ensure_callback_table_generation()
+awd_ensure_callback_table_generation()
+{
+    if ( !isdefined( level.modifyweapondamage ) )
     {
-        if ( !isdefined( level.modifyweapondamage ) )
-        {
-            return false;
-        }
-
-        if ( !isdefined( level.modifyweapondamage["__awd_generation"] ) ||
-             level.modifyweapondamage["__awd_generation"] != level.awd_callback_table_generation )
-        {
-            level.awd_callback_table_generation++;
-            level.awd_previous_damage_callbacks = [];
-            level.awd_previous_damage_callback_keys = [];
-            level.modifyweapondamage["__awd_generation"] =
-                level.awd_callback_table_generation;
-        }
-
-        return true;
+        return false;
     }
+
+    if ( !isdefined( level.modifyweapondamage["__awd_generation"] ) ||
+         level.modifyweapondamage["__awd_generation"] != level.awd_callback_table_generation )
+    {
+        level.awd_callback_table_generation++;
+        level.awd_previous_damage_callbacks = [];
+        level.awd_previous_damage_callback_keys = [];
+        level.modifyweapondamage["__awd_generation"] =
+            level.awd_callback_table_generation;
+    }
+
+    return true;
 }
 
 awd_disable_stock_weapon_level_increase( player, weaponKey )
