@@ -87,10 +87,6 @@ atlas45_register_damage_modifier()
     {
         level.exo_damage_curve_registered_weapons = [];
     }
-    if(!isdefined(level.exo_damage_curve_preserve_distinct_aliases))
-    {
-        level.exo_damage_curve_preserve_distinct_aliases = [];
-    }
     level.exo_damage_curve_weapon_key_cache = [];
 
     registeredCount = 0;
@@ -105,12 +101,6 @@ atlas45_register_damage_modifier()
         {
             continue;
         }
-        if(isdefined(level.exo_damage_curve_preserve_distinct_aliases[weaponName]) &&
-           level.exo_damage_curve_preserve_distinct_aliases[weaponName])
-        {
-            continue;
-        }
-
         level.exo_damage_curve_weapon_key_cache[weaponName] = weaponName;
         level.exo_damage_curve_weapon_key_cache[tolower(weaponName + "")] =
             weaponName;
@@ -136,20 +126,13 @@ atlas45_register_damage_modifier()
             isdefined(level.modifyweapondamage[lowercaseWeaponName]) &&
             level.modifyweapondamage[lowercaseWeaponName] != previousCallback;
 
-        if(hasDistinctAliasCallback)
-        {
-            level.exo_damage_curve_preserve_distinct_aliases[weaponName] = true;
-            level.exo_damage_curve_preserve_distinct_aliases[lowercaseWeaponName] = true;
-            skippedCount++;
-            continue;
-        }
-
         level.modifyweapondamage[weaponName] =
             ::atlas45_modify_damage;
         level.exo_damage_curve_registered_weapons[weaponName] = true;
 
-        if(lowercaseWeaponName == weaponName ||
-           !isdefined(level.modifyweapondamage[lowercaseWeaponName]))
+        if(!hasDistinctAliasCallback &&
+           (lowercaseWeaponName == weaponName ||
+            !isdefined(level.modifyweapondamage[lowercaseWeaponName])))
         {
             level.modifyweapondamage[lowercaseWeaponName] =
                 ::atlas45_modify_damage;
