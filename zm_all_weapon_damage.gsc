@@ -131,8 +131,8 @@ awd_disable_stock_weapon_level_increase( player, weaponKey )
     }
 
     if ( isdefined( player.weaponstate[weaponKey] ) &&
-         ( !isdefined( player.weaponstate[weaponKey]["weapon_level_increase"] ) ||
-           player.weaponstate[weaponKey]["weapon_level_increase"] != 0 ) )
+         isdefined( player.weaponstate[weaponKey]["weapon_level_increase"] ) &&
+         player.weaponstate[weaponKey]["weapon_level_increase"] != 0 )
     {
         player.weaponstate[weaponKey]["weapon_level_increase"] = 0;
     }
@@ -163,13 +163,15 @@ awd_modify_damage(
 
     weaponLevel = undefined;
 
-    if ( isdefined( attacker.weaponstate[weapon] ) )
+    if ( isdefined( attacker.weaponstate[weapon] ) &&
+         isdefined( attacker.weaponstate[weapon]["level"] ) )
     {
         weaponLevel = attacker.weaponstate[weapon]["level"];
     }
 
     if ( ( !isdefined( weaponLevel ) || weaponLevel < 2 ) &&
-         isdefined( attacker.weaponstate[baseWeaponName] ) )
+         isdefined( attacker.weaponstate[baseWeaponName] ) &&
+         isdefined( attacker.weaponstate[baseWeaponName]["level"] ) )
     {
         weaponLevel = attacker.weaponstate[baseWeaponName]["level"];
     }
