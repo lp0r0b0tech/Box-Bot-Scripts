@@ -793,6 +793,7 @@ clearBotPurchaseState()
     self.abzmPackAPunchWeaponEntries = [];
     self.abzmForcedLoadoutGrantedAt = undefined;
     self.abzmForcedLoadoutMaintainedAt = undefined;
+    self.abzmForcedLoadoutWeaponTrackAt = undefined;
 }
 
 grantForcedBotLoadout()
@@ -877,6 +878,38 @@ maintainForcedBotLoadout()
     }
 
     self.abzmForcedLoadoutMaintainedAt = gettime();
+    return true;
+}
+
+maintainForcedBotPackAPunchTracking()
+{
+    if ( !isBotEntity( self ) || !isdefined( level.abzm ) || !level.abzm.forceLoadoutEnabled )
+    {
+        return false;
+    }
+
+    if ( isdefined( self.abzmForcedLoadoutWeaponTrackAt ) && (gettime() - self.abzmForcedLoadoutWeaponTrackAt) < 5000 )
+    {
+        return false;
+    }
+
+    previousWeapon = self getcurrentweapon();
+    self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
+    applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
+    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_PRIMARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    self switchtoweapon( ABZM_FORCE_LOADOUT_SECONDARY );
+    applyCurrentWeaponPackAPunchLevel( level.abzm.forceLoadoutPackLevel );
+    markPackAPunchPurchase( toLower( ABZM_FORCE_LOADOUT_SECONDARY ), max( 0, level.abzm.forceLoadoutPackLevel - 1 ) );
+    if ( isdefined( previousWeapon ) && previousWeapon != "" )
+    {
+        self switchtoweapon( previousWeapon );
+    }
+    else
+    {
+        self switchtoweapon( ABZM_FORCE_LOADOUT_PRIMARY );
+    }
+
+    self.abzmForcedLoadoutWeaponTrackAt = gettime();
     return true;
 }
 
@@ -1562,6 +1595,11 @@ attemptUtilityPurchase()
         return false;
     }
 
+    if ( level.abzm.forceLoadoutEnabled )
+    {
+        maintainForcedBotPackAPunchTracking();
+    }
+
     if ( !level.abzm.forceLoadoutEnabled && level.abzm.botsAutoBuyUpgrades && currentWeaponCanUsePackAPunch() && !alreadyPackAPunchedCurrentWeapon() && hasEnoughPoints( self, level.abzm.packapunchCost ) )
     {
         papNode = getClosestAvailableSharedInteractable( "packapunch" );
@@ -2014,7 +2052,7 @@ markSharedPurchase( node, kind, usedFallback )
     sharedEntry.key = purchaseKey;
     sharedEntry.kind = kind;
     sharedEntry.isReservation = false;
-    sharedEntry.isPersistent = kind == "door";
+    sharedEntry.isPersistent = false;
     sharedEntry.expiresAt = gettime() + ABZM_SHARED_PURCHASE_RETRY_COOLDOWN_MS;
     if ( sharedEntry.isPersistent )
     {
@@ -2155,7 +2193,7 @@ clearSharedPurchaseReservation( node, kind )
 
 isTimedSharedPurchaseKind( kind )
 {
-    return kind == "exo" || kind == "mystery" || kind == "packapunch";
+    return kind == "door" || kind == "exo" || kind == "mystery" || kind == "packapunch";
 }
 
 alreadyBoughtPerkNode( node )
