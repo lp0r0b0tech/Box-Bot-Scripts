@@ -177,7 +177,7 @@ buildModState()
     state.interactableCacheTime = 0;
     state.purchaseItemCandidates = [];
     state.purchaseItemCacheTime = -999999;
-    state.sharedPurchaseKeys = [];
+    state.sharedPurchasedNodes = [];
     state.botNames = [];
     state.botNames[0] = "Atlas-1";
     state.botNames[1] = "Atlas-2";
@@ -343,21 +343,21 @@ initializeBotPurchaseState()
         self.abzmPerkPurchases = 0;
     }
 
-    if ( !isdefined( self.abzmPurchasedPerkKeys ) )
+    if ( !isdefined( self.abzmPurchasedPerkNodes ) )
     {
-        self.abzmPurchasedPerkKeys = [];
+        self.abzmPurchasedPerkNodes = [];
     }
 
-    if ( !isdefined( self.abzmPurchasedUpgradeKeys ) )
+    if ( !isdefined( self.abzmPurchasedUpgradeNodes ) )
     {
-        self.abzmPurchasedUpgradeKeys = [];
+        self.abzmPurchasedUpgradeNodes = [];
     }
 }
 
 resetBotPerkPurchaseState()
 {
     self.abzmPerkPurchases = 0;
-    self.abzmPurchasedPerkKeys = [];
+    self.abzmPurchasedPerkNodes = [];
 }
 
 monitorPlayerConnections()
@@ -1019,10 +1019,9 @@ markGenericPurchase()
 
 markPerkPurchase( node )
 {
-    key = getInteractableKey( node );
-    if ( isdefined( key ) && key != "" )
+    if ( isdefined( node ) && !nodeArrayContains( self.abzmPurchasedPerkNodes, node ) )
     {
-        self.abzmPurchasedPerkKeys[key] = true;
+        self.abzmPurchasedPerkNodes[self.abzmPurchasedPerkNodes.size] = node;
     }
 
     if ( !isdefined( self.abzmPerkPurchases ) )
@@ -1042,10 +1041,9 @@ markSharedPurchase( node )
         return;
     }
 
-    key = getInteractableKey( node );
-    if ( isdefined( key ) && key != "" )
+    if ( isdefined( node ) && !nodeArrayContains( level.abzm.sharedPurchasedNodes, node ) )
     {
-        level.abzm.sharedPurchaseKeys[key] = true;
+        level.abzm.sharedPurchasedNodes[level.abzm.sharedPurchasedNodes.size] = node;
     }
 
     markGenericPurchase();
@@ -1053,10 +1051,9 @@ markSharedPurchase( node )
 
 markBotUpgradePurchase( node )
 {
-    key = getInteractableKey( node );
-    if ( isdefined( key ) && key != "" )
+    if ( isdefined( node ) && !nodeArrayContains( self.abzmPurchasedUpgradeNodes, node ) )
     {
-        self.abzmPurchasedUpgradeKeys[key] = true;
+        self.abzmPurchasedUpgradeNodes[self.abzmPurchasedUpgradeNodes.size] = node;
     }
 
     markGenericPurchase();
@@ -1064,13 +1061,7 @@ markBotUpgradePurchase( node )
 
 alreadyBoughtPerkNode( node )
 {
-    key = getInteractableKey( node );
-    if ( !isdefined( key ) || key == "" )
-    {
-        return false;
-    }
-
-    return isdefined( self.abzmPurchasedPerkKeys[key] ) && self.abzmPurchasedPerkKeys[key];
+    return nodeArrayContains( self.abzmPurchasedPerkNodes, node );
 }
 
 alreadyBoughtSharedNode( node )
@@ -1080,24 +1071,12 @@ alreadyBoughtSharedNode( node )
         return false;
     }
 
-    key = getInteractableKey( node );
-    if ( !isdefined( key ) || key == "" )
-    {
-        return false;
-    }
-
-    return isdefined( level.abzm.sharedPurchaseKeys[key] ) && level.abzm.sharedPurchaseKeys[key];
+    return nodeArrayContains( level.abzm.sharedPurchasedNodes, node );
 }
 
 alreadyBoughtBotUpgradeNode( node )
 {
-    key = getInteractableKey( node );
-    if ( !isdefined( key ) || key == "" )
-    {
-        return false;
-    }
-
-    return isdefined( self.abzmPurchasedUpgradeKeys[key] ) && self.abzmPurchasedUpgradeKeys[key];
+    return nodeArrayContains( self.abzmPurchasedUpgradeNodes, node );
 }
 
 
@@ -2045,6 +2024,24 @@ appendEntArray( destination, source )
             destination[destination.size] = source[i];
         }
     }
+
+    nodeArrayContains( source, target )
+    {
+        if ( !isdefined( source ) || !isdefined( target ) )
+        {
+            return false;
+        }
+
+        for ( i = 0; i < source.size; i++ )
+        {
+            if ( isdefined( source[i] ) && source[i] == target )
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 isZombieEntity( entity )
@@ -2134,55 +2131,6 @@ isDesiredInteractable( entity, kind )
     }
 
     return false;
-}
-
-getInteractableKey( entity )
-{
-    if ( !isdefined( entity ) )
-    {
-        return "";
-    }
-
-    key = "";
-
-    if ( isdefined( entity.targetname ) && entity.targetname != "" )
-    {
-        key = entity.targetname;
-    }
-    else if ( isdefined( entity.script_noteworthy ) && entity.script_noteworthy != "" )
-    {
-        key = entity.script_noteworthy;
-    }
-    else if ( isdefined( entity.script_linkname ) && entity.script_linkname != "" )
-    {
-        key = entity.script_linkname;
-    }
-    else if ( isdefined( entity.script_string ) && entity.script_string != "" )
-    {
-        key = entity.script_string;
-    }
-    if ( key == "" )
-    {
-        if ( isdefined( entity.origin ) )
-        {
-            prefix = "origin";
-            if ( isdefined( entity.classname ) && entity.classname != "" )
-            {
-                prefix = entity.classname;
-            }
-
-            return prefix + "_" + int( entity.origin[0] * 100 ) + "_" + int( entity.origin[1] * 100 ) + "_" + int( entity.origin[2] * 100 );
-        }
-
-        return "";
-    }
-
-    if ( isdefined( entity.origin ) )
-    {
-        key += "_" + int( entity.origin[0] * 100 ) + "_" + int( entity.origin[1] * 100 ) + "_" + int( entity.origin[2] * 100 );
-    }
-
-    return key;
 }
 
 entityMatchesToken( entity, token )
