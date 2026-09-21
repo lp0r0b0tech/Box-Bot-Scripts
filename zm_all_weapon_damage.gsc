@@ -22,6 +22,7 @@
 
 #define AWD_CAUTERIZER_LEVEL_MULTIPLIER           0.2
 #define AWD_MAX_WEAPON_LEVEL                      25
+#define AWD_WEAPON_LEVEL_INCREASE_KEY             "weapon_level_increase"
 
 main()
 {
@@ -41,7 +42,7 @@ awd_register_damage_modifiers()
 {
     level endon( "game_ended" );
 
-    for ( i = 0; i < 600; i++ )
+    for ( ;; )
     {
         if ( isdefined( level.modifyweapondamage ) )
         {
@@ -49,12 +50,6 @@ awd_register_damage_modifiers()
         }
 
         wait 0.05;
-    }
-
-    if ( !isdefined( level.modifyweapondamage ) )
-    {
-        println( "AllWeaponDamage: ERROR - level.modifyweapondamage was never initialized." );
-        return;
     }
 
     println( "AllWeaponDamage: watching player weapon states." );
@@ -134,10 +129,10 @@ awd_disable_stock_weapon_level_increase( player, weaponKey )
     }
 
     if ( isdefined( player.weaponstate[weaponKey] ) &&
-         isdefined( player.weaponstate[weaponKey]["weapon_level_increase"] ) &&
-         player.weaponstate[weaponKey]["weapon_level_increase"] != 0 )
+         isdefined( player.weaponstate[weaponKey][AWD_WEAPON_LEVEL_INCREASE_KEY] ) &&
+         player.weaponstate[weaponKey][AWD_WEAPON_LEVEL_INCREASE_KEY] != 0 )
     {
-        player.weaponstate[weaponKey]["weapon_level_increase"] = 0;
+        player.weaponstate[weaponKey][AWD_WEAPON_LEVEL_INCREASE_KEY] = 0;
     }
 }
 

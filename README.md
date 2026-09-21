@@ -12,4 +12,4 @@ Place `zm_emz.gsc` at `s1/scripts/zm/zm_emz.gsc`.
 Place `zm_easy_round_scaling.gsc` at `s1/scripts/zm/zm_easy_round_scaling.gsc`.
 Place `zm_all_weapon_damage.gsc` at `s1/scripts/zm/zm_all_weapon_damage.gsc`.
 
-Place `Bots.txt` next to the `scripts` folder under `s1` (for example at `s1/Bots.txt`).
+Place `Bots.txt` next to the `scripts` folder (for example at `s1/Bots.txt`).
