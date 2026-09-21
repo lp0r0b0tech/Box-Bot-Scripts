@@ -196,14 +196,13 @@ awd_modify_damage(
 
     baseWeaponName = getweaponbasename( weapon );
 
-    awd_disable_stock_weapon_level_increase( attacker, baseWeaponName );
-
     if ( !exactWeaponLevelDefined &&
          isdefined( baseWeaponName ) &&
          baseWeaponName != "" &&
          isdefined( attacker.weaponstate[baseWeaponName] ) &&
          isdefined( attacker.weaponstate[baseWeaponName]["level"] ) )
     {
+        awd_disable_stock_weapon_level_increase( attacker, baseWeaponName );
         weaponLevel = attacker.weaponstate[baseWeaponName]["level"];
     }
 
