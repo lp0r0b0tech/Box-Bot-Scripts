@@ -116,6 +116,14 @@ awd_disable_stock_weapon_level_increase( player, weaponKey )
         return;
     }
 
+    if ( !isdefined( player.weaponstate[weaponKey] ) )
+    {
+        maps\mp\gametypes\zombies::createzombieweaponstate(
+            player,
+            weaponKey
+        );
+    }
+
     if ( isdefined( player.weaponstate[weaponKey] ) )
     {
         player.weaponstate[weaponKey]["weapon_level_increase"] = 0;
@@ -140,7 +148,7 @@ awd_register_damage_key( weaponKey )
     level.modifyweapondamage[weaponKey] = ::awd_modify_damage;
 }
 
-damage = awd_apply_previous_damage_callback(
+awd_apply_previous_damage_callback(
     victim,
     attacker,
     damage,
@@ -240,7 +248,7 @@ awd_modify_damage(
         return damage;
     }
 
-    awd_apply_previous_damage_callback(
+    damage = awd_apply_previous_damage_callback(
         victim,
         attacker,
         damage,
