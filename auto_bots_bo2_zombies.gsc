@@ -1121,14 +1121,12 @@ alreadyBoughtSharedNode( node, kind )
     sharedEntry = level.abzm.sharedPurchasedNodes[sharedIndex];
     if ( !isdefined( sharedEntry ) )
     {
-        compactSharedPurchaseArray( sharedIndex );
-        return false;
+        return invalidateSharedPurchaseEntry( sharedIndex );
     }
 
     if ( !isdefined( sharedEntry.expiresAt ) )
     {
-        compactSharedPurchaseArray( sharedIndex );
-        return false;
+        return invalidateSharedPurchaseEntry( sharedIndex );
     }
 
     if ( sharedEntry.expiresAt < 0 || gettime() < sharedEntry.expiresAt )
@@ -1136,8 +1134,7 @@ alreadyBoughtSharedNode( node, kind )
         return true;
     }
 
-    compactSharedPurchaseArray( sharedIndex );
-    return false;
+    return invalidateSharedPurchaseEntry( sharedIndex );
 }
 
 findSharedPurchaseIndex( purchaseKey )
@@ -1184,6 +1181,12 @@ compactSharedPurchaseArray( purchaseIndex )
     }
 
     level.abzm.sharedPurchasedNodes = newArray;
+}
+
+invalidateSharedPurchaseEntry( purchaseIndex )
+{
+    compactSharedPurchaseArray( purchaseIndex );
+    return false;
 }
 
 getStableInteractableKey( node, fallbackPrefix )
@@ -1258,13 +1261,13 @@ getBestPerkInteractable()
             continue;
         }
 
-        if ( distance( self.origin, node.origin ) > ABZM_INTERACT_RANGE )
+        dist = int( distance( self.origin, node.origin ) );
+        if ( dist > ABZM_INTERACT_RANGE )
         {
             continue;
         }
 
         priority = perkPriorityForEntity( node );
-        dist = int( distance( self.origin, node.origin ) );
 
         if ( priority > bestPriority || ( priority == bestPriority && dist < bestDist ) )
         {
