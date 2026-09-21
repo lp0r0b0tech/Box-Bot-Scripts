@@ -146,7 +146,7 @@ atlas45_register_damage_modifier()
                 ::atlas45_modify_damage;
             level.exo_damage_curve_registered_weapons[lowercaseWeaponName] = true;
             level.exo_damage_curve_weapon_key_cache[lowercaseWeaponName] =
-                lowercaseWeaponName;
+                weaponName;
         }
 
         registeredCount++;
