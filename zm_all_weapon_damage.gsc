@@ -106,6 +106,11 @@ awd_sync_weapon_callbacks()
 
             baseWeaponName = getweaponbasename( weaponName );
 
+            if ( !isdefined( baseWeaponName ) || baseWeaponName == "" )
+            {
+                continue;
+            }
+
             awd_disable_stock_weapon_level_increase( player, weaponName );
 
             if ( !isdefined( level.modifyweapondamage[weaponName] ) ||
@@ -116,6 +121,7 @@ awd_sync_weapon_callbacks()
 
             if ( isdefined( baseWeaponName ) &&
                  baseWeaponName != "" &&
+                 isdefined( player.weaponstate[baseWeaponName] ) &&
                  baseWeaponName != weaponName &&
                  !isdefined( processedBaseWeaponNames[baseWeaponName] ) )
             {
