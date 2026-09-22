@@ -185,7 +185,7 @@ atlas45_should_register_weapon(weaponName)
         return false;
     }
 
-    return issubstr(weaponName, "_zm_");
+    return true;
 }
 
 /*
