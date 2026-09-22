@@ -230,7 +230,8 @@ atlas45_should_register_weapon(weaponName)
     isUnderscoredIw5Zm = getsubstr(normalizedWeaponName, 0, 4) == "iw5_" &&
         atlas45_ends_with(normalizedWeaponName, "_zm_mp");
     isPlainIw5Zm = getsubstr(normalizedWeaponName, 0, 4) == "iw5_" &&
-        atlas45_ends_with(normalizedWeaponName, "zm_mp");
+        atlas45_ends_with(normalizedWeaponName, "zm_mp") &&
+        !atlas45_ends_with(normalizedWeaponName, "_zm_mp");
     if(!(isZmPrefix || isUnderscoredIw5Zm || isPlainIw5Zm))
     {
         return false;
