@@ -92,10 +92,17 @@ atlas45_register_damage_modifier()
             continue;
         }
 
-        if(!isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
+        if(!atlas45_is_self_reference_callback(previousCallback))
         {
-            if(isdefined(previousCallback) &&
-               !atlas45_is_self_reference_callback(previousCallback))
+            storedPreviousCallback = undefined;
+            if(isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
+            {
+                storedPreviousCallback =
+                    level.exo_damage_curve_previous_callbacks[weaponName];
+            }
+
+            if(!isdefined(storedPreviousCallback) ||
+               storedPreviousCallback != previousCallback)
             {
                 level.exo_damage_curve_previous_callbacks[weaponName] =
                     previousCallback;
@@ -103,12 +110,7 @@ atlas45_register_damage_modifier()
                     previousCallback;
                 delegatedCount++;
             }
-            else
-            {
-                skippedCount++;
-            }
         }
-
         lowercaseWeaponName = tolower(weaponName + "");
         lowercaseAliasCallback = undefined;
         if(isdefined(level.modifyweapondamage[lowercaseWeaponName]))
@@ -122,12 +124,6 @@ atlas45_register_damage_modifier()
             !atlas45_is_self_reference_callback(lowercaseAliasCallback) &&
             lowercaseAliasCallback != previousCallback;
 
-        if(!atlas45_should_hook_registered_key(weaponName, previousCallback))
-        {
-            skippedCount++;
-            continue;
-        }
-
         level.modifyweapondamage[weaponName] =
             ::atlas45_modify_damage;
         level.exo_damage_curve_registered_weapons[weaponName] = true;
@@ -135,18 +131,24 @@ atlas45_register_damage_modifier()
         if(lowercaseWeaponName != weaponName &&
            isdefined(lowercaseAliasCallback) &&
            (lowercaseAliasCallback == previousCallback ||
-            atlas45_is_self_reference_callback(lowercaseAliasCallback)) &&
-           atlas45_should_hook_registered_key(
-               lowercaseWeaponName,
-               lowercaseAliasCallback))
+            atlas45_is_self_reference_callback(lowercaseAliasCallback)))
         {
             if(isdefined(lowercaseAliasCallback) &&
                !atlas45_is_self_reference_callback(lowercaseAliasCallback))
             {
-                if(!isdefined(level.exo_damage_curve_previous_callbacks[lowercaseWeaponName]))
+                storedAliasCallback = undefined;
+                if(isdefined(level.exo_damage_curve_previous_callbacks[lowercaseWeaponName]))
+                {
+                    storedAliasCallback =
+                        level.exo_damage_curve_previous_callbacks[lowercaseWeaponName];
+                }
+
+                if(!isdefined(storedAliasCallback) ||
+                   storedAliasCallback != lowercaseAliasCallback)
                 {
                     level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
                         lowercaseAliasCallback;
+                    delegatedCount++;
                 }
             }
 
@@ -207,34 +209,6 @@ atlas45_should_register_weapon(weaponName)
 
     return isdefined(level.modifyweapondamage[originalWeaponName]) ||
            isdefined(level.modifyweapondamage[normalizedWeaponName]);
-}
-
-atlas45_should_hook_registered_key(weaponName, currentCallback)
-{
-    if(!isdefined(weaponName) || !isdefined(currentCallback))
-    {
-        return false;
-    }
-
-    if(atlas45_is_self_reference_callback(currentCallback))
-    {
-        return true;
-    }
-
-    alreadyRegistered = isdefined(level.exo_damage_curve_registered_weapons[weaponName]) &&
-        level.exo_damage_curve_registered_weapons[weaponName];
-    if(!alreadyRegistered)
-    {
-        return true;
-    }
-
-    if(isdefined(level.exo_damage_curve_previous_callbacks[weaponName]) &&
-       level.exo_damage_curve_previous_callbacks[weaponName] == currentCallback)
-    {
-        return true;
-    }
-
-    return false;
 }
 
 /*
