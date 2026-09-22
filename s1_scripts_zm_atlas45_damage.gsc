@@ -681,7 +681,7 @@ atlas45_slice_from(value, startIndex)
 
 atlas45_get_round_damage_multiplier()
 {
-    maxScaledRound = 200;
+    maxScaledRound = 120;
     maxRoundMultiplier = 4.0;
 
     if(!isdefined(level.round_number))
