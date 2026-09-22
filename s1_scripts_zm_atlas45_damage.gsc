@@ -518,9 +518,16 @@ atlas45_get_weapon_level_keys(weaponName)
     if(strlen(normalized) > 3 &&
        getsubstr(normalized, strlen(normalized) - 3, strlen(normalized)) == "_mp")
     {
+        trimmedName = getsubstr(normalized, 0, strlen(normalized) - 3);
+        if(strlen(trimmedName) > 0 &&
+           getsubstr(trimmedName, strlen(trimmedName) - 1, strlen(trimmedName)) == "_")
+        {
+            trimmedName = getsubstr(trimmedName, 0, strlen(trimmedName) - 1);
+        }
+
         atlas45_add_unique_key(
             keys,
-            getsubstr(normalized, 0, strlen(normalized) - 3)
+            trimmedName
         );
     }
 
