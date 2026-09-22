@@ -363,14 +363,21 @@ atlas45_modify_damage(
     }
 
     /*
-        Returning a fixed Mk2-Mk25 base damage here avoids stacking
-        stock weapon-level bonus damage on top of this custom curve.
-
-        Do not process hitLocation here. This intentionally avoids custom
-        head/neck/helmet multipliers so the game can retain its normal
-        hit-location behavior.
+        Feed the Mk2-Mk25 curve value through the existing callback chain so
+        stock per-weapon and hit-location behavior can still apply.
     */
-    return atlas45_get_base_damage(weaponLevel);
+    customBaseDamage = atlas45_get_base_damage(weaponLevel);
+    return atlas45_apply_compatible_previous_callback(
+        victim,
+        attacker,
+        customBaseDamage,
+        meansOfDeath,
+        weapon,
+        weaponName,
+        point,
+        direction,
+        hitLocation
+    );
 }
 
 atlas45_apply_compatible_previous_callback(
