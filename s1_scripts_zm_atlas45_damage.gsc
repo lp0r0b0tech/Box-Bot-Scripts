@@ -726,7 +726,17 @@ atlas45_parse_positive_int(value)
         }
     }
 
-    if(hasNegativeSign || !hasDigits || parsedValue < 1)
+    if(!hasDigits)
+    {
+        return 1;
+    }
+
+    if(hasNegativeSign)
+    {
+        parsedValue = -parsedValue;
+    }
+
+    if(parsedValue == 0)
     {
         return 1;
     }
