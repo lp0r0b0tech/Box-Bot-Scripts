@@ -13,6 +13,11 @@
     Curve:
         finalDamage = baseDamage + (baseDamage * 0.2 * (mark - 1))
 
+    Diagnostic logging:
+        Set level.awd_debug_weapons = 1 to print the exact internal weapon
+        key seen by the damage callback. Each weapon/base-name pair is logged
+        once so live verification stays readable.
+
     Supported weapons are registered explicitly for CB Servers S1x v0.0.4.
     This list includes the upgradeable firearms and special/wonder guns and
     excludes grenades, drones, teleport/repulsor equipment, Last Stand, and
@@ -40,6 +45,8 @@ main()
 
     level.awd_started = 1;
     awd_init_supported_weapons();
+    level.awd_debug_weapons = 1;
+    level.awd_debugged_weapons = [];
 
     println( "AllWeaponDamage: Zombies script initialized." );
 
@@ -283,6 +290,8 @@ awd_modify_damage(
 
     baseWeaponName = getweaponbasename( weapon );
 
+    awd_debug_weapon_name( weapon, baseWeaponName );
+
     if ( !isdefined( baseWeaponName ) || baseWeaponName == "" )
     {
         return damage;
@@ -314,6 +323,38 @@ awd_modify_damage(
     }
 
     return awd_get_cauterizer_damage( damage, weaponLevel );
+}
+
+awd_debug_weapon_name( weaponName, baseWeaponName )
+{
+    if ( !isdefined( level.awd_debug_weapons ) || !level.awd_debug_weapons )
+    {
+        return;
+    }
+
+    if ( !isdefined( level.awd_debugged_weapons ) )
+    {
+        level.awd_debugged_weapons = [];
+    }
+
+    if ( !isdefined( weaponName ) || weaponName == "" )
+    {
+        return;
+    }
+
+    debugKey = weaponName;
+    if ( isdefined( baseWeaponName ) && baseWeaponName != "" )
+    {
+        debugKey = weaponName + " -> " + baseWeaponName;
+    }
+
+    if ( isdefined( level.awd_debugged_weapons[debugKey] ) )
+    {
+        return;
+    }
+
+    level.awd_debugged_weapons[debugKey] = 1;
+    println( "AllWeaponDamage: callback weapon = " + weaponName + ", base = " + baseWeaponName );
 }
 
 awd_get_cauterizer_damage( baseDamage, mark )
