@@ -58,6 +58,12 @@ atlas45_register_damage_modifier()
 {
     level endon("game_ended");
 
+    if(isdefined(level.exo_damage_curve_registered) &&
+       level.exo_damage_curve_registered)
+    {
+        return;
+    }
+
     /*
         Wait for the Zombies gametype to initialize the weapon-damage
         callback table.
@@ -167,10 +173,16 @@ atlas45_register_damage_modifier()
         !isdefined(level.exo_damage_curve_registered) ||
         !level.exo_damage_curve_registered ||
         !isdefined(level.exo_damage_curve_last_registered_count) ||
-        level.exo_damage_curve_last_registered_count != registeredCount;
+        level.exo_damage_curve_last_registered_count != registeredCount ||
+        !isdefined(level.exo_damage_curve_last_delegated_count) ||
+        level.exo_damage_curve_last_delegated_count != delegatedCount ||
+        !isdefined(level.exo_damage_curve_last_skipped_count) ||
+        level.exo_damage_curve_last_skipped_count != skippedCount;
 
     level.exo_damage_curve_registered = 1;
     level.exo_damage_curve_last_registered_count = registeredCount;
+    level.exo_damage_curve_last_delegated_count = delegatedCount;
+    level.exo_damage_curve_last_skipped_count = skippedCount;
     if(shouldLogRegistration)
     {
         println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".");
