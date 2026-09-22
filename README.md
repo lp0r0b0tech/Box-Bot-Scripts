@@ -2,7 +2,7 @@ This repository contains custom Box Bot and Exo Zombies script tweaks.
 
 EMZ/EMP Zombies Nerf
 
-Mk1 weapons keep stock damage, and Mk2 through Mk25 use a Cell 3 Cauterizer-style damage curve
+Mk1 weapons keep stock damage, and the explicit CB Servers S1x v0.0.4 Zombies gun list uses a Cell 3 Cauterizer-style damage curve from Mk2 through Mk25
 
 Inside `s1`, create a `scripts` folder. For the files listed below, create `mp` and `zm` inside `s1/scripts`; no `sv` folder is needed for these files.
 
