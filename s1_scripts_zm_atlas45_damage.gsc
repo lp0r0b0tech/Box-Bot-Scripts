@@ -118,28 +118,87 @@ exo_damage_register_callbacks()
             }
         }
 
+        if(canonicalKey != key &&
+           isdefined(level.modifyweapondamage[canonicalKey]))
+        {
+            canonicalCallback = level.modifyweapondamage[canonicalKey];
+            if(isdefined(canonicalCallback) &&
+               !exo_damage_is_self_callback(canonicalCallback))
+            {
+                if(!isdefined(level.exo_damage_previous_callbacks[canonicalKey]) ||
+                   level.exo_damage_previous_callbacks[canonicalKey] != canonicalCallback)
+                {
+                    level.exo_damage_previous_callbacks[canonicalKey] = canonicalCallback;
+                    delegatedCount++;
+                    changed = true;
+                }
+
+                if(level.modifyweapondamage[canonicalKey] == canonicalCallback)
+                {
+                    level.modifyweapondamage[canonicalKey] = ::exo_damage_modify;
+                    changed = true;
+                }
+            }
+        }
+
         level.exo_damage_registered_keys[key] = true;
         level.exo_damage_registered_keys[canonicalKey] = true;
 
         hookedCount++;
     }
 
-    if(hookedCount > 0)
-    {
-        if(!isdefined(level.exo_damage_last_hooked) ||
-           !isdefined(level.exo_damage_last_delegated) ||
-           level.exo_damage_last_hooked != hookedCount ||
-           level.exo_damage_last_delegated != delegatedCount)
-        {
-            println("ExoWeaponDamage: hooks=" + hookedCount + ", delegated=" + delegatedCount + ".");
-            changed = true;
-        }
+    stableDelegatedCount = exo_damage_count_stored_callbacks();
 
-        level.exo_damage_last_hooked = hookedCount;
-        level.exo_damage_last_delegated = delegatedCount;
+    if(!isdefined(level.exo_damage_last_hooked) ||
+       !isdefined(level.exo_damage_last_delegated) ||
+       level.exo_damage_last_hooked != hookedCount ||
+       level.exo_damage_last_delegated != stableDelegatedCount)
+    {
+        println("ExoWeaponDamage: hooks=" + hookedCount + ", delegated=" + stableDelegatedCount + ".");
+        changed = true;
     }
 
+    level.exo_damage_last_hooked = hookedCount;
+    level.exo_damage_last_delegated = stableDelegatedCount;
+
     return changed;
+}
+
+exo_damage_count_stored_callbacks()
+{
+    if(!isdefined(level.exo_damage_previous_callbacks))
+    {
+        return 0;
+    }
+
+    keys = getarraykeys(level.exo_damage_previous_callbacks);
+    count = 0;
+    seenCanonical = [];
+
+    for(i = 0; i < keys.size; i++)
+    {
+        key = keys[i];
+        canonicalKey = tolower(key + "");
+        if(isdefined(seenCanonical[canonicalKey]))
+        {
+            continue;
+        }
+
+        seenCanonical[canonicalKey] = true;
+
+        callback = level.exo_damage_previous_callbacks[canonicalKey];
+        if(!isdefined(callback))
+        {
+            callback = level.exo_damage_previous_callbacks[key];
+        }
+
+        if(isdefined(callback) && !exo_damage_is_self_callback(callback))
+        {
+            count++;
+        }
+    }
+
+    return count;
 }
 
 exo_damage_is_zombie_weapon_key(key)
@@ -279,10 +338,15 @@ exo_damage_modify(
     );
 
     baseDamage = exo_damage_get_base_damage(weaponLevel);
-    targetDamage = int(baseDamage * exo_damage_get_round_multiplier());
+    targetDamage = baseDamage * exo_damage_get_round_multiplier();
     if(targetDamage < baseDamage)
     {
         targetDamage = baseDamage;
+    }
+
+    if(vanillaDamage <= 0)
+    {
+        return vanillaDamage;
     }
 
     referenceDamage = damage;
@@ -295,7 +359,12 @@ exo_damage_modify(
         return vanillaDamage;
     }
 
-    finalDamage = int((vanillaDamage * targetDamage) / referenceDamage);
+    scaledRawDamage = (((vanillaDamage * 1.0) * targetDamage) / referenceDamage);
+    finalDamage = int(scaledRawDamage);
+    if(vanillaDamage > 0 && finalDamage < 1)
+    {
+        finalDamage = 1;
+    }
 
     return finalDamage;
 }
@@ -677,7 +746,7 @@ exo_damage_get_round_multiplier()
     /*
         Balance targets:
         - Keep rounds 1-20 at vanilla-equivalent multiplier (1.0)
-        - Scale smoothly from round 21 to round 120
+        - Scale smoothly from round 21, reaching 4.0x at round 120
         - Cap scaling at 4.0x from round 120 onward
     */
     maxScaledRound = 120;
