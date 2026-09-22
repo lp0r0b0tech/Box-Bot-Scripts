@@ -676,11 +676,7 @@ atlas45_get_round_damage_multiplier()
         return 1.0;
     }
 
-    roundNumber = int(level.round_number);
-    if(roundNumber < 1)
-    {
-        roundNumber = 1;
-    }
+    roundNumber = atlas45_parse_positive_int(level.round_number);
     if(roundNumber <= 20)
     {
         return 1.0;
@@ -697,6 +693,49 @@ atlas45_get_round_damage_multiplier()
     }
 
     return 2.8 + ((roundNumber - 70) * 0.05);
+}
+
+atlas45_parse_positive_int(value)
+{
+    text = value + "";
+    parsedValue = 0;
+    hasDigits = false;
+
+    for(i = 0; i < strlen(text); i++)
+    {
+        ch = getsubstr(text, i, i + 1);
+        if(ch >= "0" && ch <= "9")
+        {
+            parsedValue = (parsedValue * 10) + atlas45_digit_to_int(ch);
+            hasDigits = true;
+        }
+        else if(hasDigits)
+        {
+            break;
+        }
+    }
+
+    if(!hasDigits || parsedValue < 1)
+    {
+        return 1;
+    }
+
+    return parsedValue;
+}
+
+atlas45_digit_to_int(ch)
+{
+    if(ch == "0") return 0;
+    if(ch == "1") return 1;
+    if(ch == "2") return 2;
+    if(ch == "3") return 3;
+    if(ch == "4") return 4;
+    if(ch == "5") return 5;
+    if(ch == "6") return 6;
+    if(ch == "7") return 7;
+    if(ch == "8") return 8;
+
+    return 9;
 }
 
 /*
