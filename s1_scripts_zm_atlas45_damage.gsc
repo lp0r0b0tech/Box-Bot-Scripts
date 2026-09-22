@@ -89,6 +89,7 @@ atlas45_register_damage_modifier()
         previousCallback = level.modifyweapondamage[weaponName];
         if(!isdefined(previousCallback))
         {
+            skippedCount++;
             continue;
         }
 
@@ -110,6 +111,10 @@ atlas45_register_damage_modifier()
                     previousCallback;
                 delegatedCount++;
             }
+        }
+        else
+        {
+            skippedCount++;
         }
         lowercaseWeaponName = tolower(weaponName + "");
         lowercaseAliasCallback = undefined;
@@ -156,6 +161,9 @@ atlas45_register_damage_modifier()
 
     if(registeredCount <= 0)
     {
+        level.exo_damage_curve_previous_callbacks = [];
+        level.exo_damage_curve_registered_weapons = [];
+        level.exo_damage_curve_weapon_key_cache = [];
         level.exo_damage_curve_registered = false;
         return;
     }
