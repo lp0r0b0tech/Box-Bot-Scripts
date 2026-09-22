@@ -702,7 +702,7 @@ atlas45_get_round_damage_multiplier()
     }
 
     round70Multiplier = round40Multiplier + (30 * 0.04);
-    return round70Multiplier + ((roundNumber - 70) * 0.05);
+    return round70Multiplier + ((roundNumber - 70) * 0.04);
 }
 
 atlas45_parse_signed_int(value)
@@ -740,11 +740,6 @@ atlas45_parse_signed_int(value)
     if(hasNegativeSign)
     {
         parsedValue = -parsedValue;
-    }
-
-    if(parsedValue == 0)
-    {
-        return 1;
     }
 
     return parsedValue;
