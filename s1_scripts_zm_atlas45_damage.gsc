@@ -185,7 +185,101 @@ atlas45_should_register_weapon(weaponName)
         return false;
     }
 
-    return true;
+    return atlas45_is_allowed_weapon_key(weaponName);
+}
+
+atlas45_is_allowed_weapon_key(weaponName)
+{
+    /*
+        User-selected Exo Zombies weapon families:
+        Atlas45, RW1, M1 Irons, MP11, ASM1, PDW, SN6, SAC3,
+        BAL27, AK12, HBRA3, IMR, ARX160, AE4,
+        Bulldog, TAC19, S12, Blunderbuss,
+        Lynx, NA45, MORS, Immolator,
+        Ameli, Pytaek, OHM,
+        CEL3 Cauterizer, Magnetron, KL03 Trident, LZ52 Limbo.
+    */
+    normalizedWeaponName = atlas45_normalize_weapon_token(weaponName);
+    if(strlen(normalizedWeaponName) <= 0)
+    {
+        return false;
+    }
+
+    allowedTokens = atlas45_get_allowed_weapon_tokens();
+    for(i = 0; i < allowedTokens.size; i++)
+    {
+        if(issubstr(normalizedWeaponName, allowedTokens[i]))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+atlas45_normalize_weapon_token(value)
+{
+    if(!isdefined(value))
+    {
+        return "";
+    }
+
+    raw = tolower(value + "");
+    normalized = "";
+    allowedChars = "abcdefghijklmnopqrstuvwxyz0123456789";
+
+    for(i = 0; i < strlen(raw); i++)
+    {
+        ch = getsubstr(raw, i, i + 1);
+        if(issubstr(allowedChars, ch))
+        {
+            normalized += ch;
+        }
+    }
+
+    return normalized;
+}
+
+atlas45_get_allowed_weapon_tokens()
+{
+    if(isdefined(level.exo_damage_curve_allowed_tokens))
+    {
+        return level.exo_damage_curve_allowed_tokens;
+    }
+
+    tokens = [];
+    tokens[tokens.size] = "atlas45";
+    tokens[tokens.size] = "rw1";
+    tokens[tokens.size] = "m1irons";
+    tokens[tokens.size] = "mp11";
+    tokens[tokens.size] = "asm1";
+    tokens[tokens.size] = "pdw";
+    tokens[tokens.size] = "sn6";
+    tokens[tokens.size] = "sac3";
+    tokens[tokens.size] = "bal27";
+    tokens[tokens.size] = "ak12";
+    tokens[tokens.size] = "hbra3";
+    tokens[tokens.size] = "imr";
+    tokens[tokens.size] = "arx160";
+    tokens[tokens.size] = "ae4";
+    tokens[tokens.size] = "bulldog";
+    tokens[tokens.size] = "tac19";
+    tokens[tokens.size] = "s12";
+    tokens[tokens.size] = "blunderbuss";
+    tokens[tokens.size] = "lynx";
+    tokens[tokens.size] = "na45";
+    tokens[tokens.size] = "mors";
+    tokens[tokens.size] = "immolator";
+    tokens[tokens.size] = "ameli";
+    tokens[tokens.size] = "pytaek";
+    tokens[tokens.size] = "ohm";
+    tokens[tokens.size] = "cel3cauterizer";
+    tokens[tokens.size] = "magnetron";
+    tokens[tokens.size] = "kl03trident";
+    tokens[tokens.size] = "lz52limbo";
+
+    level.exo_damage_curve_allowed_tokens = tokens;
+    return tokens;
 }
 
 /*
