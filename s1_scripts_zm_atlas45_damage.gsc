@@ -229,17 +229,38 @@ atlas45_modify_damage(
     weaponName = atlas45_resolve_registered_weapon_name(weapon);
     if(!isdefined(weaponName) || weaponName == "")
     {
-        return atlas45_apply_compatible_previous_callback(
-            victim,
-            attacker,
-            damage,
-            meansOfDeath,
-            weapon,
-            weaponName,
-            point,
-            direction,
-            hitLocation
-        );
+        weaponName = weapon + "";
+        if(!isdefined(level.modifyweapondamage[weaponName]) ||
+           !atlas45_is_self_reference_callback(
+               level.modifyweapondamage[weaponName]))
+        {
+            return atlas45_apply_compatible_previous_callback(
+                victim,
+                attacker,
+                damage,
+                meansOfDeath,
+                weapon,
+                weaponName,
+                point,
+                direction,
+                hitLocation
+            );
+        }
+
+        if(!isdefined(level.exo_damage_curve_weapon_key_cache))
+        {
+            level.exo_damage_curve_weapon_key_cache = [];
+        }
+        if(!isdefined(level.exo_damage_curve_registered_weapons))
+        {
+            level.exo_damage_curve_registered_weapons = [];
+        }
+
+        lowercaseWeaponName = tolower(weaponName);
+        level.exo_damage_curve_weapon_key_cache[weaponName] = weaponName;
+        level.exo_damage_curve_weapon_key_cache[lowercaseWeaponName] =
+            weaponName;
+        level.exo_damage_curve_registered_weapons[weaponName] = true;
     }
     if(!isdefined(level.exo_damage_curve_registered_weapons) ||
        !isdefined(level.exo_damage_curve_registered_weapons[weaponName]) ||
