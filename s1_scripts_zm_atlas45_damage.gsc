@@ -53,12 +53,6 @@ atlas45_register_damage_modifier()
 {
     level endon("game_ended");
 
-    if(isdefined(level.exo_damage_curve_registered) &&
-       level.exo_damage_curve_registered)
-    {
-        return;
-    }
-
     if(!isdefined(level.modifyweapondamage))
     {
         return;
@@ -93,18 +87,21 @@ atlas45_register_damage_modifier()
             weaponName;
 
         previousCallback = level.modifyweapondamage[weaponName];
-        if(isdefined(previousCallback) &&
-           !atlas45_is_self_reference_callback(previousCallback))
+        if(!isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
         {
-            level.exo_damage_curve_previous_callbacks[weaponName] =
-                previousCallback;
-            level.exo_damage_curve_previous_callbacks[tolower(weaponName + "")] =
-                previousCallback;
-            delegatedCount++;
-        }
-        else
-        {
-            skippedCount++;
+            if(isdefined(previousCallback) &&
+               !atlas45_is_self_reference_callback(previousCallback))
+            {
+                level.exo_damage_curve_previous_callbacks[weaponName] =
+                    previousCallback;
+                level.exo_damage_curve_previous_callbacks[tolower(weaponName + "")] =
+                    previousCallback;
+                delegatedCount++;
+            }
+            else
+            {
+                skippedCount++;
+            }
         }
 
         lowercaseWeaponName = tolower(weaponName + "");
@@ -132,8 +129,11 @@ atlas45_register_damage_modifier()
             if(isdefined(lowercaseAliasCallback) &&
                !atlas45_is_self_reference_callback(lowercaseAliasCallback))
             {
-                level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
-                    lowercaseAliasCallback;
+                if(!isdefined(level.exo_damage_curve_previous_callbacks[lowercaseWeaponName]))
+                {
+                    level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
+                        lowercaseAliasCallback;
+                }
             }
 
             level.modifyweapondamage[lowercaseWeaponName] =
