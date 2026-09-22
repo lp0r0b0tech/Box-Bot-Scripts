@@ -334,10 +334,7 @@ atlas45_modify_damage(
         );
     }
 
-    weaponLevel = maps\mp\zombies\_util::getzombieweaponlevel(
-        attacker,
-        weaponName
-    );
+    weaponLevel = atlas45_get_weapon_level(attacker, weaponName);
 
     if(!isdefined(weaponLevel) || weaponLevel < 2)
     {
@@ -462,6 +459,90 @@ atlas45_resolve_registered_weapon_name(weapon)
        !isdefined(level.exo_damage_curve_weapon_key_cache))
     {
         return "";
+    }
+
+    atlas45_get_weapon_level(attacker, weaponName)
+    {
+        candidateKeys = atlas45_get_weapon_level_keys(weaponName);
+        for(i = 0; i < candidateKeys.size; i++)
+        {
+            key = candidateKeys[i];
+            levelValue = maps\mp\zombies\_util::getzombieweaponlevel(
+                attacker,
+                key
+            );
+            if(isdefined(levelValue))
+            {
+                return levelValue;
+            }
+        }
+
+        return undefined;
+    }
+
+    atlas45_get_weapon_level_keys(weaponName)
+    {
+        keys = [];
+        if(!isdefined(weaponName))
+        {
+            return keys;
+        }
+
+        normalized = tolower(weaponName + "");
+        atlas45_add_unique_key(keys, normalized);
+
+        if(strlen(normalized) > 3 &&
+           getsubstr(normalized, 0, 3) == "zm_")
+        {
+            baseName = getsubstr(normalized, 3, strlen(normalized));
+            atlas45_add_unique_key(keys, baseName);
+            atlas45_add_unique_key(keys, baseName + "zm_mp");
+            atlas45_add_unique_key(keys, "iw5_" + baseName + "zm_mp");
+        }
+
+        if(strlen(normalized) > 3 &&
+           getsubstr(normalized, strlen(normalized) - 3, strlen(normalized)) == "_mp")
+        {
+            atlas45_add_unique_key(
+                keys,
+                getsubstr(normalized, 0, strlen(normalized) - 3)
+            );
+        }
+
+        if(strlen(normalized) > 11 &&
+           getsubstr(normalized, 0, 4) == "iw5_" &&
+           getsubstr(normalized, strlen(normalized) - 5, strlen(normalized)) == "zm_mp")
+        {
+            baseName = getsubstr(normalized, 4, strlen(normalized) - 5);
+            atlas45_add_unique_key(keys, baseName);
+            atlas45_add_unique_key(keys, "zm_" + baseName);
+        }
+
+        return keys;
+    }
+
+    atlas45_add_unique_key(keys, value)
+    {
+        if(!isdefined(value))
+        {
+            return;
+        }
+
+        value = tolower(value + "");
+        if(strlen(value) <= 0)
+        {
+            return;
+        }
+
+        for(i = 0; i < keys.size; i++)
+        {
+            if(keys[i] == value)
+            {
+                return;
+            }
+        }
+
+        keys[keys.size] = value;
     }
 
     weaponName = weapon + "";
