@@ -213,7 +213,17 @@ exo_damage_modify(
 {
     if(!isdefined(weapon))
     {
-        return damage;
+        return exo_damage_delegate(
+            victim,
+            attacker,
+            damage,
+            meansOfDeath,
+            weapon,
+            "",
+            point,
+            direction,
+            hitLocation
+        );
     }
 
     weaponKey = exo_damage_resolve_weapon_key(weapon);
