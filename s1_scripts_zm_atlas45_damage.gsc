@@ -161,7 +161,6 @@ atlas45_register_damage_modifier()
 
     if(registeredCount <= 0)
     {
-        level.exo_damage_curve_registered = false;
         return;
     }
 
