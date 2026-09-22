@@ -511,7 +511,9 @@ atlas45_get_weapon_level_keys(weaponName)
     {
         baseName = getsubstr(normalized, 3, strlen(normalized));
         atlas45_add_unique_key(keys, baseName);
+        atlas45_add_unique_key(keys, baseName + "_zm_mp");
         atlas45_add_unique_key(keys, baseName + "zm_mp");
+        atlas45_add_unique_key(keys, "iw5_" + baseName + "_zm_mp");
         atlas45_add_unique_key(keys, "iw5_" + baseName + "zm_mp");
     }
 
