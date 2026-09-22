@@ -681,6 +681,9 @@ atlas45_slice_from(value, startIndex)
 
 atlas45_get_round_damage_multiplier()
 {
+    maxScaledRound = 200;
+    maxRoundMultiplier = 4.0;
+
     if(!isdefined(level.round_number))
     {
         return 1.0;
@@ -691,9 +694,9 @@ atlas45_get_round_damage_multiplier()
     {
         roundNumber = 1;
     }
-    if(roundNumber > 200)
+    if(roundNumber > maxScaledRound)
     {
-        roundNumber = 200;
+        roundNumber = maxScaledRound;
     }
     if(roundNumber <= 20)
     {
@@ -701,9 +704,9 @@ atlas45_get_round_damage_multiplier()
     }
 
     multiplier = 1.0 + ((roundNumber - 20) * 0.03);
-    if(multiplier > 4.0)
+    if(multiplier > maxRoundMultiplier)
     {
-        multiplier = 4.0;
+        multiplier = maxRoundMultiplier;
     }
 
     return multiplier;
