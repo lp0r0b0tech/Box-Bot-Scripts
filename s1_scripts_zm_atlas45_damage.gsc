@@ -137,19 +137,33 @@ atlas45_register_damage_modifier()
 
         if(lowercaseWeaponName != weaponName)
         {
-            if(isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
+            if(isdefined(lowercaseAliasCallback) &&
+               !atlas45_is_self_reference_callback(lowercaseAliasCallback))
             {
+                storedAliasCallback = undefined;
+                if(isdefined(level.exo_damage_curve_previous_callbacks[lowercaseWeaponName]))
+                {
+                    storedAliasCallback =
+                        level.exo_damage_curve_previous_callbacks[lowercaseWeaponName];
+                }
+
+                if(!isdefined(storedAliasCallback) ||
+                   storedAliasCallback != lowercaseAliasCallback)
+                {
+                    level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
+                        lowercaseAliasCallback;
+                    delegatedCount++;
+                }
+            }
+            else if(!isdefined(level.exo_damage_curve_previous_callbacks[lowercaseWeaponName]) &&
+                    isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
+            {
+                /*
+                    Keep Mk1 fallback behavior for lowercase lookups when the
+                    lowercase alias had no distinct callback.
+                */
                 level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
                     level.exo_damage_curve_previous_callbacks[weaponName];
-            }
-            else if(isdefined(lowercaseAliasCallback) &&
-                    !atlas45_is_self_reference_callback(lowercaseAliasCallback))
-            {
-                level.exo_damage_curve_previous_callbacks[weaponName] =
-                    lowercaseAliasCallback;
-                level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
-                    lowercaseAliasCallback;
-                delegatedCount++;
             }
 
             level.modifyweapondamage[lowercaseWeaponName] =
@@ -373,13 +387,7 @@ atlas45_apply_compatible_previous_callback(
     }
 
     previousCallback = undefined;
-    if(isdefined(resolvedWeaponName) && resolvedWeaponName != "" &&
-       isdefined(level.exo_damage_curve_previous_callbacks[resolvedWeaponName]))
-    {
-        previousCallback =
-            level.exo_damage_curve_previous_callbacks[resolvedWeaponName];
-    }
-    else if(isdefined(weapon))
+    if(isdefined(weapon))
     {
         weaponName = weapon + "";
         weaponNameLowercase = tolower(weaponName);
@@ -393,6 +401,14 @@ atlas45_apply_compatible_previous_callback(
             previousCallback =
                 level.exo_damage_curve_previous_callbacks[weaponNameLowercase];
         }
+    }
+
+    if(!isdefined(previousCallback) &&
+       isdefined(resolvedWeaponName) && resolvedWeaponName != "" &&
+       isdefined(level.exo_damage_curve_previous_callbacks[resolvedWeaponName]))
+    {
+        previousCallback =
+            level.exo_damage_curve_previous_callbacks[resolvedWeaponName];
     }
 
     if(!isdefined(previousCallback) ||
