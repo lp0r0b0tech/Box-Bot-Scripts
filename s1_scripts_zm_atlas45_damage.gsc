@@ -80,7 +80,6 @@ atlas45_register_damage_modifier()
     delegatedCount = 0;
     skippedCount = 0;
     weaponNames = getarraykeys(level.modifyweapondamage);
-    usedFallbackRegistration = false;
 
     for(i = 0; i < weaponNames.size; i++)
     {
@@ -153,80 +152,8 @@ atlas45_register_damage_modifier()
 
     if(registeredCount <= 0)
     {
-        /*
-            Fallback safety: if the first pass matched no valid callback
-            keys, retry by scanning callback keys again.
-        */
-        registeredCount = 0;
-        delegatedCount = 0;
-        skippedCount = 0;
-
-        for(i = 0; i < weaponNames.size; i++)
-        {
-            weaponName = weaponNames[i];
-            if(!atlas45_should_register_weapon_fallback(weaponName))
-            {
-                continue;
-            }
-            level.exo_damage_curve_weapon_key_cache[weaponName] = weaponName;
-            level.exo_damage_curve_weapon_key_cache[tolower(weaponName + "")] =
-                weaponName;
-
-            previousCallback = level.modifyweapondamage[weaponName];
-            if(isdefined(previousCallback) &&
-               !atlas45_is_self_reference_callback(previousCallback))
-            {
-                level.exo_damage_curve_previous_callbacks[weaponName] =
-                    previousCallback;
-                level.exo_damage_curve_previous_callbacks[tolower(weaponName + "")] =
-                    previousCallback;
-                delegatedCount++;
-            }
-            else
-            {
-                skippedCount++;
-            }
-
-            lowercaseWeaponName = tolower(weaponName + "");
-            lowercaseAliasCallback = undefined;
-            if(isdefined(level.modifyweapondamage[lowercaseWeaponName]))
-            {
-                lowercaseAliasCallback = level.modifyweapondamage[lowercaseWeaponName];
-            }
-
-            level.modifyweapondamage[weaponName] =
-                ::atlas45_modify_damage;
-            level.exo_damage_curve_registered_weapons[weaponName] = true;
-
-            if(lowercaseWeaponName != weaponName &&
-               (!isdefined(lowercaseAliasCallback) ||
-                lowercaseAliasCallback == previousCallback ||
-                atlas45_is_self_reference_callback(lowercaseAliasCallback)))
-            {
-                if(isdefined(lowercaseAliasCallback) &&
-                   !atlas45_is_self_reference_callback(lowercaseAliasCallback))
-                {
-                    level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
-                        lowercaseAliasCallback;
-                }
-
-                level.modifyweapondamage[lowercaseWeaponName] =
-                    ::atlas45_modify_damage;
-                level.exo_damage_curve_registered_weapons[lowercaseWeaponName] = true;
-                level.exo_damage_curve_weapon_key_cache[lowercaseWeaponName] =
-                    weaponName;
-            }
-
-            registeredCount++;
-        }
-
-        if(registeredCount <= 0)
-        {
-            level.exo_damage_curve_registered = false;
-            return;
-        }
-
-        usedFallbackRegistration = true;
+        level.exo_damage_curve_registered = false;
+        return;
     }
 
     shouldLogRegistration =
@@ -246,20 +173,11 @@ atlas45_register_damage_modifier()
     if(shouldLogRegistration)
     {
         summaryText = "ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".";
-        if(usedFallbackRegistration)
-        {
-            summaryText += " (initial pass matched 0 keys; retry path used)";
-        }
         println(summaryText);
     }
 }
 
 atlas45_should_register_weapon(weaponName)
-{
-    return atlas45_should_register_weapon_fallback(weaponName);
-}
-
-atlas45_should_register_weapon_fallback(weaponName)
 {
     if(!isdefined(weaponName))
     {
@@ -275,150 +193,6 @@ atlas45_should_register_weapon_fallback(weaponName)
 
     return isdefined(level.modifyweapondamage[originalWeaponName]) ||
            isdefined(level.modifyweapondamage[normalizedWeaponName]);
-}
-
-atlas45_is_allowed_weapon_key(weaponName)
-{
-    /*
-        User-selected Exo Zombies weapon families:
-        Atlas45, RW1, M1 Irons, MP11, ASM1, PDW, SN6, SAC3,
-        BAL27, AK12, HBRA3, IMR, ARX160, AE4,
-        Bulldog, TAC19, S12, Blunderbuss,
-        Lynx, NA45, MORS, Immolator,
-        Ameli, Pytaek, OHM,
-        CEL3 Cauterizer, Magnetron, KL03 Trident, LZ52 Limbo.
-    */
-    segments = atlas45_tokenize_weapon_key(weaponName);
-    if(!isdefined(segments) || segments.size <= 0)
-    {
-        return false;
-    }
-
-    singles = atlas45_get_allowed_single_tokens();
-    for(i = 0; i < segments.size; i++)
-    {
-        segment = segments[i];
-        for(j = 0; j < singles.size; j++)
-        {
-            if(atlas45_segment_matches_allowed_single(segment, singles[j]))
-            {
-                return true;
-            }
-        }
-    }
-
-    pairs = atlas45_get_allowed_pair_tokens();
-    for(i = 0; i < segments.size - 1; i++)
-    {
-        pairKey = segments[i] + "_" + segments[i + 1];
-        if(isdefined(pairs[pairKey]) && pairs[pairKey])
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-atlas45_segment_matches_allowed_single(segment, token)
-{
-    if(!isdefined(segment) || !isdefined(token))
-    {
-        return false;
-    }
-
-    return segment == token ||
-           segment == (token + "zm") ||
-           segment == ("zm" + token);
-}
-
-atlas45_tokenize_weapon_key(value)
-{
-    tokens = [];
-    if(!isdefined(value))
-    {
-        return tokens;
-    }
-
-    raw = tolower(value + "");
-    currentToken = "";
-    allowedChars = "abcdefghijklmnopqrstuvwxyz0123456789";
-
-    for(i = 0; i < strlen(raw); i++)
-    {
-        ch = getsubstr(raw, i, i + 1);
-        if(issubstr(allowedChars, ch))
-        {
-            currentToken += ch;
-        }
-        else if(strlen(currentToken) > 0)
-        {
-            tokens[tokens.size] = currentToken;
-            currentToken = "";
-        }
-    }
-
-    if(strlen(currentToken) > 0)
-    {
-        tokens[tokens.size] = currentToken;
-    }
-
-    return tokens;
-}
-
-atlas45_get_allowed_single_tokens()
-{
-    if(isdefined(level.exo_damage_curve_allowed_single_tokens))
-    {
-        return level.exo_damage_curve_allowed_single_tokens;
-    }
-
-    tokens = [];
-    tokens[tokens.size] = "atlas45";
-    tokens[tokens.size] = "rw1";
-    tokens[tokens.size] = "mp11";
-    tokens[tokens.size] = "asm1";
-    tokens[tokens.size] = "pdw";
-    tokens[tokens.size] = "sn6";
-    tokens[tokens.size] = "sac3";
-    tokens[tokens.size] = "bal27";
-    tokens[tokens.size] = "ak12";
-    tokens[tokens.size] = "hbra3";
-    tokens[tokens.size] = "imr";
-    tokens[tokens.size] = "arx160";
-    tokens[tokens.size] = "ae4";
-    tokens[tokens.size] = "bulldog";
-    tokens[tokens.size] = "tac19";
-    tokens[tokens.size] = "s12";
-    tokens[tokens.size] = "blunderbuss";
-    tokens[tokens.size] = "lynx";
-    tokens[tokens.size] = "na45";
-    tokens[tokens.size] = "mors";
-    tokens[tokens.size] = "immolator";
-    tokens[tokens.size] = "ameli";
-    tokens[tokens.size] = "pytaek";
-    tokens[tokens.size] = "ohm";
-    tokens[tokens.size] = "magnetron";
-
-    level.exo_damage_curve_allowed_single_tokens = tokens;
-    return tokens;
-}
-
-atlas45_get_allowed_pair_tokens()
-{
-    if(isdefined(level.exo_damage_curve_allowed_pair_tokens))
-    {
-        return level.exo_damage_curve_allowed_pair_tokens;
-    }
-
-    tokens = [];
-    tokens["m1_irons"] = true;
-    tokens["cel3_cauterizer"] = true;
-    tokens["kl03_trident"] = true;
-    tokens["lz52_limbo"] = true;
-
-    level.exo_damage_curve_allowed_pair_tokens = tokens;
-    return tokens;
 }
 
 /*
