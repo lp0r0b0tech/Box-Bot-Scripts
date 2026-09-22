@@ -180,7 +180,7 @@ atlas45_register_damage_modifier()
     level.exo_damage_curve_last_skipped_count = skippedCount;
     if(shouldLogRegistration)
     {
-        summaryText = "ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".";
+        summaryText = "ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped primary undefined/already-hooked callbacks: " + skippedCount + ".";
         println(summaryText);
     }
 }
@@ -347,11 +347,12 @@ atlas45_apply_compatible_previous_callback(
     }
     else if(isdefined(weapon))
     {
-        weaponNameLowercase = tolower((weapon + ""));
-        if(isdefined(level.exo_damage_curve_previous_callbacks[weapon + ""]))
+        weaponName = weapon + "";
+        weaponNameLowercase = tolower(weaponName);
+        if(isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
         {
             previousCallback =
-                level.exo_damage_curve_previous_callbacks[weapon + ""];
+                level.exo_damage_curve_previous_callbacks[weaponName];
         }
         else if(isdefined(level.exo_damage_curve_previous_callbacks[weaponNameLowercase]))
         {
