@@ -45,7 +45,15 @@ atlas45_registration_loop()
     for(;;)
     {
         atlas45_register_damage_modifier();
-        wait 5;
+        if(isdefined(level.exo_damage_curve_registered) &&
+           level.exo_damage_curve_registered)
+        {
+            wait 30;
+        }
+        else
+        {
+            wait 5;
+        }
     }
 }
 
@@ -129,23 +137,19 @@ atlas45_register_damage_modifier()
 
         if(lowercaseWeaponName != weaponName)
         {
-            if(isdefined(lowercaseAliasCallback) &&
-               !atlas45_is_self_reference_callback(lowercaseAliasCallback))
+            if(isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
             {
-                storedAliasCallback = undefined;
-                if(isdefined(level.exo_damage_curve_previous_callbacks[lowercaseWeaponName]))
-                {
-                    storedAliasCallback =
-                        level.exo_damage_curve_previous_callbacks[lowercaseWeaponName];
-                }
-
-                if(!isdefined(storedAliasCallback) ||
-                   storedAliasCallback != lowercaseAliasCallback)
-                {
-                    level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
-                        lowercaseAliasCallback;
-                    delegatedCount++;
-                }
+                level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
+                    level.exo_damage_curve_previous_callbacks[weaponName];
+            }
+            else if(isdefined(lowercaseAliasCallback) &&
+                    !atlas45_is_self_reference_callback(lowercaseAliasCallback))
+            {
+                level.exo_damage_curve_previous_callbacks[weaponName] =
+                    lowercaseAliasCallback;
+                level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
+                    lowercaseAliasCallback;
+                delegatedCount++;
             }
 
             level.modifyweapondamage[lowercaseWeaponName] =
