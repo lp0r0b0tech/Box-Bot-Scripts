@@ -64,20 +64,6 @@ atlas45_register_damage_modifier()
         return;
     }
 
-    /*
-        Wait for the Zombies gametype to initialize the weapon-damage
-        callback table.
-    */
-    for(i = 0; i < 600; i++)
-    {
-        if(isdefined(level.modifyweapondamage))
-        {
-            break;
-        }
-
-        wait 0.05;
-    }
-
     if(!isdefined(level.modifyweapondamage))
     {
         return;
@@ -226,9 +212,12 @@ atlas45_is_allowed_weapon_key(weaponName)
     for(i = 0; i < segments.size; i++)
     {
         segment = segments[i];
-        if(isdefined(singles[segment]) && singles[segment])
+        for(j = 0; j < singles.size; j++)
         {
-            return true;
+            if(atlas45_segment_matches_allowed_single(segment, singles[j]))
+            {
+                return true;
+            }
         }
     }
 
@@ -243,6 +232,18 @@ atlas45_is_allowed_weapon_key(weaponName)
     }
 
     return false;
+}
+
+atlas45_segment_matches_allowed_single(segment, token)
+{
+    if(!isdefined(segment) || !isdefined(token))
+    {
+        return false;
+    }
+
+    return segment == token ||
+           segment == (token + "zm") ||
+           segment == ("zm" + token);
 }
 
 atlas45_tokenize_weapon_key(value)
@@ -287,31 +288,31 @@ atlas45_get_allowed_single_tokens()
     }
 
     tokens = [];
-    tokens["atlas45"] = true;
-    tokens["rw1"] = true;
-    tokens["mp11"] = true;
-    tokens["asm1"] = true;
-    tokens["pdw"] = true;
-    tokens["sn6"] = true;
-    tokens["sac3"] = true;
-    tokens["bal27"] = true;
-    tokens["ak12"] = true;
-    tokens["hbra3"] = true;
-    tokens["imr"] = true;
-    tokens["arx160"] = true;
-    tokens["ae4"] = true;
-    tokens["bulldog"] = true;
-    tokens["tac19"] = true;
-    tokens["s12"] = true;
-    tokens["blunderbuss"] = true;
-    tokens["lynx"] = true;
-    tokens["na45"] = true;
-    tokens["mors"] = true;
-    tokens["immolator"] = true;
-    tokens["ameli"] = true;
-    tokens["pytaek"] = true;
-    tokens["ohm"] = true;
-    tokens["magnetron"] = true;
+    tokens[tokens.size] = "atlas45";
+    tokens[tokens.size] = "rw1";
+    tokens[tokens.size] = "mp11";
+    tokens[tokens.size] = "asm1";
+    tokens[tokens.size] = "pdw";
+    tokens[tokens.size] = "sn6";
+    tokens[tokens.size] = "sac3";
+    tokens[tokens.size] = "bal27";
+    tokens[tokens.size] = "ak12";
+    tokens[tokens.size] = "hbra3";
+    tokens[tokens.size] = "imr";
+    tokens[tokens.size] = "arx160";
+    tokens[tokens.size] = "ae4";
+    tokens[tokens.size] = "bulldog";
+    tokens[tokens.size] = "tac19";
+    tokens[tokens.size] = "s12";
+    tokens[tokens.size] = "blunderbuss";
+    tokens[tokens.size] = "lynx";
+    tokens[tokens.size] = "na45";
+    tokens[tokens.size] = "mors";
+    tokens[tokens.size] = "immolator";
+    tokens[tokens.size] = "ameli";
+    tokens[tokens.size] = "pytaek";
+    tokens[tokens.size] = "ohm";
+    tokens[tokens.size] = "magnetron";
 
     level.exo_damage_curve_allowed_single_tokens = tokens;
     return tokens;
