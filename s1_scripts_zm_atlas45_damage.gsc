@@ -704,10 +704,17 @@ atlas45_parse_positive_int(value)
     text = value + "";
     parsedValue = 0;
     hasDigits = false;
+    hasNegativeSign = false;
 
     for(i = 0; i < strlen(text); i++)
     {
         ch = getsubstr(text, i, i + 1);
+        if(!hasDigits && ch == "-")
+        {
+            hasNegativeSign = true;
+            continue;
+        }
+
         if(ch >= "0" && ch <= "9")
         {
             parsedValue = (parsedValue * 10) + atlas45_digit_to_int(ch);
@@ -719,7 +726,7 @@ atlas45_parse_positive_int(value)
         }
     }
 
-    if(!hasDigits || parsedValue < 1)
+    if(hasNegativeSign || !hasDigits || parsedValue < 1)
     {
         return 1;
     }
