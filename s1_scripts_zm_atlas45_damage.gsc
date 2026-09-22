@@ -122,6 +122,12 @@ atlas45_register_damage_modifier()
             !atlas45_is_self_reference_callback(lowercaseAliasCallback) &&
             lowercaseAliasCallback != previousCallback;
 
+        if(!atlas45_should_hook_registered_key(weaponName, previousCallback))
+        {
+            skippedCount++;
+            continue;
+        }
+
         level.modifyweapondamage[weaponName] =
             ::atlas45_modify_damage;
         level.exo_damage_curve_registered_weapons[weaponName] = true;
@@ -129,7 +135,10 @@ atlas45_register_damage_modifier()
         if(lowercaseWeaponName != weaponName &&
            isdefined(lowercaseAliasCallback) &&
            (lowercaseAliasCallback == previousCallback ||
-            atlas45_is_self_reference_callback(lowercaseAliasCallback)))
+            atlas45_is_self_reference_callback(lowercaseAliasCallback)) &&
+           atlas45_should_hook_registered_key(
+               lowercaseWeaponName,
+               lowercaseAliasCallback))
         {
             if(isdefined(lowercaseAliasCallback) &&
                !atlas45_is_self_reference_callback(lowercaseAliasCallback))
@@ -198,6 +207,34 @@ atlas45_should_register_weapon(weaponName)
 
     return isdefined(level.modifyweapondamage[originalWeaponName]) ||
            isdefined(level.modifyweapondamage[normalizedWeaponName]);
+}
+
+atlas45_should_hook_registered_key(weaponName, currentCallback)
+{
+    if(!isdefined(weaponName) || !isdefined(currentCallback))
+    {
+        return false;
+    }
+
+    if(atlas45_is_self_reference_callback(currentCallback))
+    {
+        return true;
+    }
+
+    alreadyRegistered = isdefined(level.exo_damage_curve_registered_weapons[weaponName]) &&
+        level.exo_damage_curve_registered_weapons[weaponName];
+    if(!alreadyRegistered)
+    {
+        return true;
+    }
+
+    if(isdefined(level.exo_damage_curve_previous_callbacks[weaponName]) &&
+       level.exo_damage_curve_previous_callbacks[weaponName] == currentCallback)
+    {
+        return true;
+    }
+
+    return false;
 }
 
 /*
