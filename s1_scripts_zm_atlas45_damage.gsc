@@ -155,15 +155,25 @@ atlas45_register_damage_modifier()
                     delegatedCount++;
                 }
             }
-            else if(!isdefined(level.exo_damage_curve_previous_callbacks[lowercaseWeaponName]) &&
-                    isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
+            else if(isdefined(level.exo_damage_curve_previous_callbacks[weaponName]))
             {
-                /*
-                    Keep Mk1 fallback behavior for lowercase lookups when the
-                    lowercase alias had no distinct callback.
-                */
-                level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
-                    level.exo_damage_curve_previous_callbacks[weaponName];
+                fallbackAliasCallback = undefined;
+                if(isdefined(level.exo_damage_curve_previous_callbacks[lowercaseWeaponName]))
+                {
+                    fallbackAliasCallback =
+                        level.exo_damage_curve_previous_callbacks[lowercaseWeaponName];
+                }
+
+                if(!isdefined(fallbackAliasCallback) ||
+                   atlas45_is_self_reference_callback(fallbackAliasCallback))
+                {
+                    /*
+                        Keep Mk1 fallback behavior for lowercase lookups when the
+                        lowercase alias had no distinct callback.
+                    */
+                    level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
+                        level.exo_damage_curve_previous_callbacks[weaponName];
+                }
             }
 
             level.modifyweapondamage[lowercaseWeaponName] =
