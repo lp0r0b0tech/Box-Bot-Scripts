@@ -162,7 +162,6 @@ atlas45_register_damage_modifier()
     if(registeredCount <= 0)
     {
         level.exo_damage_curve_registered_weapons = [];
-        level.exo_damage_curve_weapon_key_cache = [];
         level.exo_damage_curve_registered = false;
         return;
     }
