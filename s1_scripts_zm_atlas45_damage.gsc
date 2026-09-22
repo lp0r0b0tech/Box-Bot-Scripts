@@ -127,8 +127,7 @@ atlas45_register_damage_modifier()
             ::atlas45_modify_damage;
         level.exo_damage_curve_registered_weapons[weaponName] = true;
 
-        if(lowercaseWeaponName != weaponName &&
-           isdefined(lowercaseAliasCallback))
+        if(lowercaseWeaponName != weaponName)
         {
             if(isdefined(lowercaseAliasCallback) &&
                !atlas45_is_self_reference_callback(lowercaseAliasCallback))
@@ -417,8 +416,7 @@ atlas45_is_self_reference_callback(callbackValue)
         return true;
     }
 
-    return callbackValue == ::atlas45_modify_damage ||
-           callbackValue == ::atlas45_apply_compatible_previous_callback;
+    return callbackValue == ::atlas45_modify_damage;
 }
 
 atlas45_resolve_registered_weapon_name(weapon)
