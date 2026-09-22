@@ -528,7 +528,15 @@ atlas45_get_weapon_level_keys(weaponName)
        getsubstr(normalized, 0, 4) == "iw5_" &&
        getsubstr(normalized, strlen(normalized) - 5, strlen(normalized)) == "zm_mp")
     {
-        baseName = getsubstr(normalized, 4, strlen(normalized) - 5);
+        if(strlen(normalized) > 12 &&
+           getsubstr(normalized, strlen(normalized) - 6, strlen(normalized)) == "_zm_mp")
+        {
+            baseName = getsubstr(normalized, 4, strlen(normalized) - 6);
+        }
+        else
+        {
+            baseName = getsubstr(normalized, 4, strlen(normalized) - 5);
+        }
         atlas45_add_unique_key(keys, baseName);
         atlas45_add_unique_key(keys, "zm_" + baseName);
     }
