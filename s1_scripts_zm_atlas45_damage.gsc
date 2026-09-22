@@ -161,10 +161,6 @@ atlas45_register_damage_modifier()
             Fallback safety: if no keys matched the curated allowlist,
             hook all non-empty callback keys so the curve still activates.
         */
-        level.exo_damage_curve_registered_weapons = [];
-        level.exo_damage_curve_weapon_key_cache = [];
-        level.exo_damage_curve_previous_callbacks = [];
-
         registeredCount = 0;
         delegatedCount = 0;
         skippedCount = 0;
@@ -280,7 +276,15 @@ atlas45_should_register_weapon_fallback(weaponName)
         return false;
     }
 
-    return strlen(tolower(weaponName + "")) > 0;
+    originalWeaponName = weaponName + "";
+    normalizedWeaponName = tolower(originalWeaponName);
+    if(strlen(normalizedWeaponName) <= 0)
+    {
+        return false;
+    }
+
+    return isdefined(level.modifyweapondamage[originalWeaponName]) ||
+           isdefined(level.modifyweapondamage[normalizedWeaponName]);
 }
 
 atlas45_is_allowed_weapon_key(weaponName)
