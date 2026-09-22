@@ -11,4 +11,4 @@ for autobots.gsc put in the mp folder
 for auto_bots_zombies.gsc and zm_emz.gsc and
 s1_scripts_zm_atlas45_damage.gsc put them in zm folder
 
-for custom names put Bots.txt next to where you made the scrips folder
+for custom names put Bots.txt next to where you made the scripts folder
