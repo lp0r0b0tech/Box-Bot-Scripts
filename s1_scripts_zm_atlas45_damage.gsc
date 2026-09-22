@@ -157,8 +157,84 @@ atlas45_register_damage_modifier()
 
     if(registeredCount <= 0)
     {
-        level.exo_damage_curve_registered = false;
-        return;
+        /*
+            Fallback safety: if no keys matched the curated allowlist,
+            hook all non-empty callback keys so the curve still activates.
+        */
+        level.exo_damage_curve_registered_weapons = [];
+        level.exo_damage_curve_weapon_key_cache = [];
+        level.exo_damage_curve_previous_callbacks = [];
+
+        registeredCount = 0;
+        delegatedCount = 0;
+        skippedCount = 0;
+
+        for(i = 0; i < weaponNames.size; i++)
+        {
+            weaponName = weaponNames[i];
+            if(!atlas45_should_register_weapon_fallback(weaponName))
+            {
+                continue;
+            }
+            level.exo_damage_curve_weapon_key_cache[weaponName] = weaponName;
+            level.exo_damage_curve_weapon_key_cache[tolower(weaponName + "")] =
+                weaponName;
+
+            previousCallback = level.modifyweapondamage[weaponName];
+            if(isdefined(previousCallback) &&
+               !atlas45_is_self_reference_callback(previousCallback))
+            {
+                level.exo_damage_curve_previous_callbacks[weaponName] =
+                    previousCallback;
+                level.exo_damage_curve_previous_callbacks[tolower(weaponName + "")] =
+                    previousCallback;
+                delegatedCount++;
+            }
+            else
+            {
+                skippedCount++;
+            }
+
+            lowercaseWeaponName = tolower(weaponName + "");
+            lowercaseAliasCallback = undefined;
+            if(isdefined(level.modifyweapondamage[lowercaseWeaponName]))
+            {
+                lowercaseAliasCallback = level.modifyweapondamage[lowercaseWeaponName];
+            }
+
+            level.modifyweapondamage[weaponName] =
+                ::atlas45_modify_damage;
+            level.exo_damage_curve_registered_weapons[weaponName] = true;
+
+            if(lowercaseWeaponName != weaponName &&
+               (!isdefined(lowercaseAliasCallback) ||
+                lowercaseAliasCallback == previousCallback ||
+                atlas45_is_self_reference_callback(lowercaseAliasCallback)))
+            {
+                if(isdefined(lowercaseAliasCallback) &&
+                   !atlas45_is_self_reference_callback(lowercaseAliasCallback))
+                {
+                    level.exo_damage_curve_previous_callbacks[lowercaseWeaponName] =
+                        lowercaseAliasCallback;
+                }
+
+                level.modifyweapondamage[lowercaseWeaponName] =
+                    ::atlas45_modify_damage;
+                level.exo_damage_curve_registered_weapons[lowercaseWeaponName] = true;
+                level.exo_damage_curve_weapon_key_cache[lowercaseWeaponName] =
+                    weaponName;
+            }
+
+            registeredCount++;
+        }
+
+        if(registeredCount <= 0)
+        {
+            level.exo_damage_curve_registered = false;
+            return;
+        }
+
+        println("ExoWeaponDamage: allowlist matched 0 keys; fallback registered " + registeredCount + " weapon callbacks.");
     }
 
     shouldLogRegistration =
@@ -195,6 +271,16 @@ atlas45_should_register_weapon(weaponName)
     }
 
     return atlas45_is_allowed_weapon_key(weaponName);
+}
+
+atlas45_should_register_weapon_fallback(weaponName)
+{
+    if(!isdefined(weaponName))
+    {
+        return false;
+    }
+
+    return strlen(tolower(weaponName + "")) > 0;
 }
 
 atlas45_is_allowed_weapon_key(weaponName)
