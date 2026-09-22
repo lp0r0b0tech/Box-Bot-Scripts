@@ -518,32 +518,23 @@ atlas45_get_weapon_level_keys(weaponName)
     if(strlen(normalized) > 3 &&
        getsubstr(normalized, strlen(normalized) - 3, strlen(normalized)) == "_mp")
     {
-        trimmedName = getsubstr(normalized, 0, strlen(normalized) - 3);
-        if(strlen(trimmedName) > 0 &&
-           getsubstr(trimmedName, strlen(trimmedName) - 1, strlen(trimmedName)) == "_")
-        {
-            trimmedName = getsubstr(trimmedName, 0, strlen(trimmedName) - 1);
-        }
-
-        atlas45_add_unique_key(
-            keys,
-            trimmedName
-        );
+        atlas45_add_unique_key(keys, atlas45_remove_suffix(normalized, "_mp"));
     }
 
     if(strlen(normalized) > 11 &&
        getsubstr(normalized, 0, 4) == "iw5_" &&
        getsubstr(normalized, strlen(normalized) - 5, strlen(normalized)) == "zm_mp")
     {
-        if(strlen(normalized) > 12 &&
-           getsubstr(normalized, strlen(normalized) - 6, strlen(normalized)) == "_zm_mp")
+        baseName = atlas45_slice_from(normalized, 4);
+        if(atlas45_ends_with(baseName, "_zm_mp"))
         {
-            baseName = getsubstr(normalized, 4, strlen(normalized) - 6);
+            baseName = atlas45_remove_suffix(baseName, "_zm_mp");
         }
         else
         {
-            baseName = getsubstr(normalized, 4, strlen(normalized) - 5);
+            baseName = atlas45_remove_suffix(baseName, "zm_mp");
         }
+
         atlas45_add_unique_key(keys, baseName);
         atlas45_add_unique_key(keys, "zm_" + baseName);
     }
@@ -573,6 +564,77 @@ atlas45_add_unique_key(keys, value)
     }
 
     keys[keys.size] = value;
+}
+
+atlas45_ends_with(value, suffix)
+{
+    if(!isdefined(value) || !isdefined(suffix))
+    {
+        return false;
+    }
+
+    value = value + "";
+    suffix = suffix + "";
+    if(strlen(suffix) > strlen(value))
+    {
+        return false;
+    }
+
+    return getsubstr(
+        value,
+        strlen(value) - strlen(suffix),
+        strlen(value)
+    ) == suffix;
+}
+
+atlas45_remove_suffix(value, suffix)
+{
+    if(!isdefined(value) || !isdefined(suffix))
+    {
+        return value;
+    }
+
+    value = value + "";
+    suffix = suffix + "";
+    if(!atlas45_ends_with(value, suffix))
+    {
+        return value;
+    }
+
+    keepLength = strlen(value) - strlen(suffix);
+    trimmedValue = "";
+    for(i = 0; i < keepLength; i++)
+    {
+        trimmedValue += getsubstr(value, i, i + 1);
+    }
+
+    return trimmedValue;
+}
+
+atlas45_slice_from(value, startIndex)
+{
+    if(!isdefined(value))
+    {
+        return "";
+    }
+
+    value = value + "";
+    if(startIndex < 0)
+    {
+        startIndex = 0;
+    }
+    if(startIndex >= strlen(value))
+    {
+        return "";
+    }
+
+    result = "";
+    for(i = startIndex; i < strlen(value); i++)
+    {
+        result += getsubstr(value, i, i + 1);
+    }
+
+    return result;
 }
 
 /*
