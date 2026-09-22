@@ -304,6 +304,7 @@ atlas45_modify_damage(
         level.exo_damage_curve_weapon_key_cache[lowercaseWeaponName] =
             weaponName;
         level.exo_damage_curve_registered_weapons[weaponName] = true;
+        level.exo_damage_curve_registered_weapons[lowercaseWeaponName] = true;
     }
     if(!isdefined(level.exo_damage_curve_registered_weapons) ||
        !isdefined(level.exo_damage_curve_registered_weapons[weaponName]) ||
@@ -696,7 +697,7 @@ atlas45_get_round_damage_multiplier()
     }
 
     round40Multiplier = 1.0 + (20 * 0.03);
-    return round40Multiplier + ((roundNumber - 40) * 0.04);
+    return round40Multiplier + ((roundNumber - 40) * 0.03);
 }
 
 atlas45_parse_signed_int(value)
