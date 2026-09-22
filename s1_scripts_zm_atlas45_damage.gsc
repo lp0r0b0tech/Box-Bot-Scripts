@@ -676,7 +676,11 @@ atlas45_get_round_damage_multiplier()
         return 1.0;
     }
 
-    roundNumber = max(1, int(level.round_number));
+    roundNumber = int(level.round_number);
+    if(roundNumber < 1)
+    {
+        roundNumber = 1;
+    }
     if(roundNumber <= 20)
     {
         return 1.0;
