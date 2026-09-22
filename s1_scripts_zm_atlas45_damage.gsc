@@ -226,6 +226,12 @@ atlas45_should_register_weapon(weaponName)
         return false;
     }
 
+    if(!(getsubstr(normalizedWeaponName, 0, 3) == "zm_" ||
+         atlas45_ends_with(normalizedWeaponName, "zm_mp")))
+    {
+        return false;
+    }
+
     return isdefined(level.modifyweapondamage[originalWeaponName]) ||
            isdefined(level.modifyweapondamage[normalizedWeaponName]);
 }
@@ -519,7 +525,7 @@ atlas45_get_weapon_level_keys(weaponName)
 
     if(strlen(normalized) > 3 &&
        atlas45_ends_with(normalized, "_mp") &&
-       !atlas45_ends_with(normalized, "_zm_mp"))
+       !atlas45_ends_with(normalized, "zm_mp"))
     {
         atlas45_add_unique_key(keys, atlas45_remove_suffix(normalized, "_mp"));
     }
