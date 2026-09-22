@@ -696,13 +696,7 @@ atlas45_get_round_damage_multiplier()
     }
 
     round40Multiplier = 1.0 + (20 * 0.03);
-    if(roundNumber <= 70)
-    {
-        return round40Multiplier + ((roundNumber - 40) * 0.04);
-    }
-
-    round70Multiplier = round40Multiplier + (30 * 0.04);
-    return round70Multiplier + ((roundNumber - 70) * 0.04);
+    return round40Multiplier + ((roundNumber - 40) * 0.04);
 }
 
 atlas45_parse_signed_int(value)
