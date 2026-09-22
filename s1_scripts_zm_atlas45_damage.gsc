@@ -562,6 +562,10 @@ atlas45_get_weapon_level_keys(weaponName)
         {
             baseName = atlas45_remove_suffix(baseName, "zm_mp");
         }
+        if(atlas45_ends_with(baseName, "_"))
+        {
+            baseName = atlas45_remove_suffix(baseName, "_");
+        }
 
         atlas45_add_unique_key(keys, baseName);
         atlas45_add_unique_key(keys, "zm_" + baseName);
@@ -691,8 +695,15 @@ atlas45_get_round_damage_multiplier()
         return 1.0;
     }
 
-    growthPerRound = (maxRoundMultiplier - 1.0) / (maxScaledRound - 20);
-    multiplier = 1.0 + ((roundNumber - 20) * growthPerRound);
+    growthSteps = maxScaledRound - 20;
+    currentStep = roundNumber - 20;
+    if(currentStep >= growthSteps)
+    {
+        return maxRoundMultiplier;
+    }
+
+    growthPerRound = (maxRoundMultiplier - 1.0) / growthSteps;
+    multiplier = 1.0 + (currentStep * growthPerRound);
     if(multiplier > maxRoundMultiplier)
     {
         multiplier = maxRoundMultiplier;
