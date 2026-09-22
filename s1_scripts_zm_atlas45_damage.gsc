@@ -33,6 +33,7 @@ main()
 
     level.exo_damage_curve_started = 1;
     println("ExoWeaponDamage: Zombies script initialized.");
+    exo_damage_validate_key_matcher();
 
     level thread exo_damage_registration_loop();
 }
@@ -50,11 +51,9 @@ exo_damage_registration_loop()
 
 exo_damage_register_callbacks()
 {
-    level endon("game_ended");
-
     if(!isdefined(level.modifyweapondamage))
     {
-        return;
+        return false;
     }
 
     if(!isdefined(level.exo_damage_previous_callbacks))
@@ -73,6 +72,7 @@ exo_damage_register_callbacks()
     keys = getarraykeys(level.modifyweapondamage);
     hookedCount = 0;
     delegatedCount = 0;
+    changed = false;
 
     for(i = 0; i < keys.size; i++)
     {
@@ -100,11 +100,23 @@ exo_damage_register_callbacks()
                 level.exo_damage_previous_callbacks[key] = callback;
                 level.exo_damage_previous_callbacks[canonicalKey] = callback;
                 delegatedCount++;
+                changed = true;
+            }
+            latestCallback = level.modifyweapondamage[key];
+            if(latestCallback == callback)
+            {
+                level.modifyweapondamage[key] = ::exo_damage_modify;
+                changed = true;
+            }
+            else if(isdefined(latestCallback) &&
+                    !exo_damage_is_self_callback(latestCallback))
+            {
+                level.exo_damage_previous_callbacks[key] = latestCallback;
+                level.exo_damage_previous_callbacks[canonicalKey] = latestCallback;
+                delegatedCount++;
+                changed = true;
             }
         }
-
-        level.modifyweapondamage[key] = ::exo_damage_modify;
-        level.modifyweapondamage[canonicalKey] = ::exo_damage_modify;
 
         level.exo_damage_registered_keys[key] = true;
         level.exo_damage_registered_keys[canonicalKey] = true;
@@ -120,11 +132,14 @@ exo_damage_register_callbacks()
            level.exo_damage_last_delegated != delegatedCount)
         {
             println("ExoWeaponDamage: hooks=" + hookedCount + ", delegated=" + delegatedCount + ".");
+            changed = true;
         }
 
         level.exo_damage_last_hooked = hookedCount;
         level.exo_damage_last_delegated = delegatedCount;
     }
+
+    return changed;
 }
 
 exo_damage_is_zombie_weapon_key(key)
@@ -153,6 +168,36 @@ exo_damage_is_zombie_weapon_key(key)
     }
 
     return false;
+}
+
+exo_damage_validate_key_matcher()
+{
+    /*
+        Accepted key formats:
+          - zm_<weapon>
+          - iw5_<weapon>_zm_mp
+          - iw5_<weapon>zm_mp
+
+        Rejected key examples:
+          - iw5_<weapon>_mp
+          - weapon names without zm/iw5 zombie prefixes/suffixes
+    */
+    if(!exo_damage_is_zombie_weapon_key("zm_atlas45"))
+    {
+        println("ExoWeaponDamage: key matcher sanity check failed for zm_*.");
+    }
+    if(!exo_damage_is_zombie_weapon_key("iw5_titan45_zm_mp"))
+    {
+        println("ExoWeaponDamage: key matcher sanity check failed for iw5_*_zm_mp.");
+    }
+    if(!exo_damage_is_zombie_weapon_key("iw5_titan45zm_mp"))
+    {
+        println("ExoWeaponDamage: key matcher sanity check failed for iw5_*zm_mp.");
+    }
+    if(exo_damage_is_zombie_weapon_key("iw5_titan45_mp"))
+    {
+        println("ExoWeaponDamage: key matcher sanity check failed for iw5_*_mp.");
+    }
 }
 
 exo_damage_modify(
@@ -188,6 +233,8 @@ exo_damage_modify(
         );
     }
 
+    exo_damage_clear_weapon_level_increase(attacker, weaponKey, weapon);
+
     weaponLevel = exo_damage_get_weapon_level(attacker, weaponKey);
     if(!isdefined(weaponLevel) || weaponLevel < 2)
     {
@@ -209,17 +256,10 @@ exo_damage_modify(
         weaponLevel = 25;
     }
 
-    baseDamage = exo_damage_get_base_damage(weaponLevel);
-    scaledDamage = int(baseDamage * exo_damage_get_round_multiplier());
-    if(scaledDamage < baseDamage)
-    {
-        scaledDamage = baseDamage;
-    }
-
-    return exo_damage_delegate(
+    vanillaDamage = exo_damage_delegate(
         victim,
         attacker,
-        scaledDamage,
+        damage,
         meansOfDeath,
         weapon,
         weaponKey,
@@ -227,6 +267,27 @@ exo_damage_modify(
         direction,
         hitLocation
     );
+
+    baseDamage = exo_damage_get_base_damage(weaponLevel);
+    targetDamage = int(baseDamage * exo_damage_get_round_multiplier());
+    if(targetDamage < baseDamage)
+    {
+        targetDamage = baseDamage;
+    }
+
+    referenceDamage = damage;
+    if(referenceDamage <= 0)
+    {
+        referenceDamage = vanillaDamage;
+    }
+    if(referenceDamage <= 0)
+    {
+        return vanillaDamage;
+    }
+
+    finalDamage = int((vanillaDamage * targetDamage) / referenceDamage);
+
+    return finalDamage;
 }
 
 exo_damage_delegate(
@@ -272,7 +333,22 @@ exo_damage_delegate(
 
     if(!isdefined(previous) || exo_damage_is_self_callback(previous))
     {
-        return damage;
+        fallback = exo_damage_get_current_non_self_callback(weapon, weaponKey);
+        if(!isdefined(fallback))
+        {
+            return damage;
+        }
+
+        return [[fallback]](
+            victim,
+            attacker,
+            damage,
+            meansOfDeath,
+            weapon,
+            point,
+            direction,
+            hitLocation
+        );
     }
 
     return [[previous]](
@@ -297,11 +373,133 @@ exo_damage_is_self_callback(callbackValue)
     return callbackValue == ::exo_damage_modify;
 }
 
+exo_damage_get_current_non_self_callback(weapon, weaponKey)
+{
+    if(!isdefined(level.modifyweapondamage))
+    {
+        return undefined;
+    }
+
+    callback = undefined;
+
+    if(isdefined(weapon))
+    {
+        weaponText = weapon + "";
+        lowerWeaponText = tolower(weaponText);
+
+        if(isdefined(level.modifyweapondamage[weaponText]))
+        {
+            callback = level.modifyweapondamage[weaponText];
+        }
+        else if(isdefined(level.modifyweapondamage[lowerWeaponText]))
+        {
+            callback = level.modifyweapondamage[lowerWeaponText];
+        }
+    }
+
+    if(!isdefined(callback) &&
+       isdefined(weaponKey) && weaponKey != "" &&
+       isdefined(level.modifyweapondamage[weaponKey]))
+    {
+        callback = level.modifyweapondamage[weaponKey];
+    }
+
+    if(!isdefined(callback) || exo_damage_is_self_callback(callback))
+    {
+        return undefined;
+    }
+
+    return callback;
+}
+
+exo_damage_clear_weapon_level_increase(attacker, weaponKey, weapon)
+{
+    if(!isdefined(attacker.weaponstate))
+    {
+        return;
+    }
+    if(!isdefined(attacker.exo_damage_cleared_weapon_level_increase))
+    {
+        attacker.exo_damage_cleared_weapon_level_increase = [];
+    }
+    if(!isdefined(attacker.exo_damage_weaponstate_probe_time))
+    {
+        attacker.exo_damage_weaponstate_probe_time = [];
+    }
+    if(isdefined(weaponKey) && weaponKey != "" &&
+       isdefined(attacker.exo_damage_cleared_weapon_level_increase[weaponKey]) &&
+       attacker.exo_damage_cleared_weapon_level_increase[weaponKey])
+    {
+        keys = exo_damage_get_weapon_level_keys(weaponKey);
+
+        if(isdefined(weapon))
+        {
+            exo_damage_add_unique_key(keys, weapon + "");
+            exo_damage_add_unique_key(keys, tolower(weapon + ""));
+        }
+
+        for(i = 0; i < keys.size; i++)
+        {
+            key = keys[i];
+            if(isdefined(attacker.weaponstate[key]) &&
+               isdefined(attacker.weaponstate[key]["weapon_level_increase"]))
+            {
+                attacker.weaponstate[key]["weapon_level_increase"] = 0;
+                return;
+            }
+        }
+
+        attacker.exo_damage_cleared_weapon_level_increase[weaponKey] = false;
+    }
+    if(isdefined(weaponKey) && weaponKey != "" &&
+       isdefined(level.time) &&
+       isdefined(attacker.exo_damage_weaponstate_probe_time[weaponKey]) &&
+       ((level.time - attacker.exo_damage_weaponstate_probe_time[weaponKey]) < 1000))
+    {
+        return;
+    }
+
+    if(isdefined(weaponKey) && weaponKey != "" && isdefined(level.time))
+    {
+        attacker.exo_damage_weaponstate_probe_time[weaponKey] = level.time;
+    }
+
+    keys = exo_damage_get_weapon_level_keys(weaponKey);
+
+    if(isdefined(weapon))
+    {
+        exo_damage_add_unique_key(keys, weapon + "");
+        exo_damage_add_unique_key(keys, tolower(weapon + ""));
+    }
+
+    resetAny = false;
+    for(i = 0; i < keys.size; i++)
+    {
+        key = keys[i];
+        if(isdefined(attacker.weaponstate[key]) &&
+           isdefined(attacker.weaponstate[key]["weapon_level_increase"]))
+        {
+            attacker.weaponstate[key]["weapon_level_increase"] = 0;
+            attacker.exo_damage_cleared_weapon_level_increase[key] = true;
+            resetAny = true;
+        }
+    }
+
+    if(resetAny && isdefined(weaponKey) && weaponKey != "")
+    {
+        attacker.exo_damage_cleared_weapon_level_increase[weaponKey] = true;
+    }
+}
+
 exo_damage_resolve_weapon_key(weapon)
 {
     if(!isdefined(weapon))
     {
         return "";
+    }
+    if(!isdefined(level.exo_damage_weapon_key_cache))
+    {
+        level.exo_damage_weapon_key_cache = [];
     }
 
     weaponText = weapon + "";
@@ -363,8 +561,14 @@ exo_damage_get_weapon_level_keys(weaponKey)
     if(exo_damage_starts_with(normalized, "iw5_"))
     {
         base = getsubstr(normalized, 4, strlen(normalized));
-        base = exo_damage_remove_suffix(base, "_zm_mp");
-        base = exo_damage_remove_suffix(base, "zm_mp");
+        if(exo_damage_ends_with(base, "_zm_mp"))
+        {
+            base = exo_damage_remove_suffix(base, "_zm_mp");
+        }
+        else if(exo_damage_ends_with(base, "zm_mp"))
+        {
+            base = exo_damage_remove_suffix(base, "zm_mp");
+        }
         base = exo_damage_remove_suffix(base, "_mp");
         base = exo_damage_remove_suffix(base, "_");
 
@@ -460,6 +664,12 @@ exo_damage_remove_suffix(value, suffix)
 
 exo_damage_get_round_multiplier()
 {
+    /*
+        Balance targets:
+        - Keep rounds 1-20 at vanilla-equivalent multiplier (1.0)
+        - Scale smoothly from round 21 to round 120
+        - Cap scaling at 4.0x from round 120 onward
+    */
     maxScaledRound = 120;
     maxRoundMultiplier = 4.0;
 
