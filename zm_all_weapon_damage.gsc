@@ -1,4 +1,5 @@
 /*
+    CB Servers S1x v0.0.4
     Exo Zombies custom damage modifier for all weapons
 
     Place this file at:
@@ -11,6 +12,11 @@
 
     Curve:
         finalDamage = baseDamage + (baseDamage * 0.2 * (mark - 1))
+
+    Supported weapons are registered explicitly for CB Servers S1x v0.0.4.
+    This list includes the upgradeable firearms and special/wonder guns and
+    excludes grenades, drones, teleport/repulsor equipment, Last Stand, and
+    Goliath suit weapons.
 
     Magazine capacity and reserve ammunition:
         Left unchanged; the normal Exo Zombies weapon-upgrade system
@@ -33,6 +39,7 @@ main()
     }
 
     level.awd_started = 1;
+    awd_init_supported_weapons();
 
     println( "AllWeaponDamage: Zombies script initialized." );
 
@@ -63,14 +70,93 @@ awd_register_damage_modifiers()
 
     for ( ;; )
     {
+        awd_register_supported_weapon_callbacks();
         awd_sync_weapon_callbacks();
         wait 0.5;
     }
 }
 
+awd_init_supported_weapons()
+{
+    level.awd_supported_weapons = [];
+
+    awd_add_supported_weapon( "iw5_rw1zm_mp" );
+    awd_add_supported_weapon( "iw5_vbrzm_mp" );
+    awd_add_supported_weapon( "iw5_gm6zm_mp" );
+    awd_add_supported_weapon( "iw5_rhinozm_mp" );
+    awd_add_supported_weapon( "iw5_lsatzm_mp" );
+    awd_add_supported_weapon( "iw5_asawzm_mp" );
+    awd_add_supported_weapon( "iw5_ak12zm_mp" );
+    awd_add_supported_weapon( "iw5_bal27zm_mp" );
+    awd_add_supported_weapon( "iw5_himarzm_mp" );
+    awd_add_supported_weapon( "iw5_asm1zm_mp" );
+    awd_add_supported_weapon( "iw5_sn6zm_mp" );
+    awd_add_supported_weapon( "iw5_sac3zm_mp" );
+    awd_add_supported_weapon( "iw5_fusionzm_mp" );
+    awd_add_supported_weapon( "iw5_exocrossbowzm_mp" );
+    awd_add_supported_weapon( "iw5_mahemzm_mp" );
+    awd_add_supported_weapon( "iw5_em1zm_mp" );
+    awd_add_supported_weapon( "iw5_dlcgun1zm_mp" );
+    awd_add_supported_weapon( "iw5_arx160zm_mp" );
+    awd_add_supported_weapon( "iw5_mp11zm_mp" );
+    awd_add_supported_weapon( "iw5_hbra3zm_mp" );
+    awd_add_supported_weapon( "iw5_hmr9zm_mp" );
+    awd_add_supported_weapon( "iw5_maulzm_mp" );
+    awd_add_supported_weapon( "iw5_m182sprzm_mp" );
+    awd_add_supported_weapon( "iw5_uts19zm_mp" );
+    awd_add_supported_weapon( "iw5_titan45zm_mp" );
+    awd_add_supported_weapon( "iw5_microwavezm_mp" );
+    awd_add_supported_weapon( "iw5_linegunzm_mp" );
+    awd_add_supported_weapon( "iw5_dlcgun2zm_mp" );
+    awd_add_supported_weapon( "iw5_dlcgun3zm_mp" );
+    awd_add_supported_weapon( "iw5_tridentzm_mp" );
+    awd_add_supported_weapon( "iw5_dlcgun4zm_mp" );
+}
+
+awd_add_supported_weapon( weaponName )
+{
+    if ( isdefined( weaponName ) && weaponName != "" )
+    {
+        level.awd_supported_weapons[weaponName] = 1;
+    }
+}
+
+awd_is_supported_weapon( weaponName )
+{
+    return isdefined( weaponName ) &&
+           isdefined( level.awd_supported_weapons ) &&
+           isdefined( level.awd_supported_weapons[weaponName] );
+}
+
+awd_register_supported_weapon_callbacks()
+{
+    if ( !isdefined( level.modifyweapondamage ) ||
+         !isdefined( level.awd_supported_weapons ) )
+    {
+        return;
+    }
+
+    supportedWeapons = getarraykeys( level.awd_supported_weapons );
+
+    if ( !isdefined( supportedWeapons ) )
+    {
+        return;
+    }
+
+    foreach ( weaponName in supportedWeapons )
+    {
+        if ( !isdefined( level.modifyweapondamage[weaponName] ) ||
+             level.modifyweapondamage[weaponName] != ::awd_modify_damage )
+        {
+            level.modifyweapondamage[weaponName] = ::awd_modify_damage;
+        }
+    }
+}
+
 awd_sync_weapon_callbacks()
 {
-    if ( !isdefined( level.modifyweapondamage ) )
+    if ( !isdefined( level.modifyweapondamage ) ||
+         !isdefined( level.awd_supported_weapons ) )
     {
         return;
     }
@@ -111,6 +197,11 @@ awd_sync_weapon_callbacks()
             baseWeaponName = getweaponbasename( weaponName );
 
             if ( !isdefined( baseWeaponName ) || baseWeaponName == "" )
+            {
+                continue;
+            }
+
+            if ( !awd_is_supported_weapon( baseWeaponName ) )
             {
                 continue;
             }
@@ -191,6 +282,16 @@ awd_modify_damage(
     }
 
     baseWeaponName = getweaponbasename( weapon );
+
+    if ( !isdefined( baseWeaponName ) || baseWeaponName == "" )
+    {
+        return damage;
+    }
+
+    if ( !awd_is_supported_weapon( baseWeaponName ) )
+    {
+        return damage;
+    }
 
     if ( !exactWeaponLevelDefined &&
          isdefined( baseWeaponName ) &&
