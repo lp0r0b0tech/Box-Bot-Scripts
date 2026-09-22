@@ -709,7 +709,7 @@ atlas45_parse_positive_int(value)
     for(i = 0; i < strlen(text); i++)
     {
         ch = getsubstr(text, i, i + 1);
-        if(!hasDigits && ch == "-")
+        if(i == 0 && !hasDigits && ch == "-")
         {
             hasNegativeSign = true;
             continue;
