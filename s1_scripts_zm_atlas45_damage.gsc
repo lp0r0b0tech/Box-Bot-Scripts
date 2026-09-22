@@ -6,13 +6,8 @@
         s1_scripts_zm_atlas45_damage.gsc
 
     Scope:
-        Applies to the configured Exo Zombies weapon families:
-        Atlas45, RW1, M1 Irons, MP11, ASM1, PDW, SN6, SAC3,
-        BAL27, AK12, HBRA3, IMR, ARX160, AE4,
-        Bulldog, TAC19, S12, Blunderbuss,
-        Lynx, NA45, MORS, Immolator,
-        Ameli, Pytaek, OHM,
-        CEL3 Cauterizer, Magnetron, KL03 Trident, LZ52 Limbo.
+        Applies to every weapon that exposes a defined callback entry in
+        level.modifyweapondamage at runtime.
 
     Damage progression:
         Mk1  = stock / vanilla damage
@@ -159,8 +154,8 @@ atlas45_register_damage_modifier()
     if(registeredCount <= 0)
     {
         /*
-            Fallback safety: if no keys matched the curated allowlist,
-            hook all non-empty callback keys so the curve still activates.
+            Fallback safety: if the first pass matched no valid callback
+            keys, retry by scanning callback keys again.
         */
         registeredCount = 0;
         delegatedCount = 0;
@@ -253,7 +248,7 @@ atlas45_register_damage_modifier()
         summaryText = "ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".";
         if(usedFallbackRegistration)
         {
-            summaryText += " (allowlist matched 0 keys; fallback path used)";
+            summaryText += " (initial pass matched 0 keys; retry path used)";
         }
         println(summaryText);
     }
@@ -261,18 +256,7 @@ atlas45_register_damage_modifier()
 
 atlas45_should_register_weapon(weaponName)
 {
-    if(!isdefined(weaponName))
-    {
-        return false;
-    }
-
-    weaponName = tolower(weaponName + "");
-    if(strlen(weaponName) <= 0)
-    {
-        return false;
-    }
-
-    return atlas45_is_allowed_weapon_key(weaponName);
+    return atlas45_should_register_weapon_fallback(weaponName);
 }
 
 atlas45_should_register_weapon_fallback(weaponName)
