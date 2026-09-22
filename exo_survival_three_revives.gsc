@@ -103,8 +103,7 @@ es3rMonitorSoloRevives()
 
         if ( self.es3rRevivesUsed >= ES3R_MAX_REVIVES )
         {
-            self thread es3rForceSoloGameOver();
-            es3rWaitForLastStandOutcome();
+            es3rHandlePostCapLastStand();
             continue;
         }
 
@@ -118,7 +117,112 @@ es3rMonitorSoloRevives()
 
 es3rWaitForLastStandOutcome()
 {
-    return common_scripts\utility::waittill_any_return( "revive", "death", "disconnect", "becameSpectator" );
+    // Stock Horde last-stand uses "player_start_last_stand" on entry
+    // and "revive" when the downed player is brought back up.
+    return self common_scripts\utility::waittill_any_return( "revive", "death", "disconnect", "becameSpectator" );
+}
+
+es3rHandlePostCapLastStand()
+{
+    self endon( "disconnect" );
+    level endon( "game_ended" );
+
+    if ( !es3rShouldEnforceForPlayer( self ) )
+    {
+        return;
+    }
+
+    originalUseTime = undefined;
+    if ( isdefined( self.usetime ) )
+    {
+        originalUseTime = self.usetime;
+    }
+
+    originalCurProgress = undefined;
+    if ( isdefined( self.curprogress ) )
+    {
+        originalCurProgress = self.curprogress;
+    }
+
+    originalUseRate = undefined;
+    if ( isdefined( self.userate ) )
+    {
+        originalUseRate = self.userate;
+    }
+
+    originalUseBarEndTime = self getclientomnvar( "ui_use_bar_end_time" );
+
+    bleedoutSeconds = 8.0;
+    if ( isdefined( originalUseTime ) && originalUseTime > 0 )
+    {
+        bleedoutSeconds = originalUseTime / 1000.0;
+    }
+
+    if ( isdefined( self.curprogress ) )
+    {
+        self.curprogress = 0;
+    }
+
+    if ( isdefined( self.userate ) )
+    {
+        self.userate = 0;
+    }
+
+    if ( isdefined( self.usetime ) )
+    {
+        self.usetime = 0;
+    }
+
+    self setclientomnvar( "ui_use_bar_end_time", 0 );
+
+    elapsed = 0.0;
+    while ( elapsed < bleedoutSeconds )
+    {
+        if ( !isdefined( self.laststand ) || !self.laststand )
+        {
+            break;
+        }
+
+        wait 0.05;
+        elapsed = elapsed + 0.05;
+    }
+
+    if ( !isdefined( self.laststand ) || !self.laststand )
+    {
+        es3rRestorePostCapReviveState( originalUseTime, originalCurProgress, originalUseRate, originalUseBarEndTime );
+        return;
+    }
+
+    es3rRestorePostCapReviveState( originalUseTime, originalCurProgress, originalUseRate, originalUseBarEndTime );
+    es3rForceSoloGameOver();
+}
+
+es3rRestorePostCapReviveState( originalUseTime, originalCurProgress, originalUseRate, originalUseBarEndTime )
+{
+    if ( !isdefined( self ) )
+    {
+        return;
+    }
+
+    if ( isdefined( originalUseTime ) )
+    {
+        self.usetime = originalUseTime;
+    }
+
+    if ( isdefined( originalCurProgress ) )
+    {
+        self.curprogress = originalCurProgress;
+    }
+
+    if ( isdefined( originalUseRate ) )
+    {
+        self.userate = originalUseRate;
+    }
+
+    if ( isdefined( originalUseBarEndTime ) )
+    {
+        self setclientomnvar( "ui_use_bar_end_time", originalUseBarEndTime );
+    }
 }
 
 es3rForceSoloGameOver()
@@ -131,18 +235,25 @@ es3rForceSoloGameOver()
         return;
     }
 
-    if ( isdefined( self.es3rGameOverTriggered ) && self.es3rGameOverTriggered )
+    if ( !isdefined( self.laststand ) || !self.laststand )
     {
         return;
     }
 
-    self.es3rGameOverTriggered = true;
-    self.uselaststandparams = 1;
+    self maps\mp\_utility::_suicide();
+    waittillframeend;
 
-    wait 0.05;
-    maps\mp\_utility::_suicide();
-    maps\mp\gametypes\_horde_util::hordeupdatescore( self, 0 );
-    maps\mp\gametypes\_horde_laststand::hordeendgame();
+    if ( ( isdefined( self.laststand ) && self.laststand ) || maps\mp\_utility::isreallyalive( self ) )
+    {
+        return;
+    }
+
+    hordeGameEnded = getomnvar( "horde_game_ended" );
+    if ( !es3rIsTruthyValue( hordeGameEnded ) )
+    {
+        maps\mp\gametypes\_horde_util::hordeupdatescore( self, 0 );
+        maps\mp\gametypes\_horde_laststand::hordeendgame();
+    }
 }
 
 es3rShouldEnforceForPlayer( player )
@@ -203,13 +314,23 @@ es3rIsCountablePlayer( player )
         }
     }
 
+    if ( !isdefined( player.pers ) || !isdefined( player.pers["connected"] ) )
+    {
+        return false;
+    }
+
     if ( isdefined( player.pers ) && isdefined( player.pers["connected"] ) )
     {
-        connected = toLower( player.pers["connected"] );
-        if ( connected != "connected" )
+        connected = es3rGetLowerValue( player.pers["connected"] + "" );
+        if ( connected != "connected" && connected != "1" && connected != "true" )
         {
             return false;
         }
+    }
+
+    if ( !maps\mp\_utility::isreallyalive( player ) && ( !isdefined( player.laststand ) || !player.laststand ) )
+    {
+        return false;
     }
 
     return true;
@@ -240,9 +361,15 @@ es3rIsExoSurvivalContext()
         mn = es3rGetLowerValue( getdvar( "mapname" ) );
     }
 
-    return es3rStringContains( gt, "survival" ) ||
-           ( es3rStringContains( pl, "exo" ) && es3rStringContains( pl, "survival" ) ) ||
-           ( es3rStringContains( mn, "exo" ) && es3rStringContains( mn, "survival" ) );
+    return es3rStringContains( gt, "exo survival" ) ||
+           es3rStringContains( gt, "exo_survival" ) ||
+           es3rStringContains( gt, "exosurvival" ) ||
+           es3rStringContains( pl, "exo survival" ) ||
+           es3rStringContains( pl, "exo_survival" ) ||
+           es3rStringContains( pl, "exosurvival" ) ||
+           es3rStringContains( mn, "exo survival" ) ||
+           es3rStringContains( mn, "exo_survival" ) ||
+           es3rStringContains( mn, "exosurvival" );
 }
 
 es3rLooksLikeZombieContext()
@@ -281,4 +408,18 @@ es3rStringContains( haystack, needle )
     }
 
     return issubstr( haystack, needle );
+}
+
+es3rIsTruthyValue( value )
+{
+    if ( !isdefined( value ) )
+    {
+        return false;
+    }
+
+    normalized = es3rGetLowerValue( value + "" );
+    return normalized != "" &&
+           normalized != "0" &&
+           normalized != "false" &&
+           normalized != "undefined";
 }
