@@ -85,6 +85,7 @@ atlas45_register_damage_modifier()
     delegatedCount = 0;
     skippedCount = 0;
     weaponNames = getarraykeys(level.modifyweapondamage);
+    usedFallbackRegistration = false;
 
     for(i = 0; i < weaponNames.size; i++)
     {
@@ -230,7 +231,7 @@ atlas45_register_damage_modifier()
             return;
         }
 
-        println("ExoWeaponDamage: allowlist matched 0 keys; fallback registered " + registeredCount + " weapon callbacks.");
+        usedFallbackRegistration = true;
     }
 
     shouldLogRegistration =
@@ -249,7 +250,12 @@ atlas45_register_damage_modifier()
     level.exo_damage_curve_last_skipped_count = skippedCount;
     if(shouldLogRegistration)
     {
-        println("ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".");
+        summaryText = "ExoWeaponDamage: damage modifier registered for " + registeredCount + " zombie weapons, delegated callbacks: " + delegatedCount + ", skipped undefined/already-hooked callbacks: " + skippedCount + ".";
+        if(usedFallbackRegistration)
+        {
+            summaryText += " (allowlist matched 0 keys; fallback path used)";
+        }
+        println(summaryText);
     }
 }
 
