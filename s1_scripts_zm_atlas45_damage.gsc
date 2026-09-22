@@ -700,7 +700,13 @@ atlas45_get_round_damage_multiplier()
         return 1.0;
     }
 
-    return 1.0 + ((roundNumber - 20) * 0.03);
+    multiplier = 1.0 + ((roundNumber - 20) * 0.03);
+    if(multiplier > 4.0)
+    {
+        multiplier = 4.0;
+    }
+
+    return multiplier;
 }
 
 atlas45_parse_signed_int(value)
