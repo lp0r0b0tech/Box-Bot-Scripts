@@ -227,7 +227,7 @@ atlas45_should_register_weapon(weaponName)
     }
 
     if(!(getsubstr(normalizedWeaponName, 0, 3) == "zm_" ||
-         atlas45_ends_with(normalizedWeaponName, "zm_mp")))
+         atlas45_ends_with(normalizedWeaponName, "_zm_mp")))
     {
         return false;
     }
@@ -518,9 +518,7 @@ atlas45_get_weapon_level_keys(weaponName)
         baseName = getsubstr(normalized, 3, strlen(normalized));
         atlas45_add_unique_key(keys, baseName);
         atlas45_add_unique_key(keys, baseName + "_zm_mp");
-        atlas45_add_unique_key(keys, baseName + "zm_mp");
         atlas45_add_unique_key(keys, "iw5_" + baseName + "_zm_mp");
-        atlas45_add_unique_key(keys, "iw5_" + baseName + "zm_mp");
     }
 
     if(strlen(normalized) > 3 &&
