@@ -644,13 +644,7 @@ atlas45_remove_suffix(value, suffix)
     }
 
     keepLength = strlen(value) - strlen(suffix);
-    trimmedValue = "";
-    for(i = 0; i < keepLength; i++)
-    {
-        trimmedValue += getsubstr(value, i, i + 1);
-    }
-
-    return trimmedValue;
+    return getsubstr(value, 0, keepLength);
 }
 
 atlas45_slice_from(value, startIndex)
@@ -670,13 +664,7 @@ atlas45_slice_from(value, startIndex)
         return "";
     }
 
-    result = "";
-    for(i = startIndex; i < strlen(value); i++)
-    {
-        result += getsubstr(value, i, i + 1);
-    }
-
-    return result;
+    return getsubstr(value, startIndex, strlen(value));
 }
 
 atlas45_get_round_damage_multiplier()
@@ -703,7 +691,8 @@ atlas45_get_round_damage_multiplier()
         return 1.0;
     }
 
-    multiplier = 1.0 + ((roundNumber - 20) * 0.03);
+    growthPerRound = (maxRoundMultiplier - 1.0) / (maxScaledRound - 20);
+    multiplier = 1.0 + ((roundNumber - 20) * growthPerRound);
     if(multiplier > maxRoundMultiplier)
     {
         multiplier = maxRoundMultiplier;
