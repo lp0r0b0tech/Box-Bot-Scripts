@@ -6,8 +6,13 @@
         s1_scripts_zm_atlas45_damage.gsc
 
     Scope:
-        Applies to all Exo Zombies weapons registered in the stock
-        weapon-damage callback table.
+        Applies to the configured Exo Zombies weapon families:
+        Atlas45, RW1, M1 Irons, MP11, ASM1, PDW, SN6, SAC3,
+        BAL27, AK12, HBRA3, IMR, ARX160, AE4,
+        Bulldog, TAC19, S12, Blunderbuss,
+        Lynx, NA45, MORS, Immolator,
+        Ameli, Pytaek, OHM,
+        CEL3 Cauterizer, Magnetron, KL03 Trident, LZ52 Limbo.
 
     Damage progression:
         Mk1  = stock / vanilla damage
@@ -199,16 +204,27 @@ atlas45_is_allowed_weapon_key(weaponName)
         Ameli, Pytaek, OHM,
         CEL3 Cauterizer, Magnetron, KL03 Trident, LZ52 Limbo.
     */
-    normalizedWeaponName = atlas45_normalize_weapon_token(weaponName);
-    if(strlen(normalizedWeaponName) <= 0)
+    segments = atlas45_tokenize_weapon_key(weaponName);
+    if(!isdefined(segments) || segments.size <= 0)
     {
         return false;
     }
 
-    allowedTokens = atlas45_get_allowed_weapon_tokens();
-    for(i = 0; i < allowedTokens.size; i++)
+    singles = atlas45_get_allowed_single_tokens();
+    for(i = 0; i < segments.size; i++)
     {
-        if(issubstr(normalizedWeaponName, allowedTokens[i]))
+        segment = segments[i];
+        if(isdefined(singles[segment]) && singles[segment])
+        {
+            return true;
+        }
+    }
+
+    pairs = atlas45_get_allowed_pair_tokens();
+    for(i = 0; i < segments.size - 1; i++)
+    {
+        pairKey = segments[i] + "_" + segments[i + 1];
+        if(isdefined(pairs[pairKey]) && pairs[pairKey])
         {
             return true;
         }
@@ -217,15 +233,16 @@ atlas45_is_allowed_weapon_key(weaponName)
     return false;
 }
 
-atlas45_normalize_weapon_token(value)
+atlas45_tokenize_weapon_key(value)
 {
+    tokens = [];
     if(!isdefined(value))
     {
-        return "";
+        return tokens;
     }
 
     raw = tolower(value + "");
-    normalized = "";
+    currentToken = "";
     allowedChars = "abcdefghijklmnopqrstuvwxyz0123456789";
 
     for(i = 0; i < strlen(raw); i++)
@@ -233,52 +250,75 @@ atlas45_normalize_weapon_token(value)
         ch = getsubstr(raw, i, i + 1);
         if(issubstr(allowedChars, ch))
         {
-            normalized += ch;
+            currentToken += ch;
+        }
+        else if(strlen(currentToken) > 0)
+        {
+            tokens[tokens.size] = currentToken;
+            currentToken = "";
         }
     }
 
-    return normalized;
+    if(strlen(currentToken) > 0)
+    {
+        tokens[tokens.size] = currentToken;
+    }
+
+    return tokens;
 }
 
-atlas45_get_allowed_weapon_tokens()
+atlas45_get_allowed_single_tokens()
 {
-    if(isdefined(level.exo_damage_curve_allowed_tokens))
+    if(isdefined(level.exo_damage_curve_allowed_single_tokens))
     {
-        return level.exo_damage_curve_allowed_tokens;
+        return level.exo_damage_curve_allowed_single_tokens;
     }
 
     tokens = [];
-    tokens[tokens.size] = "atlas45";
-    tokens[tokens.size] = "rw1";
-    tokens[tokens.size] = "m1irons";
-    tokens[tokens.size] = "mp11";
-    tokens[tokens.size] = "asm1";
-    tokens[tokens.size] = "pdw";
-    tokens[tokens.size] = "sn6";
-    tokens[tokens.size] = "sac3";
-    tokens[tokens.size] = "bal27";
-    tokens[tokens.size] = "ak12";
-    tokens[tokens.size] = "hbra3";
-    tokens[tokens.size] = "imr";
-    tokens[tokens.size] = "arx160";
-    tokens[tokens.size] = "ae4";
-    tokens[tokens.size] = "bulldog";
-    tokens[tokens.size] = "tac19";
-    tokens[tokens.size] = "s12";
-    tokens[tokens.size] = "blunderbuss";
-    tokens[tokens.size] = "lynx";
-    tokens[tokens.size] = "na45";
-    tokens[tokens.size] = "mors";
-    tokens[tokens.size] = "immolator";
-    tokens[tokens.size] = "ameli";
-    tokens[tokens.size] = "pytaek";
-    tokens[tokens.size] = "ohm";
-    tokens[tokens.size] = "cel3cauterizer";
-    tokens[tokens.size] = "magnetron";
-    tokens[tokens.size] = "kl03trident";
-    tokens[tokens.size] = "lz52limbo";
+    tokens["atlas45"] = true;
+    tokens["rw1"] = true;
+    tokens["mp11"] = true;
+    tokens["asm1"] = true;
+    tokens["pdw"] = true;
+    tokens["sn6"] = true;
+    tokens["sac3"] = true;
+    tokens["bal27"] = true;
+    tokens["ak12"] = true;
+    tokens["hbra3"] = true;
+    tokens["imr"] = true;
+    tokens["arx160"] = true;
+    tokens["ae4"] = true;
+    tokens["bulldog"] = true;
+    tokens["tac19"] = true;
+    tokens["s12"] = true;
+    tokens["blunderbuss"] = true;
+    tokens["lynx"] = true;
+    tokens["na45"] = true;
+    tokens["mors"] = true;
+    tokens["immolator"] = true;
+    tokens["ameli"] = true;
+    tokens["pytaek"] = true;
+    tokens["ohm"] = true;
+    tokens["magnetron"] = true;
 
-    level.exo_damage_curve_allowed_tokens = tokens;
+    level.exo_damage_curve_allowed_single_tokens = tokens;
+    return tokens;
+}
+
+atlas45_get_allowed_pair_tokens()
+{
+    if(isdefined(level.exo_damage_curve_allowed_pair_tokens))
+    {
+        return level.exo_damage_curve_allowed_pair_tokens;
+    }
+
+    tokens = [];
+    tokens["m1_irons"] = true;
+    tokens["cel3_cauterizer"] = true;
+    tokens["kl03_trident"] = true;
+    tokens["lz52_limbo"] = true;
+
+    level.exo_damage_curve_allowed_pair_tokens = tokens;
     return tokens;
 }
 
