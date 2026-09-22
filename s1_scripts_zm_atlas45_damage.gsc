@@ -713,9 +713,9 @@ atlas45_parse_signed_int(value)
     for(i = 0; i < strlen(text); i++)
     {
         ch = getsubstr(text, i, i + 1);
-        if(i == 0 && !hasDigits && ch == "-")
+        if(i == 0 && !hasDigits && (ch == "-" || ch == "+"))
         {
-            hasNegativeSign = true;
+            hasNegativeSign = ch == "-";
             continue;
         }
 
