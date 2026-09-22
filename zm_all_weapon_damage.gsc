@@ -343,8 +343,10 @@ awd_debug_weapon_name( weaponName, baseWeaponName )
     }
 
     debugKey = weaponName;
+    baseWeaponLabel = "<undefined>";
     if ( isdefined( baseWeaponName ) && baseWeaponName != "" )
     {
+        baseWeaponLabel = baseWeaponName;
         debugKey = weaponName + " -> " + baseWeaponName;
     }
 
@@ -354,7 +356,7 @@ awd_debug_weapon_name( weaponName, baseWeaponName )
     }
 
     level.awd_debugged_weapons[debugKey] = 1;
-    println( "AllWeaponDamage: callback weapon = " + weaponName + ", base = " + baseWeaponName );
+    println( "AllWeaponDamage: callback weapon = " + weaponName + ", base = " + baseWeaponLabel );
 }
 
 awd_get_cauterizer_damage( baseDamage, mark )
