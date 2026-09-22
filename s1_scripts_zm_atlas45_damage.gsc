@@ -551,10 +551,12 @@ atlas45_get_weapon_level_keys(weaponName)
 
     if(atlas45_ends_with(normalized, "_zm_mp"))
     {
+        strippedBaseName = atlas45_remove_suffix(normalized, "_zm_mp");
         atlas45_add_unique_key(
             keys,
-            atlas45_remove_suffix(normalized, "_zm_mp")
+            strippedBaseName
         );
+        atlas45_add_unique_key(keys, "zm_" + strippedBaseName);
     }
 
     return keys;
