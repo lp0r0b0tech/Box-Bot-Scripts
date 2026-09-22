@@ -525,7 +525,8 @@ atlas45_get_weapon_level_keys(weaponName)
 
     if(strlen(normalized) > 11 &&
        getsubstr(normalized, 0, 4) == "iw5_" &&
-       getsubstr(normalized, strlen(normalized) - 5, strlen(normalized)) == "zm_mp")
+       (atlas45_ends_with(normalized, "_zm_mp") ||
+        atlas45_ends_with(normalized, "zm_mp")))
     {
         baseName = atlas45_slice_from(normalized, 4);
         if(atlas45_ends_with(baseName, "_zm_mp"))
