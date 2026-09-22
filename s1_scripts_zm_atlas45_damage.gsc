@@ -677,6 +677,10 @@ atlas45_get_round_damage_multiplier()
     }
 
     roundNumber = atlas45_parse_positive_int(level.round_number);
+    if(roundNumber > 200)
+    {
+        roundNumber = 200;
+    }
     if(roundNumber <= 20)
     {
         return 1.0;
