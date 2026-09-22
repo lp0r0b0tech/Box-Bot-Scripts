@@ -366,14 +366,21 @@ atlas45_modify_damage(
     }
 
     /*
-        Feed the Mk2-Mk25 curve value through the existing callback chain so
-        stock per-weapon and hit-location behavior can still apply.
+        Feed the Mk2-Mk25 curve value through a round-aware scalar, then pass
+        it through the existing callback chain so stock per-weapon and
+        hit-location behavior can still apply.
     */
     customBaseDamage = atlas45_get_base_damage(weaponLevel);
+    scaledDamage = int(customBaseDamage * atlas45_get_round_damage_multiplier());
+    if(scaledDamage < customBaseDamage)
+    {
+        scaledDamage = customBaseDamage;
+    }
+
     return atlas45_apply_compatible_previous_callback(
         victim,
         attacker,
-        customBaseDamage,
+        scaledDamage,
         meansOfDeath,
         weapon,
         weaponName,
@@ -660,6 +667,32 @@ atlas45_slice_from(value, startIndex)
     }
 
     return result;
+}
+
+atlas45_get_round_damage_multiplier()
+{
+    if(!isdefined(level.round_number))
+    {
+        return 1.0;
+    }
+
+    roundNumber = max(1, int(level.round_number));
+    if(roundNumber <= 20)
+    {
+        return 1.0;
+    }
+
+    if(roundNumber <= 40)
+    {
+        return 1.0 + ((roundNumber - 20) * 0.03);
+    }
+
+    if(roundNumber <= 70)
+    {
+        return 1.6 + ((roundNumber - 40) * 0.04);
+    }
+
+    return 2.8 + ((roundNumber - 70) * 0.05);
 }
 
 /*
