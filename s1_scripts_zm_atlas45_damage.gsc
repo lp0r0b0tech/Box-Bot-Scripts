@@ -676,7 +676,11 @@ atlas45_get_round_damage_multiplier()
         return 1.0;
     }
 
-    roundNumber = atlas45_parse_positive_int(level.round_number);
+    roundNumber = atlas45_parse_signed_int(level.round_number);
+    if(roundNumber < 1)
+    {
+        roundNumber = 1;
+    }
     if(roundNumber > 200)
     {
         roundNumber = 200;
@@ -699,7 +703,7 @@ atlas45_get_round_damage_multiplier()
     return 2.8 + ((roundNumber - 70) * 0.05);
 }
 
-atlas45_parse_positive_int(value)
+atlas45_parse_signed_int(value)
 {
     text = value + "";
     parsedValue = 0;
