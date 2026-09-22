@@ -227,7 +227,8 @@ atlas45_should_register_weapon(weaponName)
     }
 
     isZmPrefix = getsubstr(normalizedWeaponName, 0, 3) == "zm_";
-    isUnderscoredIw5Zm = atlas45_ends_with(normalizedWeaponName, "_zm_mp");
+    isUnderscoredIw5Zm = getsubstr(normalizedWeaponName, 0, 4) == "iw5_" &&
+        atlas45_ends_with(normalizedWeaponName, "_zm_mp");
     isPlainIw5Zm = getsubstr(normalizedWeaponName, 0, 4) == "iw5_" &&
         atlas45_ends_with(normalizedWeaponName, "zm_mp");
     if(!(isZmPrefix || isUnderscoredIw5Zm || isPlainIw5Zm))
@@ -563,6 +564,10 @@ atlas45_get_weapon_level_keys(weaponName)
 
         atlas45_add_unique_key(keys, baseName);
         atlas45_add_unique_key(keys, "zm_" + baseName);
+        if(atlas45_ends_with(normalized, "_zm_mp"))
+        {
+            atlas45_add_unique_key(keys, atlas45_remove_suffix(normalized, "_mp"));
+        }
     }
 
     if(atlas45_ends_with(normalized, "_zm_mp"))
