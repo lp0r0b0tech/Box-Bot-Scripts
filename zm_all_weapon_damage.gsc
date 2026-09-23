@@ -388,7 +388,7 @@ awd_sync_weapon_callbacks()
             continue;
         }
 
-        updatedWeaponStateKeys = player.awd_weapon_state_keys;
+        updatedWeaponStateKeys = [];
         currentWeaponStateKeys = [];
 
         foreach ( weaponName in weaponNames )
