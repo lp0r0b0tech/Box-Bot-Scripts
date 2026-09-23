@@ -222,7 +222,12 @@ awd_get_matching_weapon_state_key( player, weaponName, baseWeaponName )
         if ( isdefined( player.awd_weapon_state_keys ) &&
              isdefined( player.awd_weapon_state_keys[candidateKey] ) )
         {
-            return player.awd_weapon_state_keys[candidateKey];
+            cachedWeaponStateKey = player.awd_weapon_state_keys[candidateKey];
+
+            if ( isdefined( player.weaponstate[cachedWeaponStateKey] ) )
+            {
+                return cachedWeaponStateKey;
+            }
         }
     }
 
@@ -297,7 +302,11 @@ awd_sync_weapon_callbacks()
         }
 
         weaponNames = getarraykeys( player.weaponstate );
-        player.awd_weapon_state_keys = [];
+
+        if ( !isdefined( player.awd_weapon_state_keys ) )
+        {
+            player.awd_weapon_state_keys = [];
+        }
 
         if ( !isdefined( weaponNames ) )
         {
