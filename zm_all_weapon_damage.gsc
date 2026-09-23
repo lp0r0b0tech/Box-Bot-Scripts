@@ -242,6 +242,11 @@ awd_sync_weapon_callbacks()
 
             awd_disable_stock_weapon_level_increase( player, weaponName );
 
+            if ( baseWeaponName != weaponName )
+            {
+                awd_disable_stock_weapon_level_increase( player, baseWeaponName );
+            }
+
             if ( !isdefined( level.modifyweapondamage[weaponName] ) ||
                  level.modifyweapondamage[weaponName] != ::awd_modify_damage )
             {

@@ -1,10 +1,10 @@
-This repository contains custom Box Bot and Exo Zombies script tweaks.
+This repository contains custom Box Bot and Exo Zombies script tweaks, and the install paths below apply only to the listed files.
 
 EMZ/EMP Zombies Nerf
 
 Mk1 weapons keep stock damage, and the explicit CB Servers S1x v0.0.4 Zombies internal weapon-name list uses a Cell 3 Cauterizer-style damage curve from Mk2 through Mk25.
 
-Inside `s1`, create a `scripts` folder. For the files listed below, create `mp` and `zm` inside `s1/scripts`; no `sv` folder is needed for these files.
+Inside `s1`, create a `scripts` folder. For the files listed below, create `mp` and `zm` inside `s1/scripts`; no `sv` folder is needed for these listed files.
 
 Place `autobots_combat_training.gsc` at `s1/scripts/mp/autobots_combat_training.gsc`.
 
