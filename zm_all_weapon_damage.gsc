@@ -445,15 +445,16 @@ awd_modify_damage(
         return damage;
     }
 
-    if ( !awd_is_supported_weapon( baseWeaponName ) )
-    {
-        return damage;
-    }
-
     supportedWeaponAlias = awd_get_supported_weapon_alias( baseWeaponName );
     if ( !isdefined( supportedWeaponAlias ) || supportedWeaponAlias == "" )
     {
         supportedWeaponAlias = awd_get_supported_weapon_alias( weapon );
+    }
+
+    if ( !awd_is_supported_weapon( baseWeaponName ) &&
+         !awd_is_supported_weapon( supportedWeaponAlias ) )
+    {
+        return damage;
     }
 
     weaponLevel = undefined;
