@@ -354,36 +354,6 @@ awd_clear_lookup_table( tableRef )
     }
 }
 
-awd_weapon_key_set_matches( currentWeaponStateKeys, weaponNames )
-{
-    if ( !isdefined( currentWeaponStateKeys ) || !isdefined( weaponNames ) )
-    {
-        return false;
-    }
-
-    cachedWeaponNames = getarraykeys( currentWeaponStateKeys );
-
-    if ( !isdefined( cachedWeaponNames ) )
-    {
-        return weaponNames.size == 0;
-    }
-
-    if ( cachedWeaponNames.size != weaponNames.size )
-    {
-        return false;
-    }
-
-    foreach ( weaponName in weaponNames )
-    {
-        if ( !isdefined( currentWeaponStateKeys[weaponName] ) )
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 awd_register_supported_weapon_callbacks()
 {
     if ( !isdefined( level.modifyweapondamage ) ||
@@ -487,18 +457,8 @@ awd_sync_weapon_callbacks()
 
         player.awd_weaponstate_missing = 0;
 
-        rebuildWeaponStateCache = !awd_weapon_key_set_matches( player.awd_current_weaponstate_keys, weaponNames );
-
-        if ( rebuildWeaponStateCache )
-        {
-            updatedWeaponStateKeys = [];
-            currentWeaponStateKeys = [];
-        }
-        else
-        {
-            updatedWeaponStateKeys = player.awd_weapon_state_keys;
-            currentWeaponStateKeys = player.awd_current_weaponstate_keys;
-        }
+        updatedWeaponStateKeys = [];
+        currentWeaponStateKeys = [];
 
         foreach ( weaponName in weaponNames )
         {
@@ -522,32 +482,29 @@ awd_sync_weapon_callbacks()
             weaponAliasName = awd_get_supported_weapon_alias( weaponName );
             supportedWeaponName = awd_get_supported_weapon_alias( baseWeaponName );
 
-            if ( rebuildWeaponStateCache )
+            currentWeaponStateKeys[weaponName] = 1;
+            updatedWeaponStateKeys[weaponName] = weaponName;
+
+            if ( isdefined( player.weaponstate[baseWeaponName] ) )
             {
-                currentWeaponStateKeys[weaponName] = 1;
-                updatedWeaponStateKeys[weaponName] = weaponName;
-
-                if ( isdefined( player.weaponstate[baseWeaponName] ) )
-                {
-                    updatedWeaponStateKeys[baseWeaponName] = baseWeaponName;
-                }
-
-                if ( isdefined( supportedWeaponName ) &&
-                     supportedWeaponName != "" &&
-                     isdefined( player.weaponstate[supportedWeaponName] ) )
-                {
-                    updatedWeaponStateKeys[supportedWeaponName] = supportedWeaponName;
-                }
-
-                if ( isdefined( weaponAliasName ) &&
-                     weaponAliasName != "" &&
-                     isdefined( player.weaponstate[weaponAliasName] ) )
-                {
-                    updatedWeaponStateKeys[weaponAliasName] = weaponAliasName;
-                }
-
-                awd_cache_known_variant_links( updatedWeaponStateKeys, player, weaponName );
+                updatedWeaponStateKeys[baseWeaponName] = baseWeaponName;
             }
+
+            if ( isdefined( supportedWeaponName ) &&
+                 supportedWeaponName != "" &&
+                 isdefined( player.weaponstate[supportedWeaponName] ) )
+            {
+                updatedWeaponStateKeys[supportedWeaponName] = supportedWeaponName;
+            }
+
+            if ( isdefined( weaponAliasName ) &&
+                 weaponAliasName != "" &&
+                 isdefined( player.weaponstate[weaponAliasName] ) )
+            {
+                updatedWeaponStateKeys[weaponAliasName] = weaponAliasName;
+            }
+
+            awd_cache_known_variant_links( updatedWeaponStateKeys, player, weaponName );
 
             awd_disable_stock_weapon_level_increase( player, weaponName );
 
@@ -591,11 +548,8 @@ awd_sync_weapon_callbacks()
             }
         }
 
-        if ( rebuildWeaponStateCache )
-        {
-            player.awd_weapon_state_keys = updatedWeaponStateKeys;
-            player.awd_current_weaponstate_keys = currentWeaponStateKeys;
-        }
+        player.awd_weapon_state_keys = updatedWeaponStateKeys;
+        player.awd_current_weaponstate_keys = currentWeaponStateKeys;
     }
 }
 
