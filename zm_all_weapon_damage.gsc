@@ -134,6 +134,7 @@ awd_init_supported_weapons()
     awd_add_supported_weapon( "playermech_rocket_swarm_zm_mp" );
     awd_add_supported_weapon( "iw5_combatknifegoliath_mp" );
     awd_add_supported_weapon( "iw5_blunderbusszm_mp" );
+    level.awd_supported_weapon_keys = getarraykeys( level.awd_supported_weapons );
 }
 
 awd_add_supported_weapon( weaponName )
@@ -196,10 +197,11 @@ awd_get_matching_weapon_state_key( player, weaponName, baseWeaponName )
     }
 
     candidateKeys = [];
-    awd_add_candidate_weapon_key( candidateKeys, weaponName );
-    awd_add_candidate_weapon_key( candidateKeys, baseWeaponName );
-    awd_add_candidate_weapon_key( candidateKeys, awd_get_supported_weapon_alias( weaponName ) );
-    awd_add_candidate_weapon_key( candidateKeys, awd_get_supported_weapon_alias( baseWeaponName ) );
+    candidateKeySet = [];
+    awd_add_candidate_weapon_key( candidateKeys, candidateKeySet, weaponName );
+    awd_add_candidate_weapon_key( candidateKeys, candidateKeySet, baseWeaponName );
+    awd_add_candidate_weapon_key( candidateKeys, candidateKeySet, awd_get_supported_weapon_alias( weaponName ) );
+    awd_add_candidate_weapon_key( candidateKeys, candidateKeySet, awd_get_supported_weapon_alias( baseWeaponName ) );
     fallbackWeaponStateKey = undefined;
 
     foreach ( candidateKey in candidateKeys )
@@ -240,40 +242,35 @@ awd_get_matching_weapon_state_key( player, weaponName, baseWeaponName )
     return fallbackWeaponStateKey;
 }
 
-awd_add_candidate_weapon_key( candidateKeys, weaponKey )
+awd_add_candidate_weapon_key( candidateKeys, candidateKeySet, weaponKey )
 {
     if ( !isdefined( candidateKeys ) ||
+         !isdefined( candidateKeySet ) ||
          !isdefined( weaponKey ) ||
          weaponKey == "" )
     {
         return;
     }
 
-    foreach ( existingKey in candidateKeys )
+    if ( isdefined( candidateKeySet[weaponKey] ) )
     {
-        if ( existingKey == weaponKey )
-        {
-            return;
-        }
+        return;
     }
 
+    candidateKeySet[weaponKey] = 1;
     candidateKeys[candidateKeys.size] = weaponKey;
 }
 
 awd_register_supported_weapon_callbacks()
 {
     if ( !isdefined( level.modifyweapondamage ) ||
-         !isdefined( level.awd_supported_weapons ) )
+         !isdefined( level.awd_supported_weapons ) ||
+         !isdefined( level.awd_supported_weapon_keys ) )
     {
         return;
     }
 
-    supportedWeapons = getarraykeys( level.awd_supported_weapons );
-
-    if ( !isdefined( supportedWeapons ) )
-    {
-        return;
-    }
+    supportedWeapons = level.awd_supported_weapon_keys;
 
     foreach ( weaponName in supportedWeapons )
     {
