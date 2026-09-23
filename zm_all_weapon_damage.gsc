@@ -319,6 +319,18 @@ awd_sync_weapon_callbacks()
             player.awd_weapon_state_keys = [];
             player.awd_weapon_state_key_count = weaponNames.size;
         }
+        else
+        {
+            foreach ( weaponName in weaponNames )
+            {
+                if ( !isdefined( player.awd_weapon_state_keys[weaponName] ) )
+                {
+                    player.awd_weapon_state_keys = [];
+                    player.awd_weapon_state_key_count = weaponNames.size;
+                    break;
+                }
+            }
+        }
 
         foreach ( weaponName in weaponNames )
         {
