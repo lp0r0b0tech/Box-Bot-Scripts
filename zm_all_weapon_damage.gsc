@@ -273,6 +273,26 @@ awd_add_candidate_weapon_key( candidateKeys, candidateKeySet, weaponKey )
     candidateKeys[candidateKeys.size] = weaponKey;
 }
 
+awd_clear_lookup_table( tableRef )
+{
+    if ( !isdefined( tableRef ) )
+    {
+        return;
+    }
+
+    tableKeys = getarraykeys( tableRef );
+
+    if ( !isdefined( tableKeys ) )
+    {
+        return;
+    }
+
+    foreach ( tableKey in tableKeys )
+    {
+        tableRef[tableKey] = undefined;
+    }
+}
+
 awd_register_supported_weapon_callbacks()
 {
     if ( !isdefined( level.modifyweapondamage ) ||
@@ -341,8 +361,8 @@ awd_sync_weapon_callbacks()
             if ( !isdefined( player.awd_weaponstate_missing ) ||
                  !player.awd_weaponstate_missing )
             {
-                player.awd_weapon_state_keys = [];
-                player.awd_current_weaponstate_keys = [];
+                awd_clear_lookup_table( player.awd_weapon_state_keys );
+                awd_clear_lookup_table( player.awd_current_weaponstate_keys );
                 player.awd_weaponstate_missing = 1;
             }
 
