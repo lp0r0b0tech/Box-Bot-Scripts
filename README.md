@@ -2,7 +2,7 @@ This repository contains custom Box Bot and Exo Zombies script tweaks, and the i
 
 EMZ/EMP Zombies Nerf
 
-Mk1 weapons keep stock damage, and the explicit CB Servers S1x v0.0.4 Zombies internal weapon name and alias list handled by `zm_all_weapon_damage.gsc` uses a Cell 3 Cauterizer-style damage curve from Mk2 through Mk25: `finalDamage = baseDamage + (baseDamage * 0.2 * (mark - 1))`.
+`zm_all_weapon_damage.gsc` keeps Mk1 weapons at stock damage and applies a Cell 3 Cauterizer-style damage curve to its registered CB Servers S1x v0.0.4 Zombies internal weapon names and aliases from Mk2 through Mk25: `finalDamage = baseDamage + (baseDamage * 0.2 * (mark - 1))`.
 
 Inside `s1`, create a `scripts` folder. For the script files documented below, create `mp` and `zm` inside `s1/scripts`; no `sv` folder is needed for those documented script files.
 

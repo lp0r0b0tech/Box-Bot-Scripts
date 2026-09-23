@@ -418,11 +418,11 @@ awd_sync_weapon_callbacks()
             {
                 foreach ( cachedWeaponName in cachedWeaponNames )
                 {
-                if ( !isdefined( currentWeaponStateKeys[cachedWeaponName] ) )
-                {
-                    cacheChanged = true;
-                    break;
-                }
+                    if ( !isdefined( currentWeaponStateKeys[cachedWeaponName] ) )
+                    {
+                        cacheChanged = true;
+                        break;
+                    }
                 }
             }
         }
