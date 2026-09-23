@@ -162,6 +162,115 @@ awd_is_supported_weapon( weaponName )
            isdefined( level.awd_supported_weapons[weaponName] );
 }
 
+awd_get_supported_weapon_alias( weaponName )
+{
+    if ( !isdefined( weaponName ) || weaponName == "" )
+    {
+        return weaponName;
+    }
+
+    switch ( weaponName )
+    {
+        case "contact_grenade_throw_zombies_mp":
+            return "contact_grenade_zombies_mp";
+
+        case "explosive_drone_throw_zombie_mp":
+            return "explosive_drone_zombie_mp";
+
+        case "distraction_drone_throw_zombie_mp":
+            return "distraction_drone_zombie_mp";
+
+        case "dna_aoe_grenade_throw_zombie_mp":
+            return "dna_aoe_grenade_zombie_mp";
+
+        case "frag_grenade_throw_zombies_mp":
+            return "frag_grenade_zombies_mp";
+
+        case "teleport_throw_zombies_mp":
+            return "teleport_zombies_mp";
+
+        case "iw5_linegundamagezm_mp":
+            return "iw5_linegunzm_mp";
+
+        case "iw5_blunderbusszm_mp":
+            return "iw5_dlcgun4zm_mp";
+    }
+
+    return weaponName;
+}
+
+awd_get_matching_weapon_state_key( player, weaponName, baseWeaponName )
+{
+    if ( !isdefined( player ) || !isdefined( player.weaponstate ) )
+    {
+        return undefined;
+    }
+
+    candidateKeys = [];
+    awd_add_candidate_weapon_key( candidateKeys, weaponName );
+    awd_add_candidate_weapon_key( candidateKeys, baseWeaponName );
+    awd_add_candidate_weapon_key( candidateKeys, awd_get_supported_weapon_alias( weaponName ) );
+    awd_add_candidate_weapon_key( candidateKeys, awd_get_supported_weapon_alias( baseWeaponName ) );
+
+    foreach ( candidateKey in candidateKeys )
+    {
+        if ( isdefined( player.weaponstate[candidateKey] ) )
+        {
+            return candidateKey;
+        }
+    }
+
+    weaponStateKeys = getarraykeys( player.weaponstate );
+
+    if ( !isdefined( weaponStateKeys ) )
+    {
+        return undefined;
+    }
+
+    foreach ( weaponStateKey in weaponStateKeys )
+    {
+        if ( !isdefined( weaponStateKey ) || weaponStateKey == "" )
+        {
+            continue;
+        }
+
+        stateBaseWeaponName = getweaponbasename( weaponStateKey );
+
+        foreach ( candidateKey in candidateKeys )
+        {
+            if ( weaponStateKey == candidateKey ||
+                 ( isdefined( stateBaseWeaponName ) &&
+                   stateBaseWeaponName != "" &&
+                   stateBaseWeaponName == candidateKey ) )
+            {
+                return weaponStateKey;
+            }
+        }
+    }
+
+    return undefined;
+}
+
+awd_add_candidate_weapon_key( candidateKeys, weaponKey )
+{
+    if ( !isdefined( candidateKeys ) ||
+         !isdefined( weaponKey ) ||
+         weaponKey == "" )
+    {
+        return;
+    }
+
+    foreach ( existingKey in candidateKeys )
+    {
+        if ( existingKey == weaponKey )
+        {
+            return;
+        }
+    }
+
+    candidateKeys[candidateKeys.size] = weaponKey;
+}
+
 awd_register_supported_weapon_callbacks()
 {
     if ( !isdefined( level.modifyweapondamage ) ||
@@ -307,17 +416,6 @@ awd_modify_damage(
         return damage;
     }
 
-    weaponLevel = undefined;
-    exactWeaponStateDefined = isdefined( attacker.weaponstate[weapon] );
-    exactWeaponLevelDefined = false;
-
-    if ( exactWeaponStateDefined &&
-         isdefined( attacker.weaponstate[weapon]["level"] ) )
-    {
-        weaponLevel = attacker.weaponstate[weapon]["level"];
-        exactWeaponLevelDefined = true;
-    }
-
     baseWeaponName = getweaponbasename( weapon );
 
     awd_debug_weapon_name( weapon, baseWeaponName );
@@ -332,11 +430,31 @@ awd_modify_damage(
         return damage;
     }
 
+    weaponLevel = undefined;
+    matchingWeaponStateKey = awd_get_matching_weapon_state_key( attacker, weapon, baseWeaponName );
+    exactWeaponStateDefined = isdefined( matchingWeaponStateKey ) &&
+                             isdefined( attacker.weaponstate[matchingWeaponStateKey] );
+    exactWeaponLevelDefined = false;
+
+    if ( exactWeaponStateDefined &&
+         isdefined( attacker.weaponstate[matchingWeaponStateKey]["level"] ) )
+    {
+        weaponLevel = attacker.weaponstate[matchingWeaponStateKey]["level"];
+        exactWeaponLevelDefined = true;
+    }
+
     awd_disable_stock_weapon_level_increase( attacker, weapon );
 
     if ( baseWeaponName != weapon )
     {
         awd_disable_stock_weapon_level_increase( attacker, baseWeaponName );
+    }
+
+    if ( isdefined( matchingWeaponStateKey ) &&
+         matchingWeaponStateKey != weapon &&
+         matchingWeaponStateKey != baseWeaponName )
+    {
+        awd_disable_stock_weapon_level_increase( attacker, matchingWeaponStateKey );
     }
 
     if ( !exactWeaponLevelDefined &&
