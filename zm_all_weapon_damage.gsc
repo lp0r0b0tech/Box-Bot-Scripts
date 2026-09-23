@@ -307,8 +307,6 @@ awd_modify_damage(
         return damage;
     }
 
-    awd_disable_stock_weapon_level_increase( attacker, weapon );
-
     weaponLevel = undefined;
     exactWeaponStateDefined = isdefined( attacker.weaponstate[weapon] );
     exactWeaponLevelDefined = false;
@@ -332,6 +330,13 @@ awd_modify_damage(
     if ( !awd_is_supported_weapon( baseWeaponName ) )
     {
         return damage;
+    }
+
+    awd_disable_stock_weapon_level_increase( attacker, weapon );
+
+    if ( baseWeaponName != weapon )
+    {
+        awd_disable_stock_weapon_level_increase( attacker, baseWeaponName );
     }
 
     if ( !exactWeaponLevelDefined &&
