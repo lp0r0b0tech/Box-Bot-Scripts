@@ -355,7 +355,6 @@ awd_sync_weapon_callbacks()
 
         updatedWeaponStateKeys = [];
         currentWeaponStateKeys = [];
-        cacheChanged = false;
 
         foreach ( weaponName in weaponNames )
         {
@@ -401,11 +400,6 @@ awd_sync_weapon_callbacks()
                 updatedWeaponStateKeys[weaponAliasName] = weaponName;
             }
 
-            if ( !isdefined( player.awd_current_weaponstate_keys[weaponName] ) )
-            {
-                cacheChanged = true;
-            }
-
             awd_disable_stock_weapon_level_increase( player, weaponName );
 
             if ( isdefined( supportedWeaponName ) &&
@@ -445,28 +439,8 @@ awd_sync_weapon_callbacks()
             }
         }
 
-        if ( !cacheChanged )
-        {
-            cachedWeaponNames = getarraykeys( player.awd_current_weaponstate_keys );
-
-            if ( isdefined( cachedWeaponNames ) )
-            {
-                foreach ( cachedWeaponName in cachedWeaponNames )
-                {
-                    if ( !isdefined( currentWeaponStateKeys[cachedWeaponName] ) )
-                    {
-                        cacheChanged = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if ( cacheChanged )
-        {
-            player.awd_weapon_state_keys = updatedWeaponStateKeys;
-            player.awd_current_weaponstate_keys = currentWeaponStateKeys;
-        }
+        player.awd_weapon_state_keys = updatedWeaponStateKeys;
+        player.awd_current_weaponstate_keys = currentWeaponStateKeys;
     }
 }
 
