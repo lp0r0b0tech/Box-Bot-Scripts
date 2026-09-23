@@ -293,26 +293,6 @@ awd_clear_lookup_table( tableRef )
     }
 }
 
-awd_merge_lookup_table( targetTable, sourceTable )
-{
-    if ( !isdefined( targetTable ) || !isdefined( sourceTable ) )
-    {
-        return;
-    }
-
-    sourceKeys = getarraykeys( sourceTable );
-
-    if ( !isdefined( sourceKeys ) )
-    {
-        return;
-    }
-
-    foreach ( sourceKey in sourceKeys )
-    {
-        targetTable[sourceKey] = sourceTable[sourceKey];
-    }
-}
-
 awd_register_supported_weapon_callbacks()
 {
     if ( !isdefined( level.modifyweapondamage ) ||
@@ -408,9 +388,8 @@ awd_sync_weapon_callbacks()
             continue;
         }
 
-        updatedWeaponStateKeys = [];
+        updatedWeaponStateKeys = player.awd_weapon_state_keys;
         currentWeaponStateKeys = [];
-        awd_merge_lookup_table( updatedWeaponStateKeys, player.awd_weapon_state_keys );
 
         foreach ( weaponName in weaponNames )
         {
