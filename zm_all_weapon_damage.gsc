@@ -308,11 +308,49 @@ awd_sync_weapon_callbacks()
             player.awd_weapon_state_keys = [];
         }
 
+        if ( !isdefined( player.awd_current_weaponstate_keys ) )
+        {
+            player.awd_current_weaponstate_keys = [];
+        }
+
         if ( !isdefined( weaponNames ) )
         {
             continue;
         }
-        player.awd_weapon_state_keys = [];
+
+        rebuildWeaponStateCache = false;
+
+        foreach ( weaponName in weaponNames )
+        {
+            if ( !isdefined( player.awd_current_weaponstate_keys[weaponName] ) )
+            {
+                rebuildWeaponStateCache = true;
+                break;
+            }
+        }
+
+        if ( !rebuildWeaponStateCache )
+        {
+            cachedWeaponNames = getarraykeys( player.awd_current_weaponstate_keys );
+
+            if ( isdefined( cachedWeaponNames ) )
+            {
+                foreach ( cachedWeaponName in cachedWeaponNames )
+                {
+                    if ( !isdefined( player.weaponstate[cachedWeaponName] ) )
+                    {
+                        rebuildWeaponStateCache = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ( rebuildWeaponStateCache )
+        {
+            player.awd_weapon_state_keys = [];
+            player.awd_current_weaponstate_keys = [];
+        }
 
         foreach ( weaponName in weaponNames )
         {
@@ -340,6 +378,7 @@ awd_sync_weapon_callbacks()
                 continue;
             }
 
+            player.awd_current_weaponstate_keys[weaponName] = 1;
             player.awd_weapon_state_keys[weaponName] = weaponName;
             player.awd_weapon_state_keys[baseWeaponName] = weaponName;
 
