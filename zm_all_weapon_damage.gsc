@@ -442,7 +442,7 @@ awd_sync_weapon_callbacks()
             player.awd_current_weaponstate_keys = [];
         }
 
-        if ( !isdefined( weaponNames ) )
+        if ( !isdefined( weaponNames ) || weaponNames.size <= 0 )
         {
             if ( !isdefined( player.awd_weaponstate_missing ) ||
                  !player.awd_weaponstate_missing )
