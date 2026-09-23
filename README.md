@@ -4,7 +4,7 @@ EMZ/EMP Zombies Nerf
 
 `zm_all_weapon_damage.gsc` keeps Mk1 weapons at stock damage and applies a Cell 3 Cauterizer-style damage curve from Mk2 through Mk25 to the weapons covered by its registered CB Servers S1x v0.0.4 Zombies internal names, aliases, and online-confirmed variants: `finalDamage = baseDamage + (baseDamage * 0.2 * (mark - 1))`.
 
-Inside `s1`, create a `scripts` folder. For the script files documented below, create `mp` and `zm` inside `s1/scripts`; no `sv` folder is needed for those documented script files.
+Inside `s1`, create a `scripts` folder if you are installing the script files documented below. For those documented script files, create `mp` and `zm` inside `s1/scripts`; no `sv` folder is needed for them.
 
 Place `autobots_combat_training.gsc` at `s1/scripts/mp/autobots_combat_training.gsc`.
 

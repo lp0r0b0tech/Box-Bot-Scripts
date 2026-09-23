@@ -476,7 +476,7 @@ awd_sync_weapon_callbacks()
 
             if ( !isdefined( baseWeaponName ) || baseWeaponName == "" )
             {
-                continue;
+                baseWeaponName = weaponName;
             }
 
             weaponAliasName = awd_get_supported_weapon_alias( weaponName );
@@ -603,7 +603,7 @@ awd_modify_damage(
 
     if ( !isdefined( baseWeaponName ) || baseWeaponName == "" )
     {
-        return damage;
+        baseWeaponName = weapon;
     }
 
     weaponAliasName = awd_get_supported_weapon_alias( weapon );
