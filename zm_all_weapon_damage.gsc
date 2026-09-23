@@ -313,24 +313,8 @@ awd_sync_weapon_callbacks()
             continue;
         }
 
-        if ( !isdefined( player.awd_weapon_state_key_count ) ||
-             player.awd_weapon_state_key_count != weaponNames.size )
-        {
-            player.awd_weapon_state_keys = [];
-            player.awd_weapon_state_key_count = weaponNames.size;
-        }
-        else
-        {
-            foreach ( weaponName in weaponNames )
-            {
-                if ( !isdefined( player.awd_weapon_state_keys[weaponName] ) )
-                {
-                    player.awd_weapon_state_keys = [];
-                    player.awd_weapon_state_key_count = weaponNames.size;
-                    break;
-                }
-            }
-        }
+        player.awd_weapon_state_keys = [];
+        player.awd_weapon_state_key_count = weaponNames.size;
 
         foreach ( weaponName in weaponNames )
         {
