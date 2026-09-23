@@ -415,20 +415,23 @@ awd_sync_weapon_callbacks()
                 awd_disable_stock_weapon_level_increase( player, baseWeaponName );
             }
 
-            if ( !isdefined( level.modifyweapondamage[weaponName] ) ||
-                 level.modifyweapondamage[weaponName] != ::awd_modify_damage )
+            if ( awd_is_supported_weapon( weaponName ) &&
+                 ( !isdefined( level.modifyweapondamage[weaponName] ) ||
+                   level.modifyweapondamage[weaponName] != ::awd_modify_damage ) )
             {
                 level.modifyweapondamage[weaponName] = ::awd_modify_damage;
             }
 
-            if ( baseWeaponName != weaponName &&
+            if ( awd_is_supported_weapon( baseWeaponName ) &&
+                 baseWeaponName != weaponName &&
                  ( !isdefined( level.modifyweapondamage[baseWeaponName] ) ||
                    level.modifyweapondamage[baseWeaponName] != ::awd_modify_damage ) )
             {
                 level.modifyweapondamage[baseWeaponName] = ::awd_modify_damage;
             }
 
-            if ( isdefined( supportedWeaponName ) &&
+            if ( awd_is_supported_weapon( supportedWeaponName ) &&
+                 isdefined( supportedWeaponName ) &&
                  supportedWeaponName != "" &&
                  supportedWeaponName != weaponName &&
                  supportedWeaponName != baseWeaponName &&
