@@ -537,6 +537,18 @@ awd_modify_damage(
         weaponLevel = attacker.weaponstate[baseWeaponName]["level"];
     }
 
+    if ( !exactWeaponLevelDefined &&
+         !isdefined( weaponLevel ) &&
+         isdefined( supportedWeaponAlias ) &&
+         supportedWeaponAlias != "" &&
+         supportedWeaponAlias != baseWeaponName &&
+         isdefined( attacker.weaponstate[supportedWeaponAlias] ) &&
+         isdefined( attacker.weaponstate[supportedWeaponAlias]["level"] ) )
+    {
+        awd_disable_stock_weapon_level_increase( attacker, supportedWeaponAlias );
+        weaponLevel = attacker.weaponstate[supportedWeaponAlias]["level"];
+    }
+
     if ( !isdefined( weaponLevel ) || weaponLevel < 2 )
     {
         return damage;
