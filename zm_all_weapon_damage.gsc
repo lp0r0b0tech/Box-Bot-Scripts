@@ -254,26 +254,6 @@ awd_add_candidate_weapon_key( candidateKeys, weaponKey )
     candidateKeys[candidateKeys.size] = weaponKey;
 }
 
-awd_get_weapon_state_signature( weaponNames )
-{
-    if ( !isdefined( weaponNames ) )
-    {
-        return "";
-    }
-
-    signature = "";
-
-    foreach ( weaponName in weaponNames )
-    {
-        if ( isdefined( weaponName ) && weaponName != "" )
-        {
-            signature += weaponName + ";";
-        }
-    }
-
-    return signature;
-}
-
 awd_register_supported_weapon_callbacks()
 {
     if ( !isdefined( level.modifyweapondamage ) ||
@@ -322,23 +302,22 @@ awd_sync_weapon_callbacks()
         }
 
         weaponNames = getarraykeys( player.weaponstate );
-        weaponStateSignature = awd_get_weapon_state_signature( weaponNames );
 
         if ( !isdefined( player.awd_weapon_state_keys ) )
         {
             player.awd_weapon_state_keys = [];
         }
 
-        if ( !isdefined( player.awd_weapon_state_signature ) ||
-             player.awd_weapon_state_signature != weaponStateSignature )
-        {
-            player.awd_weapon_state_keys = [];
-            player.awd_weapon_state_signature = weaponStateSignature;
-        }
-
         if ( !isdefined( weaponNames ) )
         {
             continue;
+        }
+
+        if ( !isdefined( player.awd_weapon_state_key_count ) ||
+             player.awd_weapon_state_key_count != weaponNames.size )
+        {
+            player.awd_weapon_state_keys = [];
+            player.awd_weapon_state_key_count = weaponNames.size;
         }
 
         foreach ( weaponName in weaponNames )
@@ -577,11 +556,5 @@ awd_get_cauterizer_damage( baseDamage, mark )
         mark = AWD_MAX_WEAPON_LEVEL;
     }
 
-    scaledDamage = baseDamage + ( baseDamage * AWD_CAUTERIZER_LEVEL_MULTIPLIER * ( mark - 1 ) );
-    if ( scaledDamage < 0 )
-    {
-        return int( scaledDamage - 0.5 );
-    }
-
-    return int( scaledDamage + 0.5 );
+    return baseDamage + ( baseDamage * AWD_CAUTERIZER_LEVEL_MULTIPLIER * ( mark - 1 ) );
 }
