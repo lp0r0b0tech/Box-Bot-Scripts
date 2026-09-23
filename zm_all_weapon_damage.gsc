@@ -45,7 +45,12 @@ main()
 
     level.awd_started = 1;
     awd_init_supported_weapons();
-    level.awd_debug_weapons = 1;
+
+    if ( !isdefined( level.awd_debug_weapons ) )
+    {
+        level.awd_debug_weapons = 0;
+    }
+
     level.awd_debugged_weapons = [];
 
     println( "AllWeaponDamage: Zombies script initialized." );
