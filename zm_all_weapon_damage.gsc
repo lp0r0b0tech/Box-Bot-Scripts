@@ -254,6 +254,26 @@ awd_add_candidate_weapon_key( candidateKeys, weaponKey )
     candidateKeys[candidateKeys.size] = weaponKey;
 }
 
+awd_get_weapon_state_signature( weaponNames )
+{
+    if ( !isdefined( weaponNames ) )
+    {
+        return "";
+    }
+
+    signature = "";
+
+    foreach ( weaponName in weaponNames )
+    {
+        if ( isdefined( weaponName ) && weaponName != "" )
+        {
+            signature += weaponName + ";";
+        }
+    }
+
+    return signature;
+}
+
 awd_register_supported_weapon_callbacks()
 {
     if ( !isdefined( level.modifyweapondamage ) ||
@@ -302,10 +322,18 @@ awd_sync_weapon_callbacks()
         }
 
         weaponNames = getarraykeys( player.weaponstate );
+        weaponStateSignature = awd_get_weapon_state_signature( weaponNames );
 
         if ( !isdefined( player.awd_weapon_state_keys ) )
         {
             player.awd_weapon_state_keys = [];
+        }
+
+        if ( !isdefined( player.awd_weapon_state_signature ) ||
+             player.awd_weapon_state_signature != weaponStateSignature )
+        {
+            player.awd_weapon_state_keys = [];
+            player.awd_weapon_state_signature = weaponStateSignature;
         }
 
         if ( !isdefined( weaponNames ) )

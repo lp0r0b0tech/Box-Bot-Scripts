@@ -11,4 +11,4 @@ Place `autobots_combat_training.gsc` at `s1/scripts/mp/autobots_combat_training.
 Place `zm_emz.gsc` at `s1/scripts/zm/zm_emz.gsc`.
 Place `zm_all_weapon_damage.gsc` at `s1/scripts/zm/zm_all_weapon_damage.gsc`.
 
-Place `Bots.txt` (the custom bot names file) directly under `s1` at `s1/Bots.txt`.
+Place `Bots.txt` (the custom bot name file) directly under `s1` at `s1/Bots.txt`.
