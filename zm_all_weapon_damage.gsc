@@ -218,33 +218,11 @@ awd_get_matching_weapon_state_key( player, weaponName, baseWeaponName )
         {
             return candidateKey;
         }
-    }
 
-    weaponStateKeys = getarraykeys( player.weaponstate );
-
-    if ( !isdefined( weaponStateKeys ) )
-    {
-        return undefined;
-    }
-
-    foreach ( weaponStateKey in weaponStateKeys )
-    {
-        if ( !isdefined( weaponStateKey ) || weaponStateKey == "" )
+        if ( isdefined( player.awd_weapon_state_keys ) &&
+             isdefined( player.awd_weapon_state_keys[candidateKey] ) )
         {
-            continue;
-        }
-
-        stateBaseWeaponName = getweaponbasename( weaponStateKey );
-
-        foreach ( candidateKey in candidateKeys )
-        {
-            if ( weaponStateKey == candidateKey ||
-                 ( isdefined( stateBaseWeaponName ) &&
-                   stateBaseWeaponName != "" &&
-                   stateBaseWeaponName == candidateKey ) )
-            {
-                return weaponStateKey;
-            }
+            return player.awd_weapon_state_keys[candidateKey];
         }
     }
 
@@ -319,6 +297,7 @@ awd_sync_weapon_callbacks()
         }
 
         weaponNames = getarraykeys( player.weaponstate );
+        player.awd_weapon_state_keys = [];
 
         if ( !isdefined( weaponNames ) )
         {
@@ -349,6 +328,14 @@ awd_sync_weapon_callbacks()
                  !awd_is_supported_weapon( supportedWeaponName ) )
             {
                 continue;
+            }
+
+            player.awd_weapon_state_keys[weaponName] = weaponName;
+            player.awd_weapon_state_keys[baseWeaponName] = weaponName;
+
+            if ( isdefined( supportedWeaponName ) && supportedWeaponName != "" )
+            {
+                player.awd_weapon_state_keys[supportedWeaponName] = weaponName;
             }
 
             awd_disable_stock_weapon_level_increase( player, weaponName );
@@ -492,18 +479,6 @@ awd_modify_damage(
     {
         awd_disable_stock_weapon_level_increase( attacker, baseWeaponName );
         weaponLevel = attacker.weaponstate[baseWeaponName]["level"];
-    }
-
-    if ( !exactWeaponLevelDefined &&
-         ( !isdefined( weaponLevel ) || weaponLevel < 2 ) &&
-         isdefined( supportedWeaponAlias ) &&
-         supportedWeaponAlias != "" &&
-         supportedWeaponAlias != baseWeaponName &&
-         isdefined( attacker.weaponstate[supportedWeaponAlias] ) &&
-         isdefined( attacker.weaponstate[supportedWeaponAlias]["level"] ) )
-    {
-        awd_disable_stock_weapon_level_increase( attacker, supportedWeaponAlias );
-        weaponLevel = attacker.weaponstate[supportedWeaponAlias]["level"];
     }
 
     if ( !isdefined( weaponLevel ) || weaponLevel < 2 )
