@@ -11,6 +11,4 @@ Place `autobots_combat_training.gsc` at `s1/scripts/mp/autobots_combat_training.
 Place `zm_emz.gsc` at `s1/scripts/zm/zm_emz.gsc`.
 Place `zm_all_weapon_damage.gsc` at `s1/scripts/zm/zm_all_weapon_damage.gsc`.
 
-This repository root does not currently include an `auto_bots_zombies.gsc` file.
-
 Place `Bots.txt` directly under `s1` at `s1/Bots.txt`.
