@@ -8,7 +8,7 @@
 init()
 {
     level.emz_debug = true;
-    level.emz_emp_range = 1.0;
+    level.emz_emp_range = 0.2;
     level.emz_tick = 0.25;
     level.emz_log_interval = 1.0;
 
