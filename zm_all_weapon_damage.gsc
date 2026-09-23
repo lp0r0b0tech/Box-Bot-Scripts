@@ -317,12 +317,19 @@ awd_sync_weapon_callbacks()
             player.awd_weapon_state_keys = [];
         }
 
+        if ( !isdefined( player.awd_current_weaponstate_keys ) )
+        {
+            player.awd_current_weaponstate_keys = [];
+        }
+
         if ( !isdefined( weaponNames ) )
         {
             continue;
         }
 
-        player.awd_weapon_state_keys = [];
+        updatedWeaponStateKeys = [];
+        currentWeaponStateKeys = [];
+        cacheChanged = false;
 
         foreach ( weaponName in weaponNames )
         {
@@ -350,12 +357,18 @@ awd_sync_weapon_callbacks()
                 continue;
             }
 
-            player.awd_weapon_state_keys[weaponName] = weaponName;
-            player.awd_weapon_state_keys[baseWeaponName] = weaponName;
+            currentWeaponStateKeys[weaponName] = 1;
+            updatedWeaponStateKeys[weaponName] = weaponName;
+            updatedWeaponStateKeys[baseWeaponName] = weaponName;
 
             if ( isdefined( supportedWeaponName ) && supportedWeaponName != "" )
             {
-                player.awd_weapon_state_keys[supportedWeaponName] = weaponName;
+                updatedWeaponStateKeys[supportedWeaponName] = weaponName;
+            }
+
+            if ( !isdefined( player.awd_current_weaponstate_keys[weaponName] ) )
+            {
+                cacheChanged = true;
             }
 
             awd_disable_stock_weapon_level_increase( player, weaponName );
@@ -395,6 +408,29 @@ awd_sync_weapon_callbacks()
             {
                 level.modifyweapondamage[supportedWeaponName] = ::awd_modify_damage;
             }
+        }
+
+        if ( !cacheChanged )
+        {
+            cachedWeaponNames = getarraykeys( player.awd_current_weaponstate_keys );
+
+            if ( isdefined( cachedWeaponNames ) )
+            {
+                foreach ( cachedWeaponName in cachedWeaponNames )
+                {
+                if ( !isdefined( currentWeaponStateKeys[cachedWeaponName] ) )
+                {
+                    cacheChanged = true;
+                    break;
+                }
+                }
+            }
+        }
+
+        if ( cacheChanged )
+        {
+            player.awd_weapon_state_keys = updatedWeaponStateKeys;
+            player.awd_current_weaponstate_keys = currentWeaponStateKeys;
         }
     }
 }
