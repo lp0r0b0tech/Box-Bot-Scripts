@@ -273,6 +273,67 @@ awd_add_candidate_weapon_key( candidateKeys, candidateKeySet, weaponKey )
     candidateKeys[candidateKeys.size] = weaponKey;
 }
 
+awd_cache_known_variant_links( updatedWeaponStateKeys, player, observedWeaponKey )
+{
+    if ( !isdefined( updatedWeaponStateKeys ) ||
+         !isdefined( player ) ||
+         !isdefined( player.weaponstate ) ||
+         !isdefined( observedWeaponKey ) ||
+         observedWeaponKey == "" )
+    {
+        return;
+    }
+
+    switch ( observedWeaponKey )
+    {
+        case "iw5_gm6zm_mp":
+        case "iw5_gm6zm_mp_gm6scope":
+            awd_cache_linked_weapon_key( updatedWeaponStateKeys, player, "iw5_gm6zm_mp", observedWeaponKey );
+            awd_cache_linked_weapon_key( updatedWeaponStateKeys, player, "iw5_gm6zm_mp_gm6scope", observedWeaponKey );
+            break;
+
+        case "iw5_sac3zm_mp":
+        case "iw5_sac3zm_mp_akimbosac3":
+            awd_cache_linked_weapon_key( updatedWeaponStateKeys, player, "iw5_sac3zm_mp", observedWeaponKey );
+            awd_cache_linked_weapon_key( updatedWeaponStateKeys, player, "iw5_sac3zm_mp_akimbosac3", observedWeaponKey );
+            break;
+
+        case "iw5_mahemzm_mp":
+        case "iw5_mahemzm_mp_mahemscopebase":
+            awd_cache_linked_weapon_key( updatedWeaponStateKeys, player, "iw5_mahemzm_mp", observedWeaponKey );
+            awd_cache_linked_weapon_key( updatedWeaponStateKeys, player, "iw5_mahemzm_mp_mahemscopebase", observedWeaponKey );
+            break;
+
+        case "iw5_dlcgun4zm_mp":
+        case "iw5_blunderbusszm_mp":
+            awd_cache_linked_weapon_key( updatedWeaponStateKeys, player, "iw5_dlcgun4zm_mp", observedWeaponKey );
+            awd_cache_linked_weapon_key( updatedWeaponStateKeys, player, "iw5_blunderbusszm_mp", observedWeaponKey );
+            break;
+    }
+}
+
+awd_cache_linked_weapon_key( updatedWeaponStateKeys, player, linkedWeaponKey, observedWeaponKey )
+{
+    if ( !isdefined( updatedWeaponStateKeys ) ||
+         !isdefined( player ) ||
+         !isdefined( player.weaponstate ) ||
+         !isdefined( linkedWeaponKey ) ||
+         linkedWeaponKey == "" ||
+         !isdefined( observedWeaponKey ) ||
+         observedWeaponKey == "" )
+    {
+        return;
+    }
+
+    if ( isdefined( player.weaponstate[linkedWeaponKey] ) )
+    {
+        updatedWeaponStateKeys[linkedWeaponKey] = linkedWeaponKey;
+        return;
+    }
+
+    updatedWeaponStateKeys[linkedWeaponKey] = observedWeaponKey;
+}
+
 awd_clear_lookup_table( tableRef )
 {
     if ( !isdefined( tableRef ) )
@@ -442,6 +503,8 @@ awd_sync_weapon_callbacks()
             {
                 updatedWeaponStateKeys[weaponAliasName] = weaponAliasName;
             }
+
+            awd_cache_known_variant_links( updatedWeaponStateKeys, player, weaponName );
 
             awd_disable_stock_weapon_level_increase( player, weaponName );
 
