@@ -430,6 +430,12 @@ awd_modify_damage(
         return damage;
     }
 
+    supportedWeaponAlias = awd_get_supported_weapon_alias( baseWeaponName );
+    if ( !isdefined( supportedWeaponAlias ) || supportedWeaponAlias == "" )
+    {
+        supportedWeaponAlias = awd_get_supported_weapon_alias( weapon );
+    }
+
     weaponLevel = undefined;
     matchingWeaponStateKey = awd_get_matching_weapon_state_key( attacker, weapon, baseWeaponName );
     exactWeaponStateDefined = isdefined( matchingWeaponStateKey ) &&
@@ -465,6 +471,18 @@ awd_modify_damage(
     {
         awd_disable_stock_weapon_level_increase( attacker, baseWeaponName );
         weaponLevel = attacker.weaponstate[baseWeaponName]["level"];
+    }
+
+    if ( !exactWeaponLevelDefined &&
+         ( !isdefined( weaponLevel ) || weaponLevel < 2 ) &&
+         isdefined( supportedWeaponAlias ) &&
+         supportedWeaponAlias != "" &&
+         supportedWeaponAlias != baseWeaponName &&
+         isdefined( attacker.weaponstate[supportedWeaponAlias] ) &&
+         isdefined( attacker.weaponstate[supportedWeaponAlias]["level"] ) )
+    {
+        awd_disable_stock_weapon_level_increase( attacker, supportedWeaponAlias );
+        weaponLevel = attacker.weaponstate[supportedWeaponAlias]["level"];
     }
 
     if ( !isdefined( weaponLevel ) || weaponLevel < 2 )
