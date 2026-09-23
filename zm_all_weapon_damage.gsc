@@ -312,9 +312,8 @@ awd_sync_weapon_callbacks()
         {
             continue;
         }
-
         player.awd_weapon_state_keys = [];
-        player.awd_weapon_state_key_count = weaponNames.size;
+        player.awd_weapon_state_keys = [];
 
         foreach ( weaponName in weaponNames )
         {
