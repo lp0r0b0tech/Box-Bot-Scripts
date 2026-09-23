@@ -331,8 +331,15 @@ awd_sync_weapon_callbacks()
 
     foreach ( player in players )
     {
-        if ( !isdefined( player ) || !isplayer( player ) || !isdefined( player.weaponstate ) )
+        if ( !isdefined( player ) || !isplayer( player ) )
         {
+            continue;
+        }
+
+        if ( !isdefined( player.weaponstate ) )
+        {
+            player.awd_weapon_state_keys = [];
+            player.awd_current_weaponstate_keys = [];
             continue;
         }
 
