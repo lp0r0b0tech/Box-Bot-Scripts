@@ -369,8 +369,6 @@ awd_sync_weapon_callbacks()
             continue;
         }
 
-        player.awd_weaponstate_missing = 0;
-
         weaponNames = getarraykeys( player.weaponstate );
 
         if ( !isdefined( player.awd_weapon_state_keys ) )
@@ -395,6 +393,8 @@ awd_sync_weapon_callbacks()
 
             continue;
         }
+
+        player.awd_weaponstate_missing = 0;
 
         updatedWeaponStateKeys = [];
         currentWeaponStateKeys = [];
@@ -423,14 +423,22 @@ awd_sync_weapon_callbacks()
 
             currentWeaponStateKeys[weaponName] = 1;
             updatedWeaponStateKeys[weaponName] = weaponName;
-            updatedWeaponStateKeys[baseWeaponName] = weaponName;
 
-            if ( isdefined( supportedWeaponName ) && supportedWeaponName != "" )
+            if ( isdefined( player.weaponstate[baseWeaponName] ) )
+            {
+                updatedWeaponStateKeys[baseWeaponName] = weaponName;
+            }
+
+            if ( isdefined( supportedWeaponName ) &&
+                 supportedWeaponName != "" &&
+                 isdefined( player.weaponstate[supportedWeaponName] ) )
             {
                 updatedWeaponStateKeys[supportedWeaponName] = weaponName;
             }
 
-            if ( isdefined( weaponAliasName ) && weaponAliasName != "" )
+            if ( isdefined( weaponAliasName ) &&
+                 weaponAliasName != "" &&
+                 isdefined( player.weaponstate[weaponAliasName] ) )
             {
                 updatedWeaponStateKeys[weaponAliasName] = weaponName;
             }
