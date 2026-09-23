@@ -338,10 +338,18 @@ awd_sync_weapon_callbacks()
 
         if ( !isdefined( player.weaponstate ) )
         {
-            player.awd_weapon_state_keys = [];
-            player.awd_current_weaponstate_keys = [];
+            if ( !isdefined( player.awd_weaponstate_missing ) ||
+                 !player.awd_weaponstate_missing )
+            {
+                player.awd_weapon_state_keys = [];
+                player.awd_current_weaponstate_keys = [];
+                player.awd_weaponstate_missing = 1;
+            }
+
             continue;
         }
+
+        player.awd_weaponstate_missing = 0;
 
         weaponNames = getarraykeys( player.weaponstate );
 
