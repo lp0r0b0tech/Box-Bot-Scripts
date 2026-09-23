@@ -385,6 +385,8 @@ awd_sync_weapon_callbacks()
 
         if ( !isdefined( weaponNames ) )
         {
+            awd_clear_lookup_table( player.awd_weapon_state_keys );
+            awd_clear_lookup_table( player.awd_current_weaponstate_keys );
             continue;
         }
 
