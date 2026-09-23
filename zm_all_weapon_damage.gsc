@@ -376,9 +376,12 @@ awd_sync_weapon_callbacks()
                 continue;
             }
 
+            weaponAliasName = awd_get_supported_weapon_alias( weaponName );
             supportedWeaponName = awd_get_supported_weapon_alias( baseWeaponName );
 
-            if ( !awd_is_supported_weapon( baseWeaponName ) &&
+            if ( !awd_is_supported_weapon( weaponName ) &&
+                 !awd_is_supported_weapon( weaponAliasName ) &&
+                 !awd_is_supported_weapon( baseWeaponName ) &&
                  !awd_is_supported_weapon( supportedWeaponName ) )
             {
                 continue;
@@ -391,6 +394,11 @@ awd_sync_weapon_callbacks()
             if ( isdefined( supportedWeaponName ) && supportedWeaponName != "" )
             {
                 updatedWeaponStateKeys[supportedWeaponName] = weaponName;
+            }
+
+            if ( isdefined( weaponAliasName ) && weaponAliasName != "" )
+            {
+                updatedWeaponStateKeys[weaponAliasName] = weaponName;
             }
 
             if ( !isdefined( player.awd_current_weaponstate_keys[weaponName] ) )
