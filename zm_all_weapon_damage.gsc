@@ -344,12 +344,13 @@ awd_sync_weapon_callbacks()
             }
 
             baseWeaponName = getweaponbasename( weaponName );
-            supportedWeaponName = awd_get_supported_weapon_alias( baseWeaponName );
 
             if ( !isdefined( baseWeaponName ) || baseWeaponName == "" )
             {
                 continue;
             }
+
+            supportedWeaponName = awd_get_supported_weapon_alias( baseWeaponName );
 
             if ( !awd_is_supported_weapon( baseWeaponName ) &&
                  !awd_is_supported_weapon( supportedWeaponName ) )
