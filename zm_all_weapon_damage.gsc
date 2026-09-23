@@ -426,21 +426,21 @@ awd_sync_weapon_callbacks()
 
             if ( isdefined( player.weaponstate[baseWeaponName] ) )
             {
-                updatedWeaponStateKeys[baseWeaponName] = weaponName;
+                updatedWeaponStateKeys[baseWeaponName] = baseWeaponName;
             }
 
             if ( isdefined( supportedWeaponName ) &&
                  supportedWeaponName != "" &&
                  isdefined( player.weaponstate[supportedWeaponName] ) )
             {
-                updatedWeaponStateKeys[supportedWeaponName] = weaponName;
+                updatedWeaponStateKeys[supportedWeaponName] = supportedWeaponName;
             }
 
             if ( isdefined( weaponAliasName ) &&
                  weaponAliasName != "" &&
                  isdefined( player.weaponstate[weaponAliasName] ) )
             {
-                updatedWeaponStateKeys[weaponAliasName] = weaponName;
+                updatedWeaponStateKeys[weaponAliasName] = weaponAliasName;
             }
 
             awd_disable_stock_weapon_level_increase( player, weaponName );
