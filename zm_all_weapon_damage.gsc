@@ -523,13 +523,12 @@ awd_modify_damage(
         return damage;
     }
 
+    weaponAliasName = awd_get_supported_weapon_alias( weapon );
     supportedWeaponAlias = awd_get_supported_weapon_alias( baseWeaponName );
-    if ( !isdefined( supportedWeaponAlias ) || supportedWeaponAlias == "" )
-    {
-        supportedWeaponAlias = awd_get_supported_weapon_alias( weapon );
-    }
 
-    if ( !awd_is_supported_weapon( baseWeaponName ) &&
+    if ( !awd_is_supported_weapon( weapon ) &&
+         !awd_is_supported_weapon( weaponAliasName ) &&
+         !awd_is_supported_weapon( baseWeaponName ) &&
          !awd_is_supported_weapon( supportedWeaponAlias ) )
     {
         return damage;
