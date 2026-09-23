@@ -118,6 +118,7 @@ awd_init_supported_weapons()
     awd_add_supported_weapon( "iw5_dlcgun3zm_mp" );
     awd_add_supported_weapon( "iw5_tridentzm_mp" );
     awd_add_supported_weapon( "iw5_dlcgun4zm_mp" );
+    awd_add_supported_weapon( "iw5_blunderbusszm_mp" );
 }
 
 awd_add_supported_weapon( weaponName )
