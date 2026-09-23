@@ -21,8 +21,8 @@
     Supported weapon names are registered explicitly for CB Servers
     S1x v0.0.4.
     This list includes the public Exo Zombies weapon-name map entries plus
-    verified special aliases used by equipment, wonder-weapon damage, and
-    Goliath suit weapons.
+    verified special aliases used by equipment, wonder-weapon damage,
+    Goliath suit weapons, and online-confirmed S1x menu/loadout variants.
 
     Magazine capacity and reserve ammunition:
         Left unchanged; the normal Exo Zombies weapon-upgrade system
@@ -85,6 +85,7 @@ awd_init_supported_weapons()
     awd_add_supported_weapon( "iw5_rw1zm_mp" );
     awd_add_supported_weapon( "iw5_vbrzm_mp" );
     awd_add_supported_weapon( "iw5_gm6zm_mp" );
+    awd_add_supported_weapon( "iw5_gm6zm_mp_gm6scope" );
     awd_add_supported_weapon( "iw5_rhinozm_mp" );
     awd_add_supported_weapon( "iw5_lsatzm_mp" );
     awd_add_supported_weapon( "iw5_asawzm_mp" );
@@ -94,11 +95,13 @@ awd_init_supported_weapons()
     awd_add_supported_weapon( "iw5_asm1zm_mp" );
     awd_add_supported_weapon( "iw5_sn6zm_mp" );
     awd_add_supported_weapon( "iw5_sac3zm_mp" );
+    awd_add_supported_weapon( "iw5_sac3zm_mp_akimbosac3" );
     awd_add_supported_weapon( "iw5_fusionzm_mp" );
     awd_add_supported_weapon( "distraction_drone_zombie_mp" );
     awd_add_supported_weapon( "dna_aoe_grenade_zombie_mp" );
     awd_add_supported_weapon( "iw5_exocrossbowzm_mp" );
     awd_add_supported_weapon( "iw5_mahemzm_mp" );
+    awd_add_supported_weapon( "iw5_mahemzm_mp_mahemscopebase" );
     awd_add_supported_weapon( "iw5_em1zm_mp" );
     awd_add_supported_weapon( "iw5_dlcgun1zm_mp" );
     awd_add_supported_weapon( "iw5_arx160zm_mp" );
@@ -181,6 +184,15 @@ awd_get_supported_weapon_alias( weaponName )
 
         case "iw5_linegundamagezm_mp":
             return "iw5_linegunzm_mp";
+
+        case "iw5_gm6zm_mp_gm6scope":
+            return "iw5_gm6zm_mp";
+
+        case "iw5_sac3zm_mp_akimbosac3":
+            return "iw5_sac3zm_mp";
+
+        case "iw5_mahemzm_mp_mahemscopebase":
+            return "iw5_mahemzm_mp";
 
         case "iw5_blunderbusszm_mp":
             return "iw5_dlcgun4zm_mp";
