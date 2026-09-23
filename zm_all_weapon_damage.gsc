@@ -569,7 +569,7 @@ awd_modify_damage(
          isdefined( attacker.weaponstate[matchingWeaponStateKey]["level"] ) )
     {
         weaponLevel = attacker.weaponstate[matchingWeaponStateKey]["level"];
-        exactWeaponLevelDefined = matchingWeaponStateKey == weapon;
+        exactWeaponLevelDefined = true;
     }
 
     awd_disable_stock_weapon_level_increase( attacker, weapon );
