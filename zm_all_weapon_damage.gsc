@@ -338,20 +338,30 @@ awd_sync_weapon_callbacks()
             }
 
             baseWeaponName = getweaponbasename( weaponName );
+            supportedWeaponName = awd_get_supported_weapon_alias( baseWeaponName );
 
             if ( !isdefined( baseWeaponName ) || baseWeaponName == "" )
             {
                 continue;
             }
 
-            if ( !awd_is_supported_weapon( baseWeaponName ) )
+            if ( !awd_is_supported_weapon( baseWeaponName ) &&
+                 !awd_is_supported_weapon( supportedWeaponName ) )
             {
                 continue;
             }
 
             awd_disable_stock_weapon_level_increase( player, weaponName );
 
-            if ( baseWeaponName != weaponName )
+            if ( isdefined( supportedWeaponName ) &&
+                 supportedWeaponName != "" &&
+                 supportedWeaponName != weaponName )
+            {
+                awd_disable_stock_weapon_level_increase( player, supportedWeaponName );
+            }
+
+            if ( baseWeaponName != weaponName &&
+                 baseWeaponName != supportedWeaponName )
             {
                 awd_disable_stock_weapon_level_increase( player, baseWeaponName );
             }
@@ -367,6 +377,16 @@ awd_sync_weapon_callbacks()
                    level.modifyweapondamage[baseWeaponName] != ::awd_modify_damage ) )
             {
                 level.modifyweapondamage[baseWeaponName] = ::awd_modify_damage;
+            }
+
+            if ( isdefined( supportedWeaponName ) &&
+                 supportedWeaponName != "" &&
+                 supportedWeaponName != weaponName &&
+                 supportedWeaponName != baseWeaponName &&
+                 ( !isdefined( level.modifyweapondamage[supportedWeaponName] ) ||
+                  level.modifyweapondamage[supportedWeaponName] != ::awd_modify_damage ) )
+            {
+                level.modifyweapondamage[supportedWeaponName] = ::awd_modify_damage;
             }
         }
     }
