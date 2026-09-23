@@ -63,20 +63,9 @@ awd_register_damage_modifiers()
 {
     level endon( "game_ended" );
 
-    for ( i = 0; i < 2400; i++ )
+    while ( !isdefined( level.modifyweapondamage ) )
     {
-        if ( isdefined( level.modifyweapondamage ) )
-        {
-            break;
-        }
-
         wait 0.05;
-    }
-
-    if ( !isdefined( level.modifyweapondamage ) )
-    {
-        println( "AllWeaponDamage: ERROR - level.modifyweapondamage was never initialized." );
-        return;
     }
 
     println( "AllWeaponDamage: watching player weapon states." );
@@ -277,6 +266,26 @@ awd_register_supported_weapon_callbacks()
             level.modifyweapondamage[weaponName] = ::awd_modify_damage;
         }
     }
+
+    awd_verify_supported_weapon_callbacks( supportedWeapons );
+}
+
+awd_verify_supported_weapon_callbacks( supportedWeapons )
+{
+    if ( !isdefined( level.modifyweapondamage ) || !isdefined( supportedWeapons ) )
+    {
+        return;
+    }
+
+    foreach ( weaponName in supportedWeapons )
+    {
+        if ( !isdefined( level.modifyweapondamage[weaponName] ) ||
+             level.modifyweapondamage[weaponName] != ::awd_modify_damage )
+        {
+            println( "AllWeaponDamage: ERROR - callback registration check failed for " + weaponName );
+            return;
+        }
+    }
 }
 
 awd_sync_weapon_callbacks()
@@ -308,49 +317,12 @@ awd_sync_weapon_callbacks()
             player.awd_weapon_state_keys = [];
         }
 
-        if ( !isdefined( player.awd_current_weaponstate_keys ) )
-        {
-            player.awd_current_weaponstate_keys = [];
-        }
-
         if ( !isdefined( weaponNames ) )
         {
             continue;
         }
 
-        rebuildWeaponStateCache = false;
-
-        foreach ( weaponName in weaponNames )
-        {
-            if ( !isdefined( player.awd_current_weaponstate_keys[weaponName] ) )
-            {
-                rebuildWeaponStateCache = true;
-                break;
-            }
-        }
-
-        if ( !rebuildWeaponStateCache )
-        {
-            cachedWeaponNames = getarraykeys( player.awd_current_weaponstate_keys );
-
-            if ( isdefined( cachedWeaponNames ) )
-            {
-                foreach ( cachedWeaponName in cachedWeaponNames )
-                {
-                    if ( !isdefined( player.weaponstate[cachedWeaponName] ) )
-                    {
-                        rebuildWeaponStateCache = true;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if ( rebuildWeaponStateCache )
-        {
-            player.awd_weapon_state_keys = [];
-            player.awd_current_weaponstate_keys = [];
-        }
+        player.awd_weapon_state_keys = [];
 
         foreach ( weaponName in weaponNames )
         {
@@ -378,7 +350,6 @@ awd_sync_weapon_callbacks()
                 continue;
             }
 
-            player.awd_current_weaponstate_keys[weaponName] = 1;
             player.awd_weapon_state_keys[weaponName] = weaponName;
             player.awd_weapon_state_keys[baseWeaponName] = weaponName;
 
