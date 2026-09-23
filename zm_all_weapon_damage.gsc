@@ -422,8 +422,8 @@ awd_sync_weapon_callbacks()
             if ( !isdefined( player.awd_weaponstate_missing ) ||
                  !player.awd_weaponstate_missing )
             {
-                awd_clear_lookup_table( player.awd_weapon_state_keys );
-                awd_clear_lookup_table( player.awd_current_weaponstate_keys );
+                player.awd_weapon_state_keys = [];
+                player.awd_current_weaponstate_keys = [];
                 player.awd_weaponstate_missing = 1;
             }
 
@@ -447,8 +447,8 @@ awd_sync_weapon_callbacks()
             if ( !isdefined( player.awd_weaponstate_missing ) ||
                  !player.awd_weaponstate_missing )
             {
-                awd_clear_lookup_table( player.awd_weapon_state_keys );
-                awd_clear_lookup_table( player.awd_current_weaponstate_keys );
+                player.awd_weapon_state_keys = [];
+                player.awd_current_weaponstate_keys = [];
                 player.awd_weaponstate_missing = 1;
             }
 
