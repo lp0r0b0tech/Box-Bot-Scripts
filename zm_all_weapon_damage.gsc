@@ -293,6 +293,26 @@ awd_clear_lookup_table( tableRef )
     }
 }
 
+awd_merge_lookup_table( targetTable, sourceTable )
+{
+    if ( !isdefined( targetTable ) || !isdefined( sourceTable ) )
+    {
+        return;
+    }
+
+    sourceKeys = getarraykeys( sourceTable );
+
+    if ( !isdefined( sourceKeys ) )
+    {
+        return;
+    }
+
+    foreach ( sourceKey in sourceKeys )
+    {
+        targetTable[sourceKey] = sourceTable[sourceKey];
+    }
+}
+
 awd_register_supported_weapon_callbacks()
 {
     if ( !isdefined( level.modifyweapondamage ) ||
@@ -390,6 +410,7 @@ awd_sync_weapon_callbacks()
 
         updatedWeaponStateKeys = [];
         currentWeaponStateKeys = [];
+        awd_merge_lookup_table( updatedWeaponStateKeys, player.awd_weapon_state_keys );
 
         foreach ( weaponName in weaponNames )
         {
@@ -412,14 +433,6 @@ awd_sync_weapon_callbacks()
 
             weaponAliasName = awd_get_supported_weapon_alias( weaponName );
             supportedWeaponName = awd_get_supported_weapon_alias( baseWeaponName );
-
-            if ( !awd_is_supported_weapon( weaponName ) &&
-                 !awd_is_supported_weapon( weaponAliasName ) &&
-                 !awd_is_supported_weapon( baseWeaponName ) &&
-                 !awd_is_supported_weapon( supportedWeaponName ) )
-            {
-                continue;
-            }
 
             currentWeaponStateKeys[weaponName] = 1;
             updatedWeaponStateKeys[weaponName] = weaponName;
