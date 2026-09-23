@@ -214,6 +214,7 @@ awd_get_matching_weapon_state_key( player, weaponName, baseWeaponName )
     awd_add_candidate_weapon_key( candidateKeys, candidateKeySet, baseWeaponName );
     awd_add_candidate_weapon_key( candidateKeys, candidateKeySet, awd_get_supported_weapon_alias( weaponName ) );
     awd_add_candidate_weapon_key( candidateKeys, candidateKeySet, awd_get_supported_weapon_alias( baseWeaponName ) );
+    fallbackWeaponStateKey = undefined;
 
     foreach ( candidateKey in candidateKeys )
     {
@@ -222,6 +223,11 @@ awd_get_matching_weapon_state_key( player, weaponName, baseWeaponName )
             if ( isdefined( player.weaponstate[candidateKey]["level"] ) )
             {
                 return candidateKey;
+            }
+
+            if ( !isdefined( fallbackWeaponStateKey ) )
+            {
+                fallbackWeaponStateKey = candidateKey;
             }
         }
 
@@ -236,11 +242,16 @@ awd_get_matching_weapon_state_key( player, weaponName, baseWeaponName )
                 {
                     return cachedWeaponStateKey;
                 }
+
+                if ( !isdefined( fallbackWeaponStateKey ) )
+                {
+                    fallbackWeaponStateKey = cachedWeaponStateKey;
+                }
             }
         }
     }
 
-    return undefined;
+    return fallbackWeaponStateKey;
 }
 
 awd_add_candidate_weapon_key( candidateKeys, candidateKeySet, weaponKey )
