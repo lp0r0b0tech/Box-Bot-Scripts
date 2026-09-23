@@ -18,9 +18,10 @@
         key seen by the damage callback. Each weapon/base-name pair is logged
         once so live verification stays readable.
 
-    Supported weapons are registered explicitly for CB Servers S1x v0.0.4.
-    This list includes the upgradeable firearms and special/wonder guns and
-    excludes grenades, drones, teleport/repulsor equipment, Last Stand, and
+    Supported weapon names are registered explicitly for CB Servers
+    S1x v0.0.4.
+    This list includes the public Exo Zombies weapon-name map entries plus
+    verified special aliases used by equipment, wonder-weapon damage, and
     Goliath suit weapons.
 
     Magazine capacity and reserve ammunition:
@@ -105,24 +106,44 @@ awd_init_supported_weapons()
     awd_add_supported_weapon( "iw5_sn6zm_mp" );
     awd_add_supported_weapon( "iw5_sac3zm_mp" );
     awd_add_supported_weapon( "iw5_fusionzm_mp" );
+    awd_add_supported_weapon( "distraction_drone_zombie_mp" );
+    awd_add_supported_weapon( "dna_aoe_grenade_zombie_mp" );
     awd_add_supported_weapon( "iw5_exocrossbowzm_mp" );
     awd_add_supported_weapon( "iw5_mahemzm_mp" );
     awd_add_supported_weapon( "iw5_em1zm_mp" );
     awd_add_supported_weapon( "iw5_dlcgun1zm_mp" );
     awd_add_supported_weapon( "iw5_arx160zm_mp" );
     awd_add_supported_weapon( "iw5_mp11zm_mp" );
+    awd_add_supported_weapon( "explosive_drone_zombie_mp" );
+    awd_add_supported_weapon( "contact_grenade_zombies_mp" );
     awd_add_supported_weapon( "iw5_hbra3zm_mp" );
     awd_add_supported_weapon( "iw5_hmr9zm_mp" );
     awd_add_supported_weapon( "iw5_maulzm_mp" );
     awd_add_supported_weapon( "iw5_m182sprzm_mp" );
     awd_add_supported_weapon( "iw5_uts19zm_mp" );
+    awd_add_supported_weapon( "contact_grenade_throw_zombies_mp" );
+    awd_add_supported_weapon( "explosive_drone_throw_zombie_mp" );
+    awd_add_supported_weapon( "distraction_drone_throw_zombie_mp" );
+    awd_add_supported_weapon( "dna_aoe_grenade_throw_zombie_mp" );
     awd_add_supported_weapon( "iw5_titan45zm_mp" );
+    awd_add_supported_weapon( "LastStand" );
     awd_add_supported_weapon( "iw5_microwavezm_mp" );
     awd_add_supported_weapon( "iw5_linegunzm_mp" );
+    awd_add_supported_weapon( "iw5_linegundamagezm_mp" );
+    awd_add_supported_weapon( "frag_grenade_zombies_mp" );
+    awd_add_supported_weapon( "frag_grenade_throw_zombies_mp" );
     awd_add_supported_weapon( "iw5_dlcgun2zm_mp" );
     awd_add_supported_weapon( "iw5_dlcgun3zm_mp" );
+    awd_add_supported_weapon( "teleport_zombies_mp" );
+    awd_add_supported_weapon( "teleport_throw_zombies_mp" );
+    awd_add_supported_weapon( "repulsor_zombie_mp" );
     awd_add_supported_weapon( "iw5_tridentzm_mp" );
     awd_add_supported_weapon( "iw5_dlcgun4zm_mp" );
+    awd_add_supported_weapon( "iw5_exominigunzm_mp" );
+    awd_add_supported_weapon( "playermech_rocket_zm_mp" );
+    awd_add_supported_weapon( "iw5_juggernautrocketszm_mp" );
+    awd_add_supported_weapon( "playermech_rocket_swarm_zm_mp" );
+    awd_add_supported_weapon( "iw5_combatknifegoliath_mp" );
     awd_add_supported_weapon( "iw5_blunderbusszm_mp" );
 }
 
