@@ -211,6 +211,10 @@ awd_init_max_damage_weapons()
         "exo_melee_zm"
     );
 
+    awd_add_max_damage_weapon(
+        "iw5_combatknifegoliath_mp"
+    );
+
     /*
         Grenades and equipment
     */
