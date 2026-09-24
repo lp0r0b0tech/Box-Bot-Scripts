@@ -205,6 +205,13 @@ awd_init_max_damage_weapons()
     level.awd_max_damage_weapons = [];
 
     /*
+        Melee weapon forced to Mk25 damage.
+    */
+    awd_add_max_damage_weapon(
+        "exo_melee_zm"
+    );
+
+    /*
         Grenades and equipment
     */
     awd_add_max_damage_weapon(
