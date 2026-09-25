@@ -237,7 +237,7 @@ abzmFillBotsToTarget()
         bot.abzmManaged = true;
         bot.abzmSlot = level.abzmBots.size;
 
-        if ( isdefined( bot.pers ) && !isdefined( bot.pers["isBot"] ) )
+        if ( isdefined( bot.pers ) )
         {
             bot.pers["isBot"] = true;
         }
@@ -554,6 +554,10 @@ abzmTryApplyPerks( bot )
             bot.abzmPerks[perkName] = true;
             abzmLog( "perk bookkeeping only: " + perkName );
         }
+        else
+        {
+            bot.abzmPerks[perkName] = true;
+        }
 
         if ( isdefined( level.time ) )
         {
@@ -617,6 +621,16 @@ abzmHandleReviveBehavior( bot, reviveTarget )
 
     if ( distance( bot.origin, reviveTarget.origin ) <= 100 )
     {
+        if ( isdefined( level.time ) && isdefined( bot.abzmLastReviveAttempt ) && level.time - bot.abzmLastReviveAttempt < 4000 )
+        {
+            return;
+        }
+
+        if ( isdefined( level.time ) )
+        {
+            bot.abzmLastReviveAttempt = level.time;
+        }
+
         if ( abzmRunMapReviveHook( bot, reviveTarget ) )
         {
             bot.abzmPoints += getdvarint( "scr_zm_autobots_revive_reward" );
@@ -624,7 +638,7 @@ abzmHandleReviveBehavior( bot, reviveTarget )
         }
         else
         {
-            abzmWarnOnce( "revive_hook", "revive hook is map-specific and disabled by default" );
+            abzmWarnOnce( "revive_hook_" + bot.abzmSlot, "revive hook is map-specific and disabled by default for bot slot " + bot.abzmSlot );
         }
     }
 }
@@ -641,7 +655,7 @@ abzmHandleEscapeBehavior( bot, leader )
 
     if ( !abzmRunMapExoEscapeHook( bot, escapeGoal ) )
     {
-        abzmWarnOnce( "exo_hook", "exo movement hook is map-specific and disabled by default" );
+        abzmWarnOnce( "exo_hook_" + bot.abzmSlot, "exo movement hook is map-specific and disabled by default for bot slot " + bot.abzmSlot );
     }
 }
 
