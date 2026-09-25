@@ -296,11 +296,6 @@ abzmBotMainLoop()
         }
 
         leader = abzmGetFollowLeader();
-        if ( !isdefined( leader ) )
-        {
-            wait 0.5;
-            continue;
-        }
 
         reviveTarget = undefined;
         if ( getdvarint( "scr_zm_autobots_auto_revive" ) > 0 )
@@ -330,7 +325,10 @@ abzmBotMainLoop()
             continue;
         }
 
-        abzmHandleFollowBehavior( self, leader );
+        if ( isdefined( leader ) )
+        {
+            abzmHandleFollowBehavior( self, leader );
+        }
         wait ABZM_DEFAULT_THINK_INTERVAL;
     }
 }
@@ -432,14 +430,16 @@ abzmGiveProgressionWeapon( bot, weaponIndex, isInitialGive )
     weaponName = level.abzmWeaponProgression[weaponIndex];
     fallbackWeapon = level.abzmWeaponProgression[0];
 
+    bot takeallweapons();
+    bot giveweapon( fallbackWeapon );
+    bot givemaxammo( fallbackWeapon );
+
     bot giveweapon( weaponName );
     bot givemaxammo( weaponName );
     bot switchtoweapon( weaponName );
 
     if ( weaponName != fallbackWeapon )
     {
-        bot giveweapon( fallbackWeapon );
-        bot givemaxammo( fallbackWeapon );
         abzmRememberOwnedWeapon( bot, fallbackWeapon );
     }
 
@@ -646,12 +646,31 @@ abzmHandleReviveBehavior( bot, reviveTarget )
 
 abzmHandleEscapeBehavior( bot, leader )
 {
-    if ( !isdefined( bot ) || !isdefined( leader ) )
+    if ( !isdefined( bot ) )
     {
         return;
     }
 
-    escapeGoal = abzmBuildEscapeGoal( bot.origin, leader.origin );
+    anchorOrigin = undefined;
+    if ( isdefined( leader ) )
+    {
+        anchorOrigin = leader.origin;
+    }
+    else
+    {
+        nearestZombie = abzmFindNearestZombie( bot.origin );
+        if ( isdefined( nearestZombie ) )
+        {
+            anchorOrigin = nearestZombie.origin;
+        }
+    }
+
+    if ( !isdefined( anchorOrigin ) )
+    {
+        anchorOrigin = bot.origin - ( 160, 0, 0 );
+    }
+
+    escapeGoal = abzmBuildEscapeGoal( bot.origin, anchorOrigin );
     abzmSetBotGoal( bot, escapeGoal );
 
     if ( !abzmRunMapExoEscapeHook( bot, escapeGoal ) )
