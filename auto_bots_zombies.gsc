@@ -154,13 +154,21 @@ abzmManagerLoop()
 
     for ( ;; )
     {
-        if ( !abzmShouldRunHere() || getdvarint( "scr_zm_autobots_enable" ) <= 0 )
+        if ( !abzmShouldRunHere() )
         {
             wait 1.0;
             continue;
         }
 
         abzmRefreshBotRoster();
+
+        if ( getdvarint( "scr_zm_autobots_enable" ) <= 0 )
+        {
+            abzmTrimBotsToCount( 0 );
+            wait 1.0;
+            continue;
+        }
+
         abzmTrimBotsToTarget();
         abzmFillBotsToTarget();
 
@@ -1168,11 +1176,6 @@ abzmRememberOwnedWeapon( bot, weaponName )
 
 abzmTrimBotsToTarget()
 {
-    if ( !isdefined( level.abzmBots ) )
-    {
-        return;
-    }
-
     targetCount = getdvarint( "scr_zm_autobots_count" );
     if ( targetCount < 0 )
     {
@@ -1181,6 +1184,16 @@ abzmTrimBotsToTarget()
     if ( targetCount > ABZM_MAX_BOTS )
     {
         targetCount = ABZM_MAX_BOTS;
+    }
+
+    abzmTrimBotsToCount( targetCount );
+}
+
+abzmTrimBotsToCount( targetCount )
+{
+    if ( !isdefined( level.abzmBots ) )
+    {
+        return;
     }
 
     trimmed = [];
