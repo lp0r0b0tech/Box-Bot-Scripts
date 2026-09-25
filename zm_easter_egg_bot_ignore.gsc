@@ -239,7 +239,7 @@ eebiTagPlayer( player, isBot )
         player.pers = [];
     }
 
-    player.pers["isBot"] = isBot;
+    player.pers["eebi_is_bot"] = isBot;
     player.pers["countsForEasterEgg"] = !isBot;
     player.pers["ee_counts_as_player"] = !isBot;
     player.pers["ee_ignore"] = isBot;
@@ -253,6 +253,7 @@ eebiTagPlayer( player, isBot )
     player.eeIgnore = isBot;
     player.eggIgnore = isBot;
     player.easterEggIgnore = isBot;
+    player.eebiIsBot = isBot;
     player.isRealPlayer = !isBot;
 }
 
@@ -298,19 +299,9 @@ eebiIsBotEntity( player )
         return player.pers["isBot"];
     }
 
-    guid = player getguid();
-    if ( isdefined( guid ) && issubstr( toLower( guid + "" ), "bot" ) )
+    if ( isdefined( player.eebiIsBot ) )
     {
-        return true;
-    }
-
-    if ( isdefined( player.name ) )
-    {
-        lowerName = toLower( player.name + "" );
-        if ( issubstr( lowerName, "bot " ) || issubstr( lowerName, "[bot]" ) )
-        {
-            return true;
-        }
+        return player.eebiIsBot;
     }
 
     return false;
