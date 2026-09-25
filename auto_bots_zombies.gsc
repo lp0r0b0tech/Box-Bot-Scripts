@@ -222,15 +222,7 @@ abzmFillBotsToTarget()
         level.abzmBots = [];
     }
 
-    targetCount = getdvarint( "scr_zm_autobots_count" );
-    if ( targetCount < 0 )
-    {
-        targetCount = 0;
-    }
-    if ( targetCount > ABZM_MAX_BOTS )
-    {
-        targetCount = ABZM_MAX_BOTS;
-    }
+    targetCount = abzmGetTargetBotCount();
 
     activeCount = level.abzmBots.size + abzmCountPendingDropBots();
 
@@ -244,6 +236,12 @@ abzmFillBotsToTarget()
         }
 
         wait 0.25;
+
+        if ( !isdefined( bot ) )
+        {
+            abzmWarnOnce( "spawn_invalid", "spawned bot disconnected before initialization completed" );
+            return;
+        }
 
         bot.abzmManaged = true;
         bot.abzmPendingDrop = false;
@@ -279,7 +277,6 @@ abzmInitBotState( bot )
     bot.abzmWeaponIndex = 0;
     bot.abzmOwnedWeapons = [];
     bot.abzmPerks = [];
-    bot.abzmSimulatedPerks = [];
     bot.abzmLastSupportTime = 0;
     bot.abzmLastReviveAttempt = 0;
     bot.abzmLastExoHookAttempt = 0;
@@ -545,6 +542,11 @@ abzmTryApplyPerks( bot )
         return;
     }
 
+    if ( getdvarint( "scr_zm_autobots_map_hooks" ) <= 0 )
+    {
+        return;
+    }
+
     if ( isdefined( level.time ) && isdefined( bot.abzmLastPerkTime ) && level.time - bot.abzmLastPerkTime < 4000 )
     {
         return;
@@ -566,8 +568,7 @@ abzmTryApplyPerks( bot )
 
         if ( !abzmRunMapPerkHook( bot, perkName ) )
         {
-            bot.abzmSimulatedPerks[perkName] = true;
-            abzmLog( "perk bookkeeping only: " + perkName );
+            abzmLog( "perk hook failed: " + perkName );
         }
         else
         {
@@ -607,6 +608,7 @@ abzmRunMapReviveHook( bot, downedPlayer )
     /*
         Map-specific customization point.
         Replace this safe no-op with the correct revive logic for a known map.
+        Return true only when the revive has fully completed.
     */
     return false;
 }
@@ -648,7 +650,8 @@ abzmHandleReviveBehavior( bot, reviveTarget )
 
         if ( abzmRunMapReviveHook( bot, reviveTarget ) )
         {
-            abzmLog( "bot started revive hook" );
+            bot.abzmPoints += getdvarint( "scr_zm_autobots_revive_reward" );
+            abzmLog( "bot completed revive hook" );
         }
         else
         {
@@ -1176,17 +1179,7 @@ abzmRememberOwnedWeapon( bot, weaponName )
 
 abzmTrimBotsToTarget()
 {
-    targetCount = getdvarint( "scr_zm_autobots_count" );
-    if ( targetCount < 0 )
-    {
-        targetCount = 0;
-    }
-    if ( targetCount > ABZM_MAX_BOTS )
-    {
-        targetCount = ABZM_MAX_BOTS;
-    }
-
-    abzmTrimBotsToCount( targetCount );
+    abzmTrimBotsToCount( abzmGetTargetBotCount() );
 }
 
 abzmTrimBotsToCount( targetCount )
@@ -1241,6 +1234,22 @@ abzmCountPendingDropBots()
     return count;
 }
 
+abzmGetTargetBotCount()
+{
+    targetCount = getdvarint( "scr_zm_autobots_count" );
+    if ( targetCount < 0 )
+    {
+        return 0;
+    }
+
+    if ( targetCount > ABZM_MAX_BOTS )
+    {
+        return ABZM_MAX_BOTS;
+    }
+
+    return targetCount;
+}
+
 abzmHasRememberedWeapon( bot, weaponName )
 {
     if ( !isdefined( bot ) || !isdefined( bot.abzmOwnedWeapons ) || !isdefined( weaponName ) )
@@ -1272,11 +1281,6 @@ abzmHasPerk( bot, perkName )
     }
 
     if ( isdefined( bot.abzmPerks[perkName] ) && bot.abzmPerks[perkName] )
-    {
-        return true;
-    }
-
-    if ( getdvarint( "scr_zm_autobots_map_hooks" ) <= 0 && isdefined( bot.abzmSimulatedPerks ) && isdefined( bot.abzmSimulatedPerks[perkName] ) && bot.abzmSimulatedPerks[perkName] )
     {
         return true;
     }
