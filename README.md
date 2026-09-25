@@ -26,5 +26,6 @@ auto_bots_zombies.gsc
   - set scr_zm_autobots_scan_interval_ms 1000
 - uses real Exo Zombies `iw5_*zm_mp` weapon ids already used elsewhere in this repo
 - revive, perk purchase, and exo movement ability hooks are safe no-ops until customized for a specific map
+- `scr_zm_autobots_auto_perks` and `scr_zm_autobots_auto_revive` only take effect after you enable `scr_zm_autobots_map_hooks 1` and implement the corresponding hook bodies
 
 for custom names, put Bots.txt at s1/Bots.txt

@@ -29,6 +29,7 @@
 #define ABZM_DEFAULT_THINK_INTERVAL           0.35
 #define ABZM_DEFAULT_SUPPORT_INTERVAL         1.00
 #define ABZM_DEFAULT_DEBUG_LOG_SECONDS        1.00
+#define ABZM_SPAWN_READY_POLL_COUNT           20
 #define ABZM_MAX_BOTS                         3
 
 main()
@@ -233,18 +234,22 @@ abzmFillBotsToTarget()
             return;
         }
 
-        wait 0.25;
-
-        if ( !isdefined( bot ) )
+        ready = false;
+        for ( readyPoll = 0; readyPoll < ABZM_SPAWN_READY_POLL_COUNT; readyPoll++ )
         {
-            abzmWarnOnce( "spawn_invalid", "spawned bot disconnected before initialization completed" );
-            return;
+            wait 0.05;
+
+            if ( isdefined( bot ) && isdefined( bot.sessionstate ) && isdefined( bot.origin ) )
+            {
+                ready = true;
+                break;
+            }
         }
 
-        if ( !isdefined( bot.sessionstate ) || !isdefined( bot.origin ) )
+        if ( !ready )
         {
             abzmWarnOnce( "spawn_not_live", "spawned bot never reached a live player state" );
-            return;
+            continue;
         }
 
         bot.abzmManaged = true;
@@ -297,6 +302,11 @@ abzmBotMainLoop()
 
     for ( ;; )
     {
+        if ( !abzmIsManagedBot( self ) || ( isdefined( self.abzmPendingDrop ) && self.abzmPendingDrop ) )
+        {
+            return;
+        }
+
         if ( !getdvarint( "scr_zm_autobots_enable" ) )
         {
             wait 1.0;
@@ -318,7 +328,7 @@ abzmBotMainLoop()
         leader = abzmGetFollowLeader();
 
         reviveTarget = undefined;
-        if ( getdvarint( "scr_zm_autobots_auto_revive" ) > 0 )
+        if ( getdvarint( "scr_zm_autobots_auto_revive" ) > 0 && getdvarint( "scr_zm_autobots_map_hooks" ) > 0 )
         {
             reviveTarget = abzmFindNearestDownedHuman( self.origin );
         }
@@ -360,6 +370,11 @@ abzmBotSupportLoop()
 
     for ( ;; )
     {
+        if ( !abzmIsManagedBot( self ) || ( isdefined( self.abzmPendingDrop ) && self.abzmPendingDrop ) )
+        {
+            return;
+        }
+
         if ( !getdvarint( "scr_zm_autobots_enable" ) )
         {
             wait 1.0;
@@ -861,7 +876,7 @@ abzmIsDownedPlayer( player )
         return true;
     }
 
-    if ( isdefined( player.revivetrigger ) || isdefined( player.revive ) || isdefined( player.laststand ) )
+    if ( isdefined( player.revivetrigger ) )
     {
         return true;
     }
