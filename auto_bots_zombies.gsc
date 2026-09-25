@@ -181,7 +181,7 @@ abzmSpecialScannerLoop()
 
     for ( ;; )
     {
-        if ( getdvarint( "scr_zm_autobots_enable" ) > 0 )
+        if ( abzmShouldRunHere() && getdvarint( "scr_zm_autobots_enable" ) > 0 )
         {
             level.abzmKnownZombies = abzmBuildZombieArray();
             level.abzmKnownSpecials = abzmFilterSpecialZombies( level.abzmKnownZombies );
@@ -248,6 +248,10 @@ abzmFillBotsToTarget()
 
         if ( !ready )
         {
+            if ( isdefined( bot ) )
+            {
+                bot bot_drop();
+            }
             abzmWarnOnce( "spawn_not_live", "spawned bot never reached a live player state" );
             continue;
         }
@@ -1455,7 +1459,7 @@ abzmShouldRunHere()
     }
 
     mapname = getdvar( "mapname" );
-    if ( !isdefined( mapname ) && isdefined( level.mapname ) )
+    if ( ( !isdefined( mapname ) || mapname == "" ) && isdefined( level.mapname ) )
     {
         mapname = level.mapname;
     }
