@@ -153,7 +153,7 @@ eebiRefreshState()
 
 eebiWriteAliases( allPlayers, humanPlayers, botPlayers, eligiblePlayers )
 {
-    level.allPlayers = eebiCloneArray( allPlayers );
+    level.eebiAllPlayers = eebiCloneArray( allPlayers );
     level.humanPlayers = eebiCloneArray( humanPlayers );
     level.realPlayers = eebiCloneArray( humanPlayers );
     level.easterEggPlayers = eebiCloneArray( eligiblePlayers );
