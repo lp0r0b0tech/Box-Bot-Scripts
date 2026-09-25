@@ -50,11 +50,7 @@ eebiDeferredInit()
         return;
     }
 
-    level.eebi = spawnstruct();
-    level.eebi.lastHumanCount = -1;
-    level.eebi.lastBotCount = -1;
-    level.eebi.lastEligibleCount = -1;
-
+    eebiEnsureState();
     eebiRefreshState();
 
     level thread eebiRefreshLoop();
@@ -103,6 +99,8 @@ eebiConnectedMonitor()
 
 eebiRefreshState()
 {
+    eebiEnsureState();
+
     allPlayers = getplayers();
     humanPlayers = [];
     botPlayers = [];
@@ -149,6 +147,19 @@ eebiRefreshState()
 
     eebiWriteAliases( allPlayers, humanPlayers, botPlayers, eligiblePlayers );
     eebiMaybeDebugCounts();
+}
+
+eebiEnsureState()
+{
+    if ( isdefined( level.eebi ) )
+    {
+        return;
+    }
+
+    level.eebi = spawnstruct();
+    level.eebi.lastHumanCount = -1;
+    level.eebi.lastBotCount = -1;
+    level.eebi.lastEligibleCount = -1;
 }
 
 eebiWriteAliases( allPlayers, humanPlayers, botPlayers, eligiblePlayers )
