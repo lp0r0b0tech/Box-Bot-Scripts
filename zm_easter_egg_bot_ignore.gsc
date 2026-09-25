@@ -11,12 +11,10 @@
 
     Toggles:
         set scr_zm_ee_ignore_bots 1
-        set scr_zm_ee_shadow_level_players 1
         set scr_zm_ee_ignore_bots_debug 0
 */
 
 #define EEBI_DEFAULT_ENABLED                    1
-#define EEBI_DEFAULT_SHADOW_LEVEL_PLAYERS       1
 #define EEBI_DEFAULT_DEBUG                      0
 #define EEBI_REFRESH_INTERVAL                   0.25
 
@@ -68,7 +66,6 @@ eebiDeferredInit()
 eebiInitDvars()
 {
     setdvarifuninitialized( "scr_zm_ee_ignore_bots", EEBI_DEFAULT_ENABLED );
-    setdvarifuninitialized( "scr_zm_ee_shadow_level_players", EEBI_DEFAULT_SHADOW_LEVEL_PLAYERS );
     setdvarifuninitialized( "scr_zm_ee_ignore_bots_debug", EEBI_DEFAULT_DEBUG );
 }
 
@@ -176,13 +173,6 @@ eebiWriteAliases( allPlayers, humanPlayers, botPlayers, eligiblePlayers )
 
     level.humanPlayerCountAll = humanPlayers.size;
     level.realPlayerCountAll = humanPlayers.size;
-
-    if ( getdvarint( "scr_zm_ee_shadow_level_players" ) > 0 )
-    {
-        level.players = eebiCloneArray( eligiblePlayers );
-        level.playerCount = eligiblePlayers.size;
-        level.playercount = eligiblePlayers.size;
-    }
 }
 
 eebiMaybeDebugCounts()
@@ -294,9 +284,19 @@ eebiIsBotEntity( player )
         return false;
     }
 
+    if ( isdefined( player.isBot ) )
+    {
+        return player.isBot;
+    }
+
     if ( isdefined( player.pers ) && isdefined( player.pers["isBot"] ) )
     {
         return player.pers["isBot"];
+    }
+
+    if ( isdefined( player.pers ) && isdefined( player.pers["eebi_is_bot"] ) )
+    {
+        return player.pers["eebi_is_bot"];
     }
 
     if ( isdefined( player.eebiIsBot ) )
