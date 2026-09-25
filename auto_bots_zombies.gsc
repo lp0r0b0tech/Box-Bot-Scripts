@@ -561,17 +561,17 @@ abzmTryApplyPerks( bot )
             continue;
         }
 
-        if ( !abzmSpendPoints( bot, getdvarint( "scr_zm_autobots_perk_cost" ) ) )
-        {
-            return;
-        }
-
         if ( !abzmRunMapPerkHook( bot, perkName ) )
         {
             abzmLog( "perk hook failed: " + perkName );
         }
         else
         {
+            if ( !abzmSpendPoints( bot, getdvarint( "scr_zm_autobots_perk_cost" ) ) )
+            {
+                return;
+            }
+
             bot.abzmPerks[perkName] = true;
         }
 
@@ -1468,11 +1468,6 @@ abzmLog( message )
 
 abzmWarnOnce( key, message )
 {
-    if ( getdvarint( "scr_zm_autobots_debug" ) <= 0 )
-    {
-        return;
-    }
-
     if ( !isdefined( level.abzmWarned ) )
     {
         level.abzmWarned = [];
