@@ -165,27 +165,13 @@ eebiEnsureState()
 eebiWriteAliases( allPlayers, humanPlayers, botPlayers, eligiblePlayers )
 {
     level.eebiAllPlayers = eebiCloneArray( allPlayers );
-    level.humanPlayers = eebiCloneArray( humanPlayers );
-    level.realPlayers = eebiCloneArray( humanPlayers );
-    level.easterEggPlayers = eebiCloneArray( eligiblePlayers );
-    level.eggPlayers = eebiCloneArray( eligiblePlayers );
-    level.questPlayers = eebiCloneArray( eligiblePlayers );
+    level.eebiHumanPlayers = eebiCloneArray( humanPlayers );
+    level.eebiEligiblePlayers = eebiCloneArray( eligiblePlayers );
+    level.eebiBotPlayers = eebiCloneArray( botPlayers );
 
-    level.allHumanPlayers = eebiCloneArray( humanPlayers );
-    level.allRealPlayers = eebiCloneArray( humanPlayers );
-    level.eligibleHumanPlayers = eebiCloneArray( eligiblePlayers );
-    level.botPlayers = eebiCloneArray( botPlayers );
-
-    level.humanPlayerCount = humanPlayers.size;
-    level.realPlayerCount = humanPlayers.size;
-    level.easterEggPlayerCount = eligiblePlayers.size;
-    level.eePlayerCount = eligiblePlayers.size;
-    level.questPlayerCount = eligiblePlayers.size;
-    level.eligibleHumanPlayerCount = eligiblePlayers.size;
-    level.botPlayerCount = botPlayers.size;
-
-    level.allHumanPlayerCount = humanPlayers.size;
-    level.allRealPlayerCount = humanPlayers.size;
+    level.eebiHumanPlayerCount = humanPlayers.size;
+    level.eebiEligiblePlayerCount = eligiblePlayers.size;
+    level.eebiBotPlayerCount = botPlayers.size;
 }
 
 eebiMaybeDebugCounts()
@@ -240,22 +226,14 @@ eebiTagPlayer( player, isBot )
     if ( isdefined( player.pers ) )
     {
         player.pers["eebi_is_bot"] = isBot;
-        player.pers["countsForEasterEgg"] = !isBot;
-        player.pers["ee_counts_as_player"] = !isBot;
-        player.pers["ee_ignore"] = isBot;
-        player.pers["egg_ignore"] = isBot;
-        player.pers["easter_egg_ignore"] = isBot;
-        player.pers["ignore_player_requirements"] = isBot;
-        player.pers["skip_ee_player_checks"] = isBot;
+        player.pers["eebi_counts_for_easter_egg"] = !isBot;
+        player.pers["eebi_ignore_easter_egg"] = isBot;
     }
 
-    player.countsForEasterEgg = !isBot;
-    player.eeCountsAsPlayer = !isBot;
-    player.eeIgnore = isBot;
-    player.eggIgnore = isBot;
-    player.easterEggIgnore = isBot;
+    player.eebiCountsForEasterEgg = !isBot;
+    player.eebiIgnoreEasterEgg = isBot;
     player.eebiIsBot = isBot;
-    player.isRealPlayer = !isBot;
+    player.eebiIsRealPlayer = !isBot;
 }
 
 eebiIsPlayerCountable( player )
