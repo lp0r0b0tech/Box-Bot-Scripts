@@ -1173,7 +1173,6 @@ abzmTrimBotsToTarget()
         extraBot = level.abzmBots[i];
         if ( isdefined( extraBot ) )
         {
-            extraBot.abzmManaged = false;
             extraBot bot_drop();
             abzmLog( "trimmed teammate bot slot " + extraBot.abzmSlot );
         }
@@ -1313,7 +1312,7 @@ abzmShouldRunHere()
         return true;
     }
 
-    if ( isdefined( level.playlist ) && ( abzmStringContainsToken( level.playlist, "zombie" ) || abzmStringContainsToken( level.playlist, "infect" ) ) )
+    if ( isdefined( level.playlist ) && abzmStringContainsToken( level.playlist, "zombie" ) )
     {
         return true;
     }
