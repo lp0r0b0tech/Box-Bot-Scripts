@@ -198,7 +198,7 @@ abzmRefreshBotRoster()
     for ( i = 0; i < players.size; i++ )
     {
         player = players[i];
-        if ( abzmIsManagedBot( player ) )
+        if ( abzmIsManagedBot( player ) && ( !isdefined( player.abzmPendingDrop ) || !player.abzmPendingDrop ) )
         {
             fresh[fresh.size] = player;
         }
@@ -224,7 +224,9 @@ abzmFillBotsToTarget()
         targetCount = ABZM_MAX_BOTS;
     }
 
-    while ( level.abzmBots.size < targetCount )
+    activeCount = level.abzmBots.size + abzmCountPendingDropBots();
+
+    while ( activeCount < targetCount )
     {
         bot = addtestclient();
         if ( !isdefined( bot ) )
@@ -236,6 +238,7 @@ abzmFillBotsToTarget()
         wait 0.25;
 
         bot.abzmManaged = true;
+        bot.abzmPendingDrop = false;
         bot.abzmSlot = level.abzmBots.size;
 
         if ( isdefined( bot.pers ) )
@@ -247,6 +250,7 @@ abzmFillBotsToTarget()
         abzmGiveProgressionWeapon( bot, 0, true );
 
         level.abzmBots[level.abzmBots.size] = bot;
+        activeCount++;
 
         bot thread abzmBotMainLoop();
         bot thread abzmBotSupportLoop();
@@ -431,6 +435,7 @@ abzmGiveProgressionWeapon( bot, weaponIndex, isInitialGive )
     fallbackWeapon = level.abzmWeaponProgression[0];
 
     bot takeallweapons();
+    bot.abzmOwnedWeapons = [];
     bot giveweapon( fallbackWeapon );
     bot givemaxammo( fallbackWeapon );
 
@@ -922,11 +927,29 @@ abzmAppendEntArray( destination, source )
 
     for ( i = 0; i < source.size; i++ )
     {
-        if ( isdefined( source[i] ) )
+        if ( isdefined( source[i] ) && !abzmArrayContainsEntity( destination, source[i] ) )
         {
             destination[destination.size] = source[i];
         }
     }
+}
+
+abzmArrayContainsEntity( entities, target )
+{
+    if ( !isdefined( entities ) || !isdefined( target ) )
+    {
+        return false;
+    }
+
+    for ( i = 0; i < entities.size; i++ )
+    {
+        if ( isdefined( entities[i] ) && entities[i] == target )
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 abzmGetCachedZombieArray()
@@ -1173,12 +1196,36 @@ abzmTrimBotsToTarget()
         extraBot = level.abzmBots[i];
         if ( isdefined( extraBot ) )
         {
+            extraBot.abzmManaged = false;
+            extraBot.abzmPendingDrop = true;
             extraBot bot_drop();
             abzmLog( "trimmed teammate bot slot " + extraBot.abzmSlot );
         }
     }
 
     level.abzmBots = trimmed;
+}
+
+abzmCountPendingDropBots()
+{
+    players = getplayers();
+    count = 0;
+
+    if ( !isdefined( players ) )
+    {
+        return 0;
+    }
+
+    for ( i = 0; i < players.size; i++ )
+    {
+        player = players[i];
+        if ( isdefined( player ) && isdefined( player.abzmPendingDrop ) && player.abzmPendingDrop )
+        {
+            count++;
+        }
+    }
+
+    return count;
 }
 
 abzmHasRememberedWeapon( bot, weaponName )
