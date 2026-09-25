@@ -160,8 +160,8 @@ eebiWriteAliases( allPlayers, humanPlayers, botPlayers, eligiblePlayers )
     level.eggPlayers = eebiCloneArray( eligiblePlayers );
     level.questPlayers = eebiCloneArray( eligiblePlayers );
 
-    level.humanPlayersAll = eebiCloneArray( humanPlayers );
-    level.realPlayersAll = eebiCloneArray( humanPlayers );
+    level.allHumanPlayers = eebiCloneArray( humanPlayers );
+    level.allRealPlayers = eebiCloneArray( humanPlayers );
     level.eligibleHumanPlayers = eebiCloneArray( eligiblePlayers );
     level.botPlayers = eebiCloneArray( botPlayers );
 
@@ -173,8 +173,8 @@ eebiWriteAliases( allPlayers, humanPlayers, botPlayers, eligiblePlayers )
     level.eligibleHumanPlayerCount = eligiblePlayers.size;
     level.botPlayerCount = botPlayers.size;
 
-    level.humanPlayerCountAll = humanPlayers.size;
-    level.realPlayerCountAll = humanPlayers.size;
+    level.allHumanPlayerCount = humanPlayers.size;
+    level.allRealPlayerCount = humanPlayers.size;
 }
 
 eebiMaybeDebugCounts()
