@@ -36,7 +36,7 @@ init()
 
 eebiDeferredInit()
 {
-    wait 0.25;
+    wait EEBI_REFRESH_INTERVAL;
 
     if ( !eebiIsZombieContext() )
     {
