@@ -27,4 +27,4 @@ auto_bots_zombies.gsc
 - uses real Exo Zombies `iw5_*zm_mp` weapon ids already used elsewhere in this repo
 - revive, perk purchase, and exo movement ability hooks are safe no-ops until customized for a specific map
 
-for custom names, put Bots.txt next to the scripts folder you made
+for custom names, put Bots.txt at s1/Bots.txt

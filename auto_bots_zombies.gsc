@@ -241,7 +241,7 @@ abzmFillBotsToTarget()
             return;
         }
 
-        if ( !isdefined( bot.sessionstate ) && !isdefined( bot.origin ) )
+        if ( !isdefined( bot.sessionstate ) || !isdefined( bot.origin ) )
         {
             abzmWarnOnce( "spawn_not_live", "spawned bot never reached a live player state" );
             return;
@@ -287,6 +287,7 @@ abzmInitBotState( bot )
     bot.abzmLastWeaponBuyTime = 0;
     bot.abzmLastAmmoFillTime = 0;
     bot.abzmLastPerkTime = 0;
+    bot.abzmWasAlive = false;
 }
 
 abzmBotMainLoop()
@@ -304,8 +305,14 @@ abzmBotMainLoop()
 
         if ( !isalive( self ) )
         {
+            self.abzmWasAlive = false;
             wait 1.0;
             continue;
+        }
+
+        if ( !isdefined( self.abzmWasAlive ) || !self.abzmWasAlive )
+        {
+            abzmResetBotLifeState( self );
         }
 
         leader = abzmGetFollowLeader();
@@ -361,6 +368,11 @@ abzmBotSupportLoop()
 
         if ( isalive( self ) )
         {
+            if ( !isdefined( self.abzmWasAlive ) || !self.abzmWasAlive )
+            {
+                abzmResetBotLifeState( self );
+            }
+
             abzmTickBotPoints( self );
 
             if ( getdvarint( "scr_zm_autobots_auto_progress" ) > 0 )
@@ -378,9 +390,29 @@ abzmBotSupportLoop()
                 abzmTryApplyPerks( self );
             }
         }
+        else
+        {
+            self.abzmWasAlive = false;
+        }
 
         wait ABZM_DEFAULT_SUPPORT_INTERVAL;
     }
+}
+
+abzmResetBotLifeState( bot )
+{
+    if ( !isdefined( bot ) )
+    {
+        return;
+    }
+
+    bot.abzmLastSupportTime = 0;
+    bot.abzmLastReviveAttempt = 0;
+    bot.abzmLastExoHookAttempt = 0;
+    bot.abzmLastWeaponBuyTime = 0;
+    bot.abzmLastAmmoFillTime = 0;
+    bot.abzmLastPerkTime = 0;
+    bot.abzmWasAlive = true;
 }
 
 abzmTickBotPoints( bot )
@@ -1477,7 +1509,7 @@ abzmLog( message )
         now = level.time;
     }
 
-    minGapMs = int( getdvarint( "scr_zm_autobots_debug_log_seconds" ) * 1000.0 );
+    minGapMs = int( getdvarfloat( "scr_zm_autobots_debug_log_seconds" ) * 1000.0 );
     if ( minGapMs < 0 )
     {
         minGapMs = 0;
