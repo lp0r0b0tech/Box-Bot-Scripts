@@ -337,5 +337,5 @@ eebiIsKnownZombieMap( mapname )
         return true;
     }
 
-    return issubstr( lowerMap, "zombie" );
+    return false;
 }
