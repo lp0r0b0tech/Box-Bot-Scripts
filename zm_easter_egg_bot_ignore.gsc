@@ -51,16 +51,13 @@ eebiDeferredInit()
 
     eebiInitDvars();
 
-    if ( getdvarint( "scr_zm_ee_ignore_bots" ) <= 0 )
-    {
-        level.eebiInitPending = false;
-        return;
-    }
-
     eebiEnsureState();
-    eebiRefreshState();
-
     level thread eebiRefreshLoop();
+
+    if ( getdvarint( "scr_zm_ee_ignore_bots" ) > 0 )
+    {
+        eebiRefreshState();
+    }
 
     level.eebiInitStarted = true;
     level.eebiInitPending = false;
@@ -250,15 +247,15 @@ eebiClearPlayerTags( player )
 
     if ( isdefined( player.pers ) )
     {
-        player.pers["eebi_is_bot"] = false;
-        player.pers["eebi_counts_for_easter_egg"] = false;
-        player.pers["eebi_ignore_easter_egg"] = false;
+        player.pers["eebi_is_bot"] = undefined;
+        player.pers["eebi_counts_for_easter_egg"] = undefined;
+        player.pers["eebi_ignore_easter_egg"] = undefined;
     }
 
-    player.eebiCountsForEasterEgg = false;
-    player.eebiIgnoreEasterEgg = false;
-    player.eebiIsBot = false;
-    player.eebiIsRealPlayer = false;
+    player.eebiCountsForEasterEgg = undefined;
+    player.eebiIgnoreEasterEgg = undefined;
+    player.eebiIsBot = undefined;
+    player.eebiIsRealPlayer = undefined;
 }
 
 eebiIsPlayerCountable( player )
