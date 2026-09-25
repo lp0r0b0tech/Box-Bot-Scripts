@@ -154,7 +154,7 @@ eebiRefreshState()
     level.eebi.eligibleCount = eligiblePlayers.size;
     level.eebi.active = true;
 
-    eebiShadowQuestPlayers();
+    eebiApplyQuestPlayerShadow();
     eebiWriteAliases();
     eebiMaybeDebugCounts();
 }
@@ -225,10 +225,16 @@ eebiWriteAliases()
     level.eebiOriginalPlayerCount = level.eebi.originalPlayerCount;
 }
 
-eebiShadowQuestPlayers()
+eebiApplyQuestPlayerShadow()
 {
     if ( !isdefined( level.eebi ) )
     {
+        return;
+    }
+
+    if ( !eebiShouldShadowQuestPlayers() )
+    {
+        eebiRestoreQuestPlayers();
         return;
     }
 
@@ -248,6 +254,31 @@ eebiRestoreQuestPlayers()
     level.players = eebiCopyEntityArray( restoredPlayers );
     level.playerCount = restoredPlayers.size;
     level.playercount = restoredPlayers.size;
+}
+
+eebiShouldShadowQuestPlayers()
+{
+    if ( !eebiIsKnownEeQuestMap( getdvar( "mapname" ) ) )
+    {
+        return false;
+    }
+
+    if ( !isdefined( level.eebi ) )
+    {
+        return false;
+    }
+
+    if ( !isdefined( level.eebi.botCount ) || level.eebi.botCount <= 0 )
+    {
+        return false;
+    }
+
+    if ( !isdefined( level.eebi.eligibleCount ) || level.eebi.eligibleCount <= 0 )
+    {
+        return false;
+    }
+
+    return true;
 }
 
 eebiArrayContainsEntity( entities, target )
@@ -440,24 +471,24 @@ eebiIsKnownZombieMap( mapname )
 
     lowerMap = toLower( mapname + "" );
 
-    if ( ( strlen( lowerMap ) >= 3 && getsubstr( lowerMap, 0, 3 ) == "zm_" ) ||
-         ( strlen( lowerMap ) >= 6 && getsubstr( lowerMap, 0, 6 ) == "mp_zm_" ) ||
-         ( strlen( lowerMap ) >= 10 && getsubstr( lowerMap, 0, 10 ) == "mp_zombie_" ) )
+    return eebiIsKnownEeQuestMap( lowerMap );
+}
+
+eebiIsKnownEeQuestMap( mapname )
+{
+    if ( !isdefined( mapname ) )
     {
-        return true;
+        return false;
     }
 
-    if ( lowerMap == "mp_zombie_lab" ||
-         lowerMap == "mp_zombie_ark" ||
-         lowerMap == "mp_zombie_brg" ||
-         lowerMap == "mp_zombie_h2o" ||
-         lowerMap == "zombie_outbreak" ||
-         lowerMap == "zombie_infection" ||
-         lowerMap == "zombie_carrier" ||
-         lowerMap == "zombie_descent" )
-    {
-        return true;
-    }
+    lowerMap = toLower( mapname + "" );
 
-    return false;
+    return lowerMap == "mp_zombie_lab" ||
+        lowerMap == "mp_zombie_ark" ||
+        lowerMap == "mp_zombie_brg" ||
+        lowerMap == "mp_zombie_h2o" ||
+        lowerMap == "zombie_outbreak" ||
+        lowerMap == "zombie_infection" ||
+        lowerMap == "zombie_carrier" ||
+        lowerMap == "zombie_descent";
 }
