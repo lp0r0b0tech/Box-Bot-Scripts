@@ -555,10 +555,16 @@ abzmTryApplyPerks( bot )
     for ( i = 0; i < level.abzmPerkPriority.size; i++ )
     {
         perkName = level.abzmPerkPriority[i];
+        perkCost = getdvarint( "scr_zm_autobots_perk_cost" );
 
         if ( abzmHasPerk( bot, perkName ) )
         {
             continue;
+        }
+
+        if ( !abzmCanSpendPoints( bot, perkCost ) )
+        {
+            return;
         }
 
         if ( !abzmRunMapPerkHook( bot, perkName ) )
@@ -567,11 +573,7 @@ abzmTryApplyPerks( bot )
         }
         else
         {
-            if ( !abzmSpendPoints( bot, getdvarint( "scr_zm_autobots_perk_cost" ) ) )
-            {
-                return;
-            }
-
+            bot.abzmPoints -= perkCost;
             bot.abzmPerks[perkName] = true;
         }
 
@@ -1327,6 +1329,26 @@ abzmSpendPoints( bot, cost )
 
     bot.abzmPoints -= cost;
     return true;
+}
+
+abzmCanSpendPoints( bot, cost )
+{
+    if ( !isdefined( bot ) )
+    {
+        return false;
+    }
+
+    if ( cost < 0 )
+    {
+        cost = 0;
+    }
+
+    if ( !isdefined( bot.abzmPoints ) )
+    {
+        bot.abzmPoints = 0;
+    }
+
+    return bot.abzmPoints >= cost;
 }
 
 abzmIsManagedBot( entity )

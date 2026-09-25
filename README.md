@@ -23,6 +23,7 @@ auto_bots_zombies.gsc
   - set scr_zm_autobots_auto_perks 1
   - set scr_zm_autobots_auto_revive 1 (attempts revive routing only after you wire a real map revive hook)
   - set scr_zm_autobots_map_hooks 0 (source-customization hook switch; default hook bodies are safe no-ops)
+  - set scr_zm_autobots_scan_interval_ms 1000
 - uses real Exo Zombies `iw5_*zm_mp` weapon ids already used elsewhere in this repo
 - revive, perk purchase, and exo movement ability hooks are safe no-ops until customized for a specific map
 
