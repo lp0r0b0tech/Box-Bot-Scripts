@@ -139,8 +139,6 @@ abzmInitSpecialKeywords()
 
     level.abzmSpecialKeywordGroups.breacher = [];
     level.abzmSpecialKeywordGroups.breacher[level.abzmSpecialKeywordGroups.breacher.size] = "breacher";
-    level.abzmSpecialKeywordGroups.breacher[level.abzmSpecialKeywordGroups.breacher.size] = "bomber";
-    level.abzmSpecialKeywordGroups.breacher[level.abzmSpecialKeywordGroups.breacher.size] = "exploder";
 
     level.abzmSpecialKeywordGroups.other = [];
     level.abzmSpecialKeywordGroups.other[level.abzmSpecialKeywordGroups.other.size] = "infected";
@@ -243,6 +241,12 @@ abzmFillBotsToTarget()
             return;
         }
 
+        if ( !isdefined( bot.sessionstate ) && !isdefined( bot.origin ) )
+        {
+            abzmWarnOnce( "spawn_not_live", "spawned bot never reached a live player state" );
+            return;
+        }
+
         bot.abzmManaged = true;
         bot.abzmPendingDrop = false;
         bot.abzmSlot = level.abzmBots.size;
@@ -319,17 +323,17 @@ abzmBotMainLoop()
             continue;
         }
 
-        if ( abzmTooManyZombiesNearby( self.origin, 220, 6 ) )
-        {
-            abzmHandleEscapeBehavior( self, leader );
-            wait ABZM_DEFAULT_THINK_INTERVAL;
-            continue;
-        }
-
         threat = abzmFindBestThreatForBot( self );
         if ( isdefined( threat ) )
         {
             abzmHandleThreatBehavior( self, threat, leader );
+            wait ABZM_DEFAULT_THINK_INTERVAL;
+            continue;
+        }
+
+        if ( abzmTooManyZombiesNearby( self.origin, 220, 6 ) )
+        {
+            abzmHandleEscapeBehavior( self, leader );
             wait ABZM_DEFAULT_THINK_INTERVAL;
             continue;
         }
