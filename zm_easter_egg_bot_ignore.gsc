@@ -297,12 +297,12 @@ eebiIsBotEntity( player )
 
     if ( isdefined( player.isBot ) )
     {
-        return player.isBot;
+        return eebiValueIsTrue( player.isBot );
     }
 
     if ( isdefined( player.pers ) && isdefined( player.pers["isBot"] ) )
     {
-        return player.pers["isBot"];
+        return eebiValueIsTrue( player.pers["isBot"] );
     }
 
     if ( isdefined( player.pers ) && isdefined( player.pers["eebi_is_bot"] ) )
@@ -316,6 +316,17 @@ eebiIsBotEntity( player )
     }
 
     return false;
+}
+
+eebiValueIsTrue( value )
+{
+    if ( !isdefined( value ) )
+    {
+        return false;
+    }
+
+    stringValue = toLower( value + "" );
+    return stringValue == "1" || stringValue == "true" || stringValue == "yes" || stringValue == "bot";
 }
 
 eebiIsZombieContext()
