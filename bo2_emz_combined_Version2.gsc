@@ -8,7 +8,7 @@ init()
 {
     // ---------------- BO2 scaling settings ----------------
     level.bo2_health_cap = 30000;
-    level.bo2_speed_cap = 1.0; // 1.0 = normal speed, 0.75 = 75%
+    level.bo2_speed_cap = 0.75; // 1.0 = normal speed, 0.75 = 75%
 
     level.bo2_last_round = -1;
     level.bo2_health = 150;
