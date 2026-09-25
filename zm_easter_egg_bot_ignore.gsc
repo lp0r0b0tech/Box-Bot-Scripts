@@ -145,7 +145,7 @@ eebiRefreshState()
     level.eebi.humanPlayers = humanPlayers;
     level.eebi.botPlayers = botPlayers;
     level.eebi.eligiblePlayers = eligiblePlayers;
-    level.eebi.taggedPlayers = allPlayers;
+    level.eebi.taggedPlayers = eebiCopyEntityArray( allPlayers );
 
     level.eebi.humanCount = humanPlayers.size;
     level.eebi.botCount = botPlayers.size;
@@ -233,6 +233,23 @@ eebiArrayContainsEntity( entities, target )
     }
 
     return false;
+}
+
+eebiCopyEntityArray( entities )
+{
+    copy = [];
+
+    if ( !isdefined( entities ) )
+    {
+        return copy;
+    }
+
+    for ( i = 0; i < entities.size; i++ )
+    {
+        copy[copy.size] = entities[i];
+    }
+
+    return copy;
 }
 
 eebiMaybeDebugCounts()
