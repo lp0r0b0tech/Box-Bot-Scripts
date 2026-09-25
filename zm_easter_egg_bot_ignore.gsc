@@ -73,11 +73,6 @@ eebiRefreshLoop()
     {
         if ( getdvarint( "scr_zm_ee_ignore_bots" ) > 0 )
         {
-            if ( isdefined( level.eebiRefreshRequested ) )
-            {
-                level.eebiRefreshRequested = false;
-            }
-
             eebiRefreshState();
         }
 
@@ -97,7 +92,6 @@ eebiConnectedMonitor()
         {
             wait 0.05;
             eebiTagPlayer( player, eebiIsBotEntity( player ) );
-            level.eebiRefreshRequested = true;
         }
     }
 }
@@ -202,23 +196,6 @@ eebiMaybeDebugCounts()
         " eligible=" + level.eebi.eligibleCount +
         " bots=" + level.eebi.botCount
     );
-}
-
-eebiCloneArray( source )
-{
-    result = [];
-
-    if ( !isdefined( source ) )
-    {
-        return result;
-    }
-
-    for ( i = 0; i < source.size; i++ )
-    {
-        result[result.size] = source[i];
-    }
-
-    return result;
 }
 
 eebiTagPlayer( player, isBot )
