@@ -101,6 +101,13 @@ eebiRefreshState()
 {
     eebiEnsureState();
 
+    if ( isdefined( level.eebiRefreshBusy ) && level.eebiRefreshBusy )
+    {
+        return;
+    }
+
+    level.eebiRefreshBusy = true;
+
     allPlayers = getplayers();
     humanPlayers = [];
     botPlayers = [];
@@ -147,6 +154,7 @@ eebiRefreshState()
 
     eebiWriteAliases( allPlayers, humanPlayers, botPlayers, eligiblePlayers );
     eebiMaybeDebugCounts();
+    level.eebiRefreshBusy = false;
 }
 
 eebiEnsureState()
@@ -319,12 +327,12 @@ eebiIsZombieContext()
         return true;
     }
 
-    if ( isdefined( level.gametype ) && eebiStringContainsToken( level.gametype, "zom" ) )
+    if ( isdefined( level.gametype ) && eebiStringStartsWithToken( level.gametype, "zom" ) )
     {
         return true;
     }
 
-    if ( eebiDvarContainsToken( "ui_gametype", "zom" ) || eebiDvarContainsToken( "g_gametype", "zom" ) )
+    if ( eebiDvarStartsWithToken( "ui_gametype", "zom" ) || eebiDvarStartsWithToken( "g_gametype", "zom" ) )
     {
         return true;
     }
@@ -332,9 +340,9 @@ eebiIsZombieContext()
     return eebiIsKnownZombieMap( getdvar( "mapname" ) );
 }
 
-eebiDvarContainsToken( dvarName, token )
+eebiDvarStartsWithToken( dvarName, token )
 {
-    return eebiStringContainsToken( getdvar( dvarName ), token );
+    return eebiStringStartsWithToken( getdvar( dvarName ), token );
 }
 
 eebiStringContainsToken( value, token )
@@ -345,6 +353,24 @@ eebiStringContainsToken( value, token )
     }
 
     return issubstr( toLower( value + "" ), toLower( token + "" ) );
+}
+
+eebiStringStartsWithToken( value, token )
+{
+    if ( !isdefined( value ) || !isdefined( token ) )
+    {
+        return false;
+    }
+
+    lowerValue = toLower( value + "" );
+    lowerToken = toLower( token + "" );
+
+    if ( strlen( lowerValue ) < strlen( lowerToken ) )
+    {
+        return false;
+    }
+
+    return getsubstr( lowerValue, 0, strlen( lowerToken ) ) == lowerToken;
 }
 
 eebiIsKnownZombieMap( mapname )
