@@ -146,12 +146,15 @@ eebiRefreshState()
     level.eebi.botPlayers = botPlayers;
     level.eebi.eligiblePlayers = eligiblePlayers;
     level.eebi.taggedPlayers = eebiCopyEntityArray( allPlayers );
+    level.eebi.originalPlayers = eebiCopyEntityArray( allPlayers );
+    level.eebi.originalPlayerCount = allPlayers.size;
 
     level.eebi.humanCount = humanPlayers.size;
     level.eebi.botCount = botPlayers.size;
     level.eebi.eligibleCount = eligiblePlayers.size;
     level.eebi.active = true;
 
+    eebiShadowQuestPlayers();
     eebiWriteAliases();
     eebiMaybeDebugCounts();
 }
@@ -178,6 +181,8 @@ eebiResetPublishedState()
     level.eebi.botPlayers = [];
     level.eebi.eligiblePlayers = [];
     level.eebi.taggedPlayers = [];
+    level.eebi.originalPlayers = [];
+    level.eebi.originalPlayerCount = 0;
 
     level.eebi.humanCount = 0;
     level.eebi.botCount = 0;
@@ -202,6 +207,7 @@ eebiDisableState()
         }
     }
 
+    eebiRestoreQuestPlayers();
     eebiResetPublishedState();
 }
 
@@ -215,6 +221,33 @@ eebiWriteAliases()
     level.eebiHumanPlayerCount = level.eebi.humanCount;
     level.eebiEligiblePlayerCount = level.eebi.eligibleCount;
     level.eebiBotPlayerCount = level.eebi.botCount;
+    level.eebiOriginalPlayers = level.eebi.originalPlayers;
+    level.eebiOriginalPlayerCount = level.eebi.originalPlayerCount;
+}
+
+eebiShadowQuestPlayers()
+{
+    if ( !isdefined( level.eebi ) )
+    {
+        return;
+    }
+
+    level.players = eebiCopyEntityArray( level.eebi.eligiblePlayers );
+    level.playerCount = level.eebi.eligibleCount;
+    level.playercount = level.eebi.eligibleCount;
+}
+
+eebiRestoreQuestPlayers()
+{
+    restoredPlayers = getplayers();
+    if ( !isdefined( restoredPlayers ) )
+    {
+        restoredPlayers = [];
+    }
+
+    level.players = eebiCopyEntityArray( restoredPlayers );
+    level.playerCount = restoredPlayers.size;
+    level.playercount = restoredPlayers.size;
 }
 
 eebiArrayContainsEntity( entities, target )
@@ -415,9 +448,13 @@ eebiIsKnownZombieMap( mapname )
     }
 
     if ( lowerMap == "mp_zombie_lab" ||
-         lowerMap == "mp_zombie_school" ||
-         lowerMap == "mp_zombie_carrier" ||
-         lowerMap == "mp_zombie_descent" )
+         lowerMap == "mp_zombie_ark" ||
+         lowerMap == "mp_zombie_brg" ||
+         lowerMap == "mp_zombie_h2o" ||
+         lowerMap == "zombie_outbreak" ||
+         lowerMap == "zombie_infection" ||
+         lowerMap == "zombie_carrier" ||
+         lowerMap == "zombie_descent" )
     {
         return true;
     }
