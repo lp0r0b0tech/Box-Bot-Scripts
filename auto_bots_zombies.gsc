@@ -436,7 +436,9 @@ abzmGiveProgressionWeapon( bot, weaponIndex, isInitialGive )
 
     if ( weaponName != fallbackWeapon )
     {
+        bot giveweapon( fallbackWeapon );
         bot givemaxammo( fallbackWeapon );
+        abzmRememberOwnedWeapon( bot, fallbackWeapon );
     }
 
     abzmRememberOwnedWeapon( bot, weaponName );
@@ -492,6 +494,20 @@ abzmNeedsAmmo( bot )
     if ( !isdefined( bot ) )
     {
         return false;
+    }
+
+    weaponName = abzmGetCurrentWeaponName( bot );
+    clipAmmo = bot getweaponammoclip( weaponName );
+    stockAmmo = bot getweaponammostock( weaponName );
+
+    if ( isdefined( clipAmmo ) && clipAmmo <= 4 )
+    {
+        return true;
+    }
+
+    if ( isdefined( stockAmmo ) && stockAmmo <= 24 )
+    {
+        return true;
     }
 
     if ( isdefined( bot.clipammo ) && bot.clipammo <= 4 )
@@ -1225,7 +1241,7 @@ abzmShouldRunHere()
         return true;
     }
 
-    if ( isdefined( level.playlist ) && ( abzmStringContainsToken( level.playlist, "zombie" ) || abzmStringContainsToken( level.playlist, "exo" ) ) )
+    if ( isdefined( level.playlist ) && ( abzmStringContainsToken( level.playlist, "zombie" ) || abzmStringContainsToken( level.playlist, "infect" ) ) )
     {
         return true;
     }
@@ -1317,6 +1333,11 @@ abzmLog( message )
 
 abzmWarnOnce( key, message )
 {
+    if ( getdvarint( "scr_zm_autobots_debug" ) <= 0 )
+    {
+        return;
+    }
+
     if ( !isdefined( level.abzmWarned ) )
     {
         level.abzmWarned = [];
