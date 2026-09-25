@@ -161,6 +161,7 @@ abzmManagerLoop()
         }
 
         abzmRefreshBotRoster();
+        abzmTrimBotsToTarget();
         abzmFillBotsToTarget();
 
         wait 1.0;
@@ -266,6 +267,7 @@ abzmInitBotState( bot )
     bot.abzmWeaponIndex = 0;
     bot.abzmOwnedWeapons = [];
     bot.abzmPerks = [];
+    bot.abzmSimulatedPerks = [];
     bot.abzmLastSupportTime = 0;
     bot.abzmLastReviveAttempt = 0;
     bot.abzmLastExoHookAttempt = 0;
@@ -551,7 +553,7 @@ abzmTryApplyPerks( bot )
 
         if ( !abzmRunMapPerkHook( bot, perkName ) )
         {
-            bot.abzmPerks[perkName] = true;
+            bot.abzmSimulatedPerks[perkName] = true;
             abzmLog( "perk bookkeeping only: " + perkName );
         }
         else
@@ -633,8 +635,7 @@ abzmHandleReviveBehavior( bot, reviveTarget )
 
         if ( abzmRunMapReviveHook( bot, reviveTarget ) )
         {
-            bot.abzmPoints += getdvarint( "scr_zm_autobots_revive_reward" );
-            abzmLog( "bot completed revive hook" );
+            bot thread abzmFinalizeReviveReward( reviveTarget );
         }
         else
         {
@@ -657,6 +658,22 @@ abzmHandleEscapeBehavior( bot, leader )
     {
         abzmWarnOnce( "exo_hook_" + bot.abzmSlot, "exo movement hook is map-specific and disabled by default for bot slot " + bot.abzmSlot );
     }
+}
+
+abzmFinalizeReviveReward( reviveTarget )
+{
+    self endon( "disconnect" );
+    level endon( "game_ended" );
+
+    wait 0.50;
+
+    if ( !isdefined( reviveTarget ) || abzmIsDownedPlayer( reviveTarget ) )
+    {
+        return;
+    }
+
+    self.abzmPoints += getdvarint( "scr_zm_autobots_revive_reward" );
+    abzmLog( "bot completed revive hook" );
 }
 
 abzmHandleThreatBehavior( bot, threat, leader )
@@ -1123,6 +1140,39 @@ abzmRememberOwnedWeapon( bot, weaponName )
     bot.abzmOwnedWeapons[bot.abzmOwnedWeapons.size] = weaponName;
 }
 
+abzmTrimBotsToTarget()
+{
+    if ( !isdefined( level.abzmBots ) )
+    {
+        return;
+    }
+
+    targetCount = getdvarint( "scr_zm_autobots_count" );
+    if ( targetCount < 0 )
+    {
+        targetCount = 0;
+    }
+    if ( targetCount > ABZM_MAX_BOTS )
+    {
+        targetCount = ABZM_MAX_BOTS;
+    }
+
+    while ( level.abzmBots.size > targetCount )
+    {
+        extraBot = level.abzmBots[level.abzmBots.size - 1];
+        if ( !isdefined( extraBot ) )
+        {
+            level.abzmBots[level.abzmBots.size - 1] = undefined;
+            return;
+        }
+
+        extraBot.abzmManaged = false;
+        extraBot bot_drop();
+        abzmLog( "trimmed teammate bot slot " + extraBot.abzmSlot );
+        return;
+    }
+}
+
 abzmHasRememberedWeapon( bot, weaponName )
 {
     if ( !isdefined( bot ) || !isdefined( bot.abzmOwnedWeapons ) || !isdefined( weaponName ) )
@@ -1153,7 +1203,17 @@ abzmHasPerk( bot, perkName )
         return false;
     }
 
-    return isdefined( bot.abzmPerks[perkName] ) && bot.abzmPerks[perkName];
+    if ( isdefined( bot.abzmPerks[perkName] ) && bot.abzmPerks[perkName] )
+    {
+        return true;
+    }
+
+    if ( getdvarint( "scr_zm_autobots_map_hooks" ) <= 0 && isdefined( bot.abzmSimulatedPerks ) && isdefined( bot.abzmSimulatedPerks[perkName] ) && bot.abzmSimulatedPerks[perkName] )
+    {
+        return true;
+    }
+
+    return false;
 }
 
 abzmGetCurrentWeaponName( bot )
