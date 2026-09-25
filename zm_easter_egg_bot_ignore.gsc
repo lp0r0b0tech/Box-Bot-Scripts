@@ -61,7 +61,6 @@ eebiDeferredInit()
     eebiRefreshState();
 
     level thread eebiRefreshLoop();
-    level thread eebiConnectedMonitor();
 
     level.eebiInitStarted = true;
     level.eebiInitPending = false;
@@ -89,22 +88,6 @@ eebiRefreshLoop()
     }
 }
 
-eebiConnectedMonitor()
-{
-    level endon( "game_ended" );
-
-    for ( ;; )
-    {
-        level waittill( "connected", player );
-
-        if ( isdefined( player ) )
-        {
-            wait 0.05;
-            eebiTagPlayer( player, eebiIsBotEntity( player ) );
-        }
-    }
-}
-
 eebiRefreshState()
 {
     eebiEnsureState();
@@ -117,6 +100,18 @@ eebiRefreshState()
     if ( !isdefined( allPlayers ) )
     {
         allPlayers = [];
+    }
+
+    if ( isdefined( level.eebi.taggedPlayers ) )
+    {
+        for ( i = 0; i < level.eebi.taggedPlayers.size; i++ )
+        {
+            previousPlayer = level.eebi.taggedPlayers[i];
+            if ( isdefined( previousPlayer ) && !eebiArrayContainsEntity( allPlayers, previousPlayer ) )
+            {
+                eebiClearPlayerTags( previousPlayer );
+            }
+        }
     }
 
     for ( i = 0; i < allPlayers.size; i++ )
@@ -148,6 +143,7 @@ eebiRefreshState()
     level.eebi.humanPlayers = humanPlayers;
     level.eebi.botPlayers = botPlayers;
     level.eebi.eligiblePlayers = eligiblePlayers;
+    level.eebi.taggedPlayers = allPlayers;
 
     level.eebi.humanCount = humanPlayers.size;
     level.eebi.botCount = botPlayers.size;
@@ -180,6 +176,24 @@ eebiWriteAliases()
     level.eebiHumanPlayerCount = level.eebi.humanCount;
     level.eebiEligiblePlayerCount = level.eebi.eligibleCount;
     level.eebiBotPlayerCount = level.eebi.botCount;
+}
+
+eebiArrayContainsEntity( entities, target )
+{
+    if ( !isdefined( entities ) || !isdefined( target ) )
+    {
+        return false;
+    }
+
+    for ( i = 0; i < entities.size; i++ )
+    {
+        if ( isdefined( entities[i] ) && entities[i] == target )
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 eebiMaybeDebugCounts()
@@ -225,6 +239,26 @@ eebiTagPlayer( player, isBot )
     player.eebiIgnoreEasterEgg = isBot;
     player.eebiIsBot = isBot;
     player.eebiIsRealPlayer = !isBot;
+}
+
+eebiClearPlayerTags( player )
+{
+    if ( !isdefined( player ) )
+    {
+        return;
+    }
+
+    if ( isdefined( player.pers ) )
+    {
+        player.pers["eebi_is_bot"] = false;
+        player.pers["eebi_counts_for_easter_egg"] = false;
+        player.pers["eebi_ignore_easter_egg"] = false;
+    }
+
+    player.eebiCountsForEasterEgg = false;
+    player.eebiIgnoreEasterEgg = false;
+    player.eebiIsBot = false;
+    player.eebiIsRealPlayer = false;
 }
 
 eebiIsPlayerCountable( player )
