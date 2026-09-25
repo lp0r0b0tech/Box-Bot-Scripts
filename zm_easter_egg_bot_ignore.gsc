@@ -73,6 +73,11 @@ eebiRefreshLoop()
     {
         if ( getdvarint( "scr_zm_ee_ignore_bots" ) > 0 )
         {
+            if ( isdefined( level.eebiRefreshRequested ) )
+            {
+                level.eebiRefreshRequested = false;
+            }
+
             eebiRefreshState();
         }
 
@@ -92,7 +97,7 @@ eebiConnectedMonitor()
         {
             wait 0.05;
             eebiTagPlayer( player, eebiIsBotEntity( player ) );
-            eebiRefreshState();
+            level.eebiRefreshRequested = true;
         }
     }
 }
@@ -100,13 +105,6 @@ eebiConnectedMonitor()
 eebiRefreshState()
 {
     eebiEnsureState();
-
-    if ( isdefined( level.eebiRefreshBusy ) && level.eebiRefreshBusy )
-    {
-        return;
-    }
-
-    level.eebiRefreshBusy = true;
 
     allPlayers = getplayers();
     humanPlayers = [];
@@ -143,18 +141,17 @@ eebiRefreshState()
         }
     }
 
-    level.eebi.allPlayers = eebiCloneArray( allPlayers );
-    level.eebi.humanPlayers = eebiCloneArray( humanPlayers );
-    level.eebi.botPlayers = eebiCloneArray( botPlayers );
-    level.eebi.eligiblePlayers = eebiCloneArray( eligiblePlayers );
+    level.eebi.allPlayers = allPlayers;
+    level.eebi.humanPlayers = humanPlayers;
+    level.eebi.botPlayers = botPlayers;
+    level.eebi.eligiblePlayers = eligiblePlayers;
 
     level.eebi.humanCount = humanPlayers.size;
     level.eebi.botCount = botPlayers.size;
     level.eebi.eligibleCount = eligiblePlayers.size;
 
-    eebiWriteAliases( allPlayers, humanPlayers, botPlayers, eligiblePlayers );
+    eebiWriteAliases();
     eebiMaybeDebugCounts();
-    level.eebiRefreshBusy = false;
 }
 
 eebiEnsureState()
@@ -170,16 +167,16 @@ eebiEnsureState()
     level.eebi.lastEligibleCount = -1;
 }
 
-eebiWriteAliases( allPlayers, humanPlayers, botPlayers, eligiblePlayers )
+eebiWriteAliases()
 {
-    level.eebiAllPlayers = eebiCloneArray( allPlayers );
-    level.eebiHumanPlayers = eebiCloneArray( humanPlayers );
-    level.eebiEligiblePlayers = eebiCloneArray( eligiblePlayers );
-    level.eebiBotPlayers = eebiCloneArray( botPlayers );
+    level.eebiAllPlayers = level.eebi.allPlayers;
+    level.eebiHumanPlayers = level.eebi.humanPlayers;
+    level.eebiEligiblePlayers = level.eebi.eligiblePlayers;
+    level.eebiBotPlayers = level.eebi.botPlayers;
 
-    level.eebiHumanPlayerCount = humanPlayers.size;
-    level.eebiEligiblePlayerCount = eligiblePlayers.size;
-    level.eebiBotPlayerCount = botPlayers.size;
+    level.eebiHumanPlayerCount = level.eebi.humanCount;
+    level.eebiEligiblePlayerCount = level.eebi.eligibleCount;
+    level.eebiBotPlayerCount = level.eebi.botCount;
 }
 
 eebiMaybeDebugCounts()
