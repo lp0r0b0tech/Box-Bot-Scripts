@@ -274,11 +274,6 @@ eebiIsBotEntity( player )
         return eebiValueIsTrue( player.pers["isBot"] );
     }
 
-    if ( isdefined( player.pers ) && isdefined( player.pers["eebi_is_bot"] ) )
-    {
-        return eebiValueIsTrue( player.pers["eebi_is_bot"] );
-    }
-
     if ( isdefined( player.eebiIsBot ) )
     {
         return eebiValueIsTrue( player.eebiIsBot );
