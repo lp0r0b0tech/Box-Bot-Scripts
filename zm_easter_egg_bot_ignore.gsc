@@ -378,7 +378,9 @@ eebiIsKnownZombieMap( mapname )
 
     lowerMap = toLower( mapname + "" );
 
-    if ( strlen( lowerMap ) >= 3 && getsubstr( lowerMap, 0, 3 ) == "zm_" )
+    if ( ( strlen( lowerMap ) >= 3 && getsubstr( lowerMap, 0, 3 ) == "zm_" ) ||
+         ( strlen( lowerMap ) >= 6 && getsubstr( lowerMap, 0, 6 ) == "mp_zm_" ) ||
+         ( strlen( lowerMap ) >= 10 && getsubstr( lowerMap, 0, 10 ) == "mp_zombie_" ) )
     {
         return true;
     }
