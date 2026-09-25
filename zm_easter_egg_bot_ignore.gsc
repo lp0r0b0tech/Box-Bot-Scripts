@@ -226,19 +226,17 @@ eebiTagPlayer( player, isBot )
         return;
     }
 
-    if ( !isdefined( player.pers ) )
+    if ( isdefined( player.pers ) )
     {
-        player.pers = [];
+        player.pers["eebi_is_bot"] = isBot;
+        player.pers["countsForEasterEgg"] = !isBot;
+        player.pers["ee_counts_as_player"] = !isBot;
+        player.pers["ee_ignore"] = isBot;
+        player.pers["egg_ignore"] = isBot;
+        player.pers["easter_egg_ignore"] = isBot;
+        player.pers["ignore_player_requirements"] = isBot;
+        player.pers["skip_ee_player_checks"] = isBot;
     }
-
-    player.pers["eebi_is_bot"] = isBot;
-    player.pers["countsForEasterEgg"] = !isBot;
-    player.pers["ee_counts_as_player"] = !isBot;
-    player.pers["ee_ignore"] = isBot;
-    player.pers["egg_ignore"] = isBot;
-    player.pers["easter_egg_ignore"] = isBot;
-    player.pers["ignore_player_requirements"] = isBot;
-    player.pers["skip_ee_player_checks"] = isBot;
 
     player.countsForEasterEgg = !isBot;
     player.eeCountsAsPlayer = !isBot;
