@@ -30,7 +30,12 @@ init()
         return;
     }
 
-    level.eebiInitStarted = true;
+    if ( isdefined( level.eebiInitPending ) && level.eebiInitPending )
+    {
+        return;
+    }
+
+    level.eebiInitPending = true;
     level thread eebiDeferredInit();
 }
 
@@ -40,6 +45,7 @@ eebiDeferredInit()
 
     if ( !eebiIsZombieContext() )
     {
+        level.eebiInitPending = false;
         return;
     }
 
@@ -47,6 +53,7 @@ eebiDeferredInit()
 
     if ( getdvarint( "scr_zm_ee_ignore_bots" ) <= 0 )
     {
+        level.eebiInitPending = false;
         return;
     }
 
@@ -56,6 +63,8 @@ eebiDeferredInit()
     level thread eebiRefreshLoop();
     level thread eebiConnectedMonitor();
 
+    level.eebiInitStarted = true;
+    level.eebiInitPending = false;
     println( "EEBotIgnore: initialized." );
 }
 
@@ -301,50 +310,7 @@ eebiIsZombieContext()
         return true;
     }
 
-    if ( isdefined( level.gametype ) && eebiStringStartsWithToken( level.gametype, "zom" ) )
-    {
-        return true;
-    }
-
-    if ( eebiDvarStartsWithToken( "ui_gametype", "zom" ) || eebiDvarStartsWithToken( "g_gametype", "zom" ) )
-    {
-        return true;
-    }
-
     return eebiIsKnownZombieMap( getdvar( "mapname" ) );
-}
-
-eebiDvarStartsWithToken( dvarName, token )
-{
-    return eebiStringStartsWithToken( getdvar( dvarName ), token );
-}
-
-eebiStringContainsToken( value, token )
-{
-    if ( !isdefined( value ) || !isdefined( token ) )
-    {
-        return false;
-    }
-
-    return issubstr( toLower( value + "" ), toLower( token + "" ) );
-}
-
-eebiStringStartsWithToken( value, token )
-{
-    if ( !isdefined( value ) || !isdefined( token ) )
-    {
-        return false;
-    }
-
-    lowerValue = toLower( value + "" );
-    lowerToken = toLower( token + "" );
-
-    if ( strlen( lowerValue ) < strlen( lowerToken ) )
-    {
-        return false;
-    }
-
-    return getsubstr( lowerValue, 0, strlen( lowerToken ) ) == lowerToken;
 }
 
 eebiIsKnownZombieMap( mapname )
