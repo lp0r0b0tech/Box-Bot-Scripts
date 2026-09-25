@@ -1497,6 +1497,7 @@ abzmStringContainsToken( value, token )
 
 abzmReadScanInterval()
 {
+    setdvarifuninitialized( "scr_zm_autobots_scan_interval_ms", ABZM_DEFAULT_SCAN_INTERVAL_MS );
     intervalMs = getdvarint( "scr_zm_autobots_scan_interval_ms" );
     if ( intervalMs < 100 )
     {
