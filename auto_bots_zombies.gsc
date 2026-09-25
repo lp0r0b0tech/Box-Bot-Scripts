@@ -635,7 +635,7 @@ abzmHandleReviveBehavior( bot, reviveTarget )
 
         if ( abzmRunMapReviveHook( bot, reviveTarget ) )
         {
-            bot thread abzmFinalizeReviveReward( reviveTarget );
+            abzmLog( "bot started revive hook" );
         }
         else
         {
@@ -658,22 +658,6 @@ abzmHandleEscapeBehavior( bot, leader )
     {
         abzmWarnOnce( "exo_hook_" + bot.abzmSlot, "exo movement hook is map-specific and disabled by default for bot slot " + bot.abzmSlot );
     }
-}
-
-abzmFinalizeReviveReward( reviveTarget )
-{
-    self endon( "disconnect" );
-    level endon( "game_ended" );
-
-    wait 0.50;
-
-    if ( !isdefined( reviveTarget ) || abzmIsDownedPlayer( reviveTarget ) )
-    {
-        return;
-    }
-
-    self.abzmPoints += getdvarint( "scr_zm_autobots_revive_reward" );
-    abzmLog( "bot completed revive hook" );
 }
 
 abzmHandleThreatBehavior( bot, threat, leader )
@@ -1157,20 +1141,26 @@ abzmTrimBotsToTarget()
         targetCount = ABZM_MAX_BOTS;
     }
 
-    while ( level.abzmBots.size > targetCount )
+    trimmed = [];
+
+    for ( i = 0; i < level.abzmBots.size; i++ )
     {
-        extraBot = level.abzmBots[level.abzmBots.size - 1];
-        if ( !isdefined( extraBot ) )
+        if ( i < targetCount && isdefined( level.abzmBots[i] ) )
         {
-            level.abzmBots[level.abzmBots.size - 1] = undefined;
-            return;
+            trimmed[trimmed.size] = level.abzmBots[i];
+            continue;
         }
 
-        extraBot.abzmManaged = false;
-        extraBot bot_drop();
-        abzmLog( "trimmed teammate bot slot " + extraBot.abzmSlot );
-        return;
+        extraBot = level.abzmBots[i];
+        if ( isdefined( extraBot ) )
+        {
+            extraBot.abzmManaged = false;
+            extraBot bot_drop();
+            abzmLog( "trimmed teammate bot slot " + extraBot.abzmSlot );
+        }
     }
+
+    level.abzmBots = trimmed;
 }
 
 abzmHasRememberedWeapon( bot, weaponName )
@@ -1277,17 +1267,6 @@ abzmIsBotEntity( entity )
     if ( isdefined( entity.pers ) && isdefined( entity.pers["isBot"] ) )
     {
         return entity.pers["isBot"];
-    }
-
-    guidValue = entity getguid();
-    if ( isdefined( guidValue ) && abzmStringContainsToken( guidValue, "bot" ) )
-    {
-        return true;
-    }
-
-    if ( isdefined( entity.name ) && abzmStringContainsToken( entity.name, "bot" ) )
-    {
-        return true;
     }
 
     return false;
