@@ -52,6 +52,7 @@ eebiDeferredInit()
     eebiInitDvars();
 
     eebiEnsureState();
+    eebiResetPublishedState();
     level thread eebiRefreshLoop();
 
     if ( getdvarint( "scr_zm_ee_ignore_bots" ) > 0 )
@@ -79,6 +80,10 @@ eebiRefreshLoop()
         if ( getdvarint( "scr_zm_ee_ignore_bots" ) > 0 )
         {
             eebiRefreshState();
+        }
+        else
+        {
+            eebiDisableState();
         }
 
         wait EEBI_REFRESH_INTERVAL;
@@ -145,6 +150,7 @@ eebiRefreshState()
     level.eebi.humanCount = humanPlayers.size;
     level.eebi.botCount = botPlayers.size;
     level.eebi.eligibleCount = eligiblePlayers.size;
+    level.eebi.active = true;
 
     eebiWriteAliases();
     eebiMaybeDebugCounts();
@@ -161,6 +167,42 @@ eebiEnsureState()
     level.eebi.lastHumanCount = -1;
     level.eebi.lastBotCount = -1;
     level.eebi.lastEligibleCount = -1;
+}
+
+eebiResetPublishedState()
+{
+    eebiEnsureState();
+
+    level.eebi.allPlayers = [];
+    level.eebi.humanPlayers = [];
+    level.eebi.botPlayers = [];
+    level.eebi.eligiblePlayers = [];
+    level.eebi.taggedPlayers = [];
+
+    level.eebi.humanCount = 0;
+    level.eebi.botCount = 0;
+    level.eebi.eligibleCount = 0;
+    level.eebi.active = false;
+
+    eebiWriteAliases();
+}
+
+eebiDisableState()
+{
+    eebiEnsureState();
+
+    if ( isdefined( level.eebi.active ) && level.eebi.active && isdefined( level.eebi.taggedPlayers ) )
+    {
+        for ( i = 0; i < level.eebi.taggedPlayers.size; i++ )
+        {
+            if ( isdefined( level.eebi.taggedPlayers[i] ) )
+            {
+                eebiClearPlayerTags( level.eebi.taggedPlayers[i] );
+            }
+        }
+    }
+
+    eebiResetPublishedState();
 }
 
 eebiWriteAliases()
