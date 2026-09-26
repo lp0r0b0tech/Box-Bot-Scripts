@@ -14,8 +14,8 @@ combatTrainingForce = true;
 combatTrainingMaxPlayers = 12;
 dedicatedMaxPlayers = 18;
 
-defaultBotDifficulty = "ultra";
-lockedBotDifficulty = "ultra";
+defaultBotDifficulty = "impossible";
+lockedBotDifficulty = "impossible";
 
 defaultBotLevel = 50;
 defaultBotPrestige = 23;
@@ -48,10 +48,10 @@ spawnFailBackoff = 0.50;
 maxSpawnAttemptsPerTick = 8;
 
 // Fallback modifiers used only when the Veteran/impossible layer is disabled.
-rageBotAccuracy = 9.99;
+rageBotAccuracy = 99.99;
 rageBotReactionTime = 0.000;
 rageBotMaxHealth = 2500;
-rageBotAggression = 9.99;
+rageBotAggression = 99.99;
 
 // Capture native Veteran settings before applying custom impossible settings.
 useExactVeteranPrivateMatchValues = true;
