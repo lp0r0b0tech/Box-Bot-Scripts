@@ -317,9 +317,6 @@ awd_init_max_damage_weapons()
         "playermech_rocket_swarm_zm_mp"
     );
 
-    /*
-        Special weapons forced to direct Mk25 behavior.
-    */
     awd_add_max_damage_weapon(
         "iw5_linegunzm_mp"
     );
@@ -335,6 +332,9 @@ awd_init_max_damage_weapons()
     awd_add_max_damage_weapon(
         "iw5_microwavezm_mp"
     );
+
+    awd_add_max_damage_weapon(
+        "specialty_booster"
 }
 
 
