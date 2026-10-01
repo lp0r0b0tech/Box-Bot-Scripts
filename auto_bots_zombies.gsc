@@ -119,9 +119,10 @@ abzmInitPerkPriority()
     level.abzmPerkPriority = [];
 
     level.abzmPerkPriority[level.abzmPerkPriority.size] = "exo_health";
-    level.abzmPerkPriority[level.abzmPerkPriority.size] = "quick_revive";
-    level.abzmPerkPriority[level.abzmPerkPriority.size] = "fast_hands";
-    level.abzmPerkPriority[level.abzmPerkPriority.size] = "staminup";
+    level.abzmPerkPriority[level.abzmPerkPriority.size] = "exo_medic";
+    level.abzmPerkPriority[level.abzmPerkPriority.size] = "exo_reload";
+    level.abzmPerkPriority[level.abzmPerkPriority.size] = "exo_soldier";
+    level.abzmPerkPriority[level.abzmPerkPriority.size] = "exo_slam";
 }
 
 abzmInitSpecialKeywords()
@@ -332,7 +333,7 @@ abzmBotMainLoop()
         leader = abzmGetFollowLeader();
 
         reviveTarget = undefined;
-        if ( getdvarint( "scr_zm_autobots_auto_revive" ) > 0 && getdvarint( "scr_zm_autobots_map_hooks" ) > 0 )
+        if ( getdvarint( "scr_zm_autobots_auto_revive" ) > 0 )
         {
             reviveTarget = abzmFindNearestDownedHuman( self.origin );
         }
@@ -597,11 +598,6 @@ abzmTryApplyPerks( bot )
         return;
     }
 
-    if ( getdvarint( "scr_zm_autobots_map_hooks" ) <= 0 )
-    {
-        return;
-    }
-
     if ( isdefined( level.time ) && isdefined( bot.abzmLastPerkTime ) && level.time - bot.abzmLastPerkTime < 4000 )
     {
         return;
@@ -643,45 +639,71 @@ abzmTryApplyPerks( bot )
 
 abzmRunMapPerkHook( bot, perkName )
 {
-    if ( getdvarint( "scr_zm_autobots_map_hooks" ) <= 0 )
+    if ( !isdefined( bot ) || !isdefined( perkName ) || perkName == "" )
     {
         return false;
     }
 
     /*
-        Map-specific customization point.
-        Replace this safe no-op with real perk trigger logic for a known map.
+       Standard native fallback first.
+       Keep scr_zm_autobots_map_hooks for custom map-specific override logic if needed.
     */
+    if ( bot hasperk( perkName ) )
+    {
+       return true;
+    }
+
+    bot setperk( perkName );
+
+    if ( bot hasperk( perkName ) )
+    {
+       return true;
+    }
+
     return false;
 }
 
 abzmRunMapReviveHook( bot, downedPlayer )
 {
-    if ( getdvarint( "scr_zm_autobots_map_hooks" ) <= 0 )
+    if ( !isdefined( bot ) || !isdefined( downedPlayer ) )
     {
-        return false;
+       return false;
     }
 
     /*
-        Map-specific customization point.
-        Replace this safe no-op with the correct revive logic for a known map.
-        Return true only when the revive has fully completed.
+       Standard native fallback first.
+       Return true only when the revive has fully completed.
     */
-    return false;
+    if ( !abzmIsDownedPlayer( downedPlayer ) )
+    {
+       return true;
+    }
+
+    downedPlayer startrevive( bot );
+    wait 2.0;
+
+    if ( abzmIsDownedPlayer( downedPlayer ) )
+    {
+       downedPlayer stoprevive( bot );
+       return false;
+    }
+
+    downedPlayer stoprevive( bot );
+    return true;
 }
 
 abzmRunMapExoEscapeHook( bot, escapeGoal )
 {
-    if ( getdvarint( "scr_zm_autobots_map_hooks" ) <= 0 )
+    if ( !isdefined( bot ) || !isdefined( escapeGoal ) )
     {
-        return false;
+       return false;
     }
 
     /*
-        Map-specific customization point.
-        Replace this safe no-op with the correct exo boost / jump logic.
+       Default working fallback is the pathing goal already set by the caller.
+       Keep scr_zm_autobots_map_hooks for optional map-specific boost / jump overrides.
     */
-    return false;
+    return true;
 }
 
 abzmHandleReviveBehavior( bot, reviveTarget )
@@ -712,7 +734,7 @@ abzmHandleReviveBehavior( bot, reviveTarget )
         }
         else
         {
-            abzmWarnOnce( "revive_hook_" + bot.abzmSlot, "revive hook is map-specific and disabled by default for bot slot " + bot.abzmSlot );
+            abzmWarnOnce( "revive_hook_" + bot.abzmSlot, "revive attempt failed for bot slot " + bot.abzmSlot );
         }
     }
 }
@@ -746,9 +768,9 @@ abzmHandleEscapeBehavior( bot, leader )
     escapeGoal = abzmBuildEscapeGoal( bot.origin, anchorOrigin );
     abzmSetBotGoal( bot, escapeGoal );
 
-    if ( !abzmRunMapExoEscapeHook( bot, escapeGoal ) )
+    if ( getdvarint( "scr_zm_autobots_map_hooks" ) > 0 && !abzmRunMapExoEscapeHook( bot, escapeGoal ) )
     {
-        abzmWarnOnce( "exo_hook_" + bot.abzmSlot, "exo movement hook is map-specific and disabled by default for bot slot " + bot.abzmSlot );
+        abzmWarnOnce( "exo_hook_" + bot.abzmSlot, "exo movement hook override failed for bot slot " + bot.abzmSlot );
     }
 }
 
@@ -1335,6 +1357,11 @@ abzmHasPerk( bot, perkName )
     if ( !isdefined( bot.abzmPerks ) )
     {
         return false;
+    }
+
+    if ( bot hasperk( perkName ) )
+    {
+        return true;
     }
 
     if ( isdefined( bot.abzmPerks[perkName] ) && bot.abzmPerks[perkName] )

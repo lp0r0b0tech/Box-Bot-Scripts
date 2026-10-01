@@ -21,11 +21,11 @@ auto_bots_zombies.gsc
   - set scr_zm_autobots_auto_ammo 1
   - set scr_zm_autobots_auto_progress 1
   - set scr_zm_autobots_auto_perks 1
-  - set scr_zm_autobots_auto_revive 1 (attempts revive routing only after you wire a real map revive hook)
-  - set scr_zm_autobots_map_hooks 0 (source-customization hook switch; default hook bodies are safe no-ops)
+  - set scr_zm_autobots_auto_revive 1
+  - set scr_zm_autobots_map_hooks 0 (optional source-customization switch for map-specific override logic)
   - set scr_zm_autobots_scan_interval_ms 1000
 - uses real Exo Zombies `iw5_*zm_mp` weapon ids already used elsewhere in this repo
-- revive, perk purchase, and exo movement ability hooks are safe no-ops until customized for a specific map
-- `scr_zm_autobots_auto_perks` and `scr_zm_autobots_auto_revive` only take effect after you enable `scr_zm_autobots_map_hooks 1` and implement the corresponding hook bodies
+- perk and revive behavior now try standard player natives first; exact success still depends on your S1x/AW build supporting those natives
+- exo escape works by default through bot goal movement, while `scr_zm_autobots_map_hooks 1` is reserved for optional map-specific boost/jump overrides
 
 for custom names, use the canonical path s1/Bots.txt
