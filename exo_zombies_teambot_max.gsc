@@ -95,8 +95,21 @@ eztbIsTeammateBot( player )
         return true;
     }
 
-    return isdefined( player.eebiIsBot ) &&
-           eztbValueIsTrue( player.eebiIsBot );
+    if ( isdefined( player.pers ) &&
+         isdefined( player.pers["eebi_is_bot"] ) &&
+         eztbValueIsTrue( player.pers["eebi_is_bot"] ) )
+    {
+        return true;
+    }
+
+    if ( isdefined( player.eebiIsBot ) &&
+         eztbValueIsTrue( player.eebiIsBot ) )
+    {
+        return true;
+    }
+
+    guid = player getguid();
+    return isdefined( guid ) && issubstr( toLower( guid + "" ), "bot" );
 }
 
 eztbValueIsTrue( value )
@@ -180,13 +193,6 @@ eztbModifyWeaponDamage(
          !isdefined( victim.health ) ||
          victim.health <= 0 ||
          isplayer( victim ) )
-    {
-        return damage;
-    }
-
-    if ( isdefined( level.zombie_team ) &&
-         isdefined( victim.team ) &&
-         victim.team != level.zombie_team )
     {
         return damage;
     }
