@@ -14,6 +14,10 @@
         At Mk20-Mk25, headshots (x4) deal 48,000-60,000 damage (guaranteed 1-shot kill)
         and body shots (x1) deal 12,000-15,000 damage (2-3 shots to kill capped zombies).
 
+    Melee weapons:
+        Exo suit melee ("exo_melee_zm") and Goliath combat knife ("iw5_combatknifegoliath_mp")
+        are guaranteed 1-hit kills on standard zombies, but deal configured Mk25 damage on bosses.
+
     Max-damage weapons:
         Grenades, equipment, rockets, turrets, and killstreak weapons
         always use their configured Mk25 damage (15,000 base).
@@ -58,6 +62,7 @@
 #define AWD_DEFAULT_MK23_DAMAGE  13800
 #define AWD_DEFAULT_MK24_DAMAGE  14400
 #define AWD_DEFAULT_MK25_DAMAGE  15000
+#define AWD_ONE_HIT_MELEE_DAMAGE 250000
 
 #define AWD_HEAD_MULTIPLIER       4
 #define AWD_NECK_MULTIPLIER       5
@@ -408,6 +413,151 @@ awd_is_max_damage_weapon( weaponName )
 
 
 /*
+    Check whether a weapon is an Exo suit melee or Goliath combat knife.
+*/
+awd_is_one_hit_melee( weaponName, weapon, meansOfDeath )
+{
+    if ( isdefined( weaponName ) )
+    {
+        if ( weaponName == "exo_melee_zm" ||
+             weaponName == "iw5_combatknifegoliath_mp" ||
+             issubstr( weaponName, "exo_melee" ) ||
+             issubstr( weaponName, "combatknifegoliath" ) )
+        {
+            return true;
+        }
+    }
+
+    if ( isdefined( weapon ) )
+    {
+        if ( weapon == "exo_melee_zm" ||
+             weapon == "iw5_combatknifegoliath_mp" ||
+             issubstr( weapon, "exo_melee" ) ||
+             issubstr( weapon, "combatknifegoliath" ) )
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+/*
+    Check whether a damage victim is a boss enemy
+    (e.g., Goliath mech zombie, Oz boss, or other special boss agent).
+*/
+awd_is_boss( victim )
+{
+    if ( !isdefined( victim ) )
+    {
+        return false;
+    }
+
+    if ( isdefined( victim.is_boss ) && victim.is_boss )
+    {
+        return true;
+    }
+
+    if ( isdefined( victim.boss ) && victim.boss )
+    {
+        return true;
+    }
+
+    if ( isdefined( victim.isboss ) && victim.isboss )
+    {
+        return true;
+    }
+
+    if ( isdefined( victim.entity_type ) )
+    {
+        if ( victim.entity_type == "boss" ||
+             issubstr( tolower( victim.entity_type ), "boss" ) )
+        {
+            return true;
+        }
+    }
+
+    if ( isdefined( victim.agent_type ) )
+    {
+        agentType = tolower( victim.agent_type );
+
+        if ( issubstr( agentType, "boss" ) ||
+             issubstr( agentType, "goliath" ) ||
+             issubstr( agentType, "mech" ) ||
+             issubstr( agentType, "oz" ) )
+        {
+            return true;
+        }
+    }
+
+    if ( isdefined( victim.zombie_type ) )
+    {
+        zombieType = tolower( victim.zombie_type );
+
+        if ( issubstr( zombieType, "boss" ) ||
+             issubstr( zombieType, "goliath" ) ||
+             issubstr( zombieType, "mech" ) ||
+             issubstr( zombieType, "oz" ) )
+        {
+            return true;
+        }
+    }
+
+    if ( isdefined( victim.sub_type ) )
+    {
+        subType = tolower( victim.sub_type );
+
+        if ( issubstr( subType, "boss" ) ||
+             issubstr( subType, "goliath" ) ||
+             issubstr( subType, "mech" ) )
+        {
+            return true;
+        }
+    }
+
+    if ( isdefined( victim.animname ) )
+    {
+        animName = tolower( victim.animname );
+
+        if ( issubstr( animName, "boss" ) ||
+             issubstr( animName, "goliath" ) ||
+             issubstr( animName, "mech" ) ||
+             issubstr( animName, "oz" ) )
+        {
+            return true;
+        }
+    }
+
+    if ( isdefined( victim.classname ) )
+    {
+        className = tolower( victim.classname );
+
+        if ( className == "boss" ||
+             className == "boss_zombie" ||
+             className == "special_zombie" ||
+             issubstr( className, "boss" ) )
+        {
+            return true;
+        }
+    }
+
+    if ( isdefined( victim.model ) )
+    {
+        modelName = tolower( victim.model );
+
+        if ( issubstr( modelName, "goliath" ) ||
+             issubstr( modelName, "zombie_boss" ) )
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+/*
     Configure default direct-damage ranges.
 
     Standard weapons scale across Mk2 (1,200) to Mk25 (15,000).
@@ -576,6 +726,77 @@ awd_modify_damage(
         awd_get_damage_weapon_name(
             weaponName
         );
+
+    /*
+        Exo suit melee and Goliath combat knife:
+        Guaranteed 1-hit kill on standard zombies, but not on bosses.
+        Bosses receive configured Mk25 damage instead.
+    */
+    if ( awd_is_one_hit_melee( weaponName, weapon, meansOfDeath ) )
+    {
+        awd_disable_stock_multiplier(
+            attacker,
+            weaponName
+        );
+
+        if ( !awd_is_boss( victim ) )
+        {
+            finalDamage = AWD_ONE_HIT_MELEE_DAMAGE;
+
+            if ( isdefined( victim ) )
+            {
+                if ( isdefined( victim.health ) && victim.health > 0 )
+                {
+                    finalDamage = victim.health + 10000;
+                }
+                else if ( isdefined( victim.maxhealth ) && victim.maxhealth > 0 )
+                {
+                    finalDamage = victim.maxhealth + 10000;
+                }
+
+                if ( finalDamage < AWD_ONE_HIT_MELEE_DAMAGE )
+                {
+                    finalDamage = AWD_ONE_HIT_MELEE_DAMAGE;
+                }
+            }
+
+            awd_debug_damage(
+                weaponName,
+                AWD_MAX_CUSTOM_MARK,
+                hitLocation,
+                damage,
+                finalDamage,
+                finalDamage
+            );
+
+            return int( finalDamage );
+        }
+
+        /*
+            Target is a boss: do not 1-hit kill. Use configured Mk25 damage.
+        */
+        baseDamage =
+            awd_get_mk25_damage(
+                weaponName
+            );
+
+        finalDamage =
+            awd_apply_hit_location_multiplier(
+                baseDamage,
+                hitLocation
+            );
+
+        awd_debug_damage(
+            weaponName,
+            AWD_MAX_CUSTOM_MARK,
+            hitLocation,
+            damage,
+            baseDamage,
+            finalDamage
+        );
+
+        return int( finalDamage );
+    }
 
     /*
         Killstreaks, grenades, equipment, and listed special
