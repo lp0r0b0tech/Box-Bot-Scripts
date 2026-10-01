@@ -4,6 +4,11 @@
 // - EMZ Safe Coexist debug/detection system
 // ============================================================
 
+main()
+{
+    init();
+}
+
 init()
 {
     // ---------------- BO2 scaling settings ----------------
