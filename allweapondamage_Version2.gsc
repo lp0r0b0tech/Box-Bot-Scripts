@@ -16,13 +16,15 @@
 
     Melee weapons:
         Exo suit melee ("exo_melee_zm"), Goliath combat knife ("iw5_combatknifegoliath_mp"),
-        and any MOD_MELEE hit made while holding a registered weapon
+        and any MOD_MELEE hit made while holding ANY weapon (listed or not)
         are guaranteed 1-hit kills on standard zombies, but deal configured Mk25 damage on bosses.
 
         The native Exo Zombies damage callback replaces all MOD_MELEE damage with
         level.playermeleedamage / level.playerexomeleedamage AFTER the
-        level.modifyweapondamage callbacks run, so the computed melee damage is
-        passed through those values for the current hit and restored at frame end.
+        level.modifyweapondamage callbacks run. Melee damage is therefore applied
+        through level.modifydamagebyagenttype[agentType], which the native callback
+        runs after that overwrite for every zombie type. Existing per-agent
+        callbacks (e.g. Oz stage 2 armor) are wrapped and still run afterwards.
 
     Max-damage weapons:
         Grenades, equipment, rockets, turrets, and killstreak weapons
@@ -69,9 +71,6 @@
 #define AWD_DEFAULT_MK24_DAMAGE  14400
 #define AWD_DEFAULT_MK25_DAMAGE  15000
 #define AWD_ONE_HIT_MELEE_DAMAGE 250000
-
-#define AWD_NATIVE_MELEE_DAMAGE      150
-#define AWD_NATIVE_EXO_MELEE_DAMAGE  500
 
 #define AWD_HEAD_MULTIPLIER       4
 #define AWD_NECK_MULTIPLIER       5
@@ -150,8 +149,6 @@ awd_wait_for_damage_table()
 
         return;
     }
-
-    awd_capture_native_melee_damage();
 
     awd_register_all_weapons();
 
@@ -465,67 +462,178 @@ awd_is_one_hit_melee( weaponName, weapon, meansOfDeath )
 
 
 /*
-    Save the native melee damage values so they can be restored
-    after a buffed melee hit.
+    Melee damage:
+        Standard zombies = guaranteed 1-hit kill.
+        Bosses           = configured Mk25 damage with hit-location multiplier.
 */
-awd_capture_native_melee_damage()
+awd_get_melee_damage(
+    victim,
+    weaponName,
+    hitLocation
+)
 {
-    if ( isdefined( level.awd_native_melee_saved ) )
+    if ( !awd_is_boss( victim ) )
     {
-        return;
+        finalDamage = AWD_ONE_HIT_MELEE_DAMAGE;
+
+        if ( isdefined( victim ) )
+        {
+            if ( isdefined( victim.health ) && victim.health > 0 )
+            {
+                finalDamage = victim.health + 10000;
+            }
+            else if ( isdefined( victim.maxhealth ) && victim.maxhealth > 0 )
+            {
+                finalDamage = victim.maxhealth + 10000;
+            }
+
+            if ( finalDamage < AWD_ONE_HIT_MELEE_DAMAGE )
+            {
+                finalDamage = AWD_ONE_HIT_MELEE_DAMAGE;
+            }
+        }
+
+        return int( finalDamage );
     }
 
-    level.awd_native_melee_saved = 1;
+    /*
+        Target is a boss: do not 1-hit kill. Use configured Mk25 damage.
+    */
+    baseDamage =
+        awd_get_mk25_damage(
+            weaponName
+        );
 
-    level.awd_native_player_melee_damage =
-        AWD_NATIVE_MELEE_DAMAGE;
-
-    level.awd_native_player_exo_melee_damage =
-        AWD_NATIVE_EXO_MELEE_DAMAGE;
-
-    if ( isdefined( level.playermeleedamage ) )
-    {
-        level.awd_native_player_melee_damage =
-            level.playermeleedamage;
-    }
-
-    if ( isdefined( level.playerexomeleedamage ) )
-    {
-        level.awd_native_player_exo_melee_damage =
-            level.playerexomeleedamage;
-    }
+    return int(
+        awd_apply_hit_location_multiplier(
+            baseDamage,
+            hitLocation
+        )
+    );
 }
 
 
 /*
-    The native damage callback runs level.modifyweapondamage first and
-    then overwrites every MOD_MELEE hit with level.playermeleedamage or
-    level.playerexomeleedamage. Feed the computed damage through those
-    values for this hit, then restore the native values at frame end.
+    Hook every zombie agent type through level.modifydamagebyagenttype.
+
+    The native damage callback runs these hooks AFTER it replaces MOD_MELEE
+    damage with level.playermeleedamage / level.playerexomeleedamage, and
+    for every weapon (not only the registered weapon list). Any existing
+    per-agent callback is saved and still called after the melee damage
+    is applied.
 */
-awd_set_melee_damage_override( finalDamage )
+awd_register_agent_damage_hooks()
 {
-    awd_capture_native_melee_damage();
+    if ( !isdefined( level.agentclasses ) )
+    {
+        return;
+    }
 
-    level.playermeleedamage = finalDamage;
-    level.playerexomeleedamage = finalDamage;
+    if ( !isdefined( level.modifydamagebyagenttype ) )
+    {
+        level.modifydamagebyagenttype = [];
+    }
 
-    level thread awd_restore_melee_damage();
+    if ( !isdefined( level.awd_prev_agent_damage ) )
+    {
+        level.awd_prev_agent_damage = [];
+    }
+
+    agentTypes =
+        getArrayKeys(
+            level.agentclasses
+        );
+
+    foreach ( agentType in agentTypes )
+    {
+        current =
+            level.modifydamagebyagenttype[agentType];
+
+        if ( isdefined( current ) &&
+             current == ::awd_agent_modify_damage )
+        {
+            continue;
+        }
+
+        level.awd_prev_agent_damage[agentType] = current;
+
+        level.modifydamagebyagenttype[agentType] =
+            ::awd_agent_modify_damage;
+    }
 }
 
 
-awd_restore_melee_damage()
+awd_agent_modify_damage(
+    victim,
+    attacker,
+    damage,
+    meansOfDeath,
+    weapon,
+    point,
+    direction,
+    hitLocation
+)
 {
-    level notify( "awd_restore_melee_damage" );
-    level endon( "awd_restore_melee_damage" );
+    if ( isdefined( attacker ) &&
+         isplayer( attacker ) &&
+         isdefined( meansOfDeath ) &&
+         meansOfDeath == "MOD_MELEE" )
+    {
+        weaponName = "none";
 
-    waittillframeend;
+        if ( isdefined( weapon ) &&
+             weapon != "" )
+        {
+            weaponName =
+                getweaponbasename( weapon );
 
-    level.playermeleedamage =
-        level.awd_native_player_melee_damage;
+            if ( !isdefined( weaponName ) ||
+                 weaponName == "" )
+            {
+                weaponName = weapon;
+            }
+        }
 
-    level.playerexomeleedamage =
-        level.awd_native_player_exo_melee_damage;
+        finalDamage =
+            awd_get_melee_damage(
+                victim,
+                weaponName,
+                hitLocation
+            );
+
+        awd_debug_damage(
+            "melee:" + weaponName,
+            AWD_MAX_CUSTOM_MARK,
+            hitLocation,
+            damage,
+            finalDamage,
+            finalDamage
+        );
+
+        damage = finalDamage;
+    }
+
+    if ( isdefined( victim ) &&
+         isdefined( victim.agent_type ) &&
+         isdefined( level.awd_prev_agent_damage ) &&
+         isdefined(
+             level.awd_prev_agent_damage[victim.agent_type]
+         ) )
+    {
+        damage =
+            [[ level.awd_prev_agent_damage[victim.agent_type] ]](
+                victim,
+                attacker,
+                damage,
+                meansOfDeath,
+                weapon,
+                point,
+                direction,
+                hitLocation
+            );
+    }
+
+    return damage;
 }
 
 
@@ -766,6 +874,8 @@ awd_register_all_weapons()
             ::awd_modify_damage;
     }
 
+    awd_register_agent_damage_hooks();
+
     println(
         "AllWeaponDamage: registered weapon callbacks."
     );
@@ -820,10 +930,18 @@ awd_modify_damage(
         );
 
     /*
-        Melee (MOD_MELEE with any registered weapon), Exo suit melee,
-        and Goliath combat knife:
-        Guaranteed 1-hit kill on standard zombies, but not on bosses.
-        Bosses receive configured Mk25 damage instead.
+        MOD_MELEE hits are handled by awd_agent_modify_damage, because the
+        native callback overwrites melee damage after this callback returns.
+    */
+    if ( isdefined( meansOfDeath ) &&
+         meansOfDeath == "MOD_MELEE" )
+    {
+        return damage;
+    }
+
+    /*
+        Exo suit melee and Goliath combat knife hits that are not
+        reported as MOD_MELEE.
     */
     if ( awd_is_one_hit_melee( weaponName, weapon, meansOfDeath ) )
     {
@@ -832,55 +950,12 @@ awd_modify_damage(
             weaponName
         );
 
-        if ( !awd_is_boss( victim ) )
-        {
-            finalDamage = AWD_ONE_HIT_MELEE_DAMAGE;
-
-            if ( isdefined( victim ) )
-            {
-                if ( isdefined( victim.health ) && victim.health > 0 )
-                {
-                    finalDamage = victim.health + 10000;
-                }
-                else if ( isdefined( victim.maxhealth ) && victim.maxhealth > 0 )
-                {
-                    finalDamage = victim.maxhealth + 10000;
-                }
-
-                if ( finalDamage < AWD_ONE_HIT_MELEE_DAMAGE )
-                {
-                    finalDamage = AWD_ONE_HIT_MELEE_DAMAGE;
-                }
-            }
-
-            finalDamage = int( finalDamage );
-        }
-        else
-        {
-            /*
-                Target is a boss: do not 1-hit kill. Use configured Mk25 damage.
-            */
-            baseDamage =
-                awd_get_mk25_damage(
-                    weaponName
-                );
-
-            finalDamage =
-                int(
-                    awd_apply_hit_location_multiplier(
-                        baseDamage,
-                        hitLocation
-                    )
-                );
-        }
-
-        if ( isdefined( meansOfDeath ) &&
-             meansOfDeath == "MOD_MELEE" )
-        {
-            awd_set_melee_damage_override(
-                finalDamage
+        finalDamage =
+            awd_get_melee_damage(
+                victim,
+                weaponName,
+                hitLocation
             );
-        }
 
         awd_debug_damage(
             "melee:" + weaponName,
