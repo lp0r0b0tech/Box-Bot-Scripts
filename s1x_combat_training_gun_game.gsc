@@ -142,12 +142,8 @@ gungame_start_player( player )
         player.gungame_stage = 0;
     }
 
-    if ( !isdefined( player.gungame_score_initialized ) )
-    {
-        player.gungame_score_initialized = 0;
-    }
-
     player thread gungame_track_player();
+    player thread gungame_watch_disconnect();
 }
 
 
@@ -157,7 +153,6 @@ gungame_track_player()
 
     if ( isAlive( self ) )
     {
-        self.gungame_score_initialized = 1;
         self thread gungame_update_native_score();
         self thread gungame_equip_stage();
     }
@@ -166,14 +161,21 @@ gungame_track_player()
     {
         self waittill( "spawned_player" );
 
-        if ( !self.gungame_score_initialized )
-        {
-            self.gungame_score_initialized = 1;
-            self thread gungame_update_native_score();
-        }
-
+        self thread gungame_update_native_score();
         self thread gungame_equip_stage();
     }
+}
+
+
+gungame_watch_disconnect()
+{
+    level endon( "game_ended" );
+
+    self waittill( "disconnect" );
+    wait 0;
+
+    gungame_update_team_scores();
+    gungame_refresh_native_scores();
 }
 
 
