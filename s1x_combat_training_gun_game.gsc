@@ -113,8 +113,26 @@ gungame_watch_connections()
 
 gungame_start_existing_players()
 {
-    if ( !isdefined( level.players ) )
+    level endon( "game_ended" );
+
+    waitedSeconds = 0;
+
+    while ( ( !isdefined( level.players ) ||
+              !isdefined( level.gametypestarted ) ||
+              !level.gametypestarted ) &&
+            waitedSeconds < GG_CALLBACK_WAIT_SECONDS )
     {
+        wait GG_CALLBACK_WAIT_INTERVAL;
+        waitedSeconds += GG_CALLBACK_WAIT_INTERVAL;
+    }
+
+    if ( !isdefined( level.players ) ||
+         !isdefined( level.gametypestarted ) ||
+         !level.gametypestarted )
+    {
+        println(
+            "GunGame: timed out waiting for the player list."
+        );
         return;
     }
 
@@ -242,6 +260,16 @@ gungame_callback_player_killed(
         gungame_advance_player( attacker );
     }
 
+    if ( hasAttacker )
+    {
+        if ( meleeKill )
+        {
+            self thread gungame_update_native_score();
+        }
+
+        attacker thread gungame_update_native_score();
+    }
+
     if ( isdefined( level.gungame_original_killed_callback ) )
     {
         [[ level.gungame_original_killed_callback ]](
@@ -295,6 +323,13 @@ gungame_equip_stage()
     if ( !isdefined( self.gungame_stage ) )
     {
         self.gungame_stage = 0;
+    }
+
+    if ( self.gungame_stage >=
+         level.gungame_weapons.size )
+    {
+        self maps\mp\gametypes\_gamelogic::checkScoreLimit();
+        return;
     }
 
     weaponIndex = self.gungame_stage;
