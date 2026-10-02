@@ -9,8 +9,8 @@
 
 #define GG_SCORE_PER_KILL 100
 #define GG_EQUIP_DELAY 0.5
-#define GG_CALLBACK_WAIT_SECONDS 30
-#define GG_CALLBACK_WAIT_INTERVAL 0.05
+#define GG_SETUP_WAIT_SECONDS 30
+#define GG_SETUP_WAIT_INTERVAL 0.05
 
 init()
 {
@@ -120,10 +120,10 @@ gungame_start_existing_players()
     while ( ( !isdefined( level.players ) ||
               !isdefined( level.gametypestarted ) ||
               !level.gametypestarted ) &&
-            waitedSeconds < GG_CALLBACK_WAIT_SECONDS )
+            waitedSeconds < GG_SETUP_WAIT_SECONDS )
     {
-        wait GG_CALLBACK_WAIT_INTERVAL;
-        waitedSeconds += GG_CALLBACK_WAIT_INTERVAL;
+        wait GG_SETUP_WAIT_INTERVAL;
+        waitedSeconds += GG_SETUP_WAIT_INTERVAL;
     }
 
     if ( !isdefined( level.players ) ||
@@ -203,10 +203,10 @@ gungame_install_kill_callback()
     while ( ( !isdefined( level.callbackPlayerKilled ) ||
               !isdefined( level.gametypestarted ) ||
               !level.gametypestarted ) &&
-            waitedSeconds < GG_CALLBACK_WAIT_SECONDS )
+            waitedSeconds < GG_SETUP_WAIT_SECONDS )
     {
-        wait GG_CALLBACK_WAIT_INTERVAL;
-        waitedSeconds += GG_CALLBACK_WAIT_INTERVAL;
+        wait GG_SETUP_WAIT_INTERVAL;
+        waitedSeconds += GG_SETUP_WAIT_INTERVAL;
     }
 
     if ( !isdefined( level.callbackPlayerKilled ) ||
@@ -260,16 +260,6 @@ gungame_callback_player_killed(
         gungame_advance_player( attacker );
     }
 
-    if ( hasAttacker )
-    {
-        if ( meleeKill )
-        {
-            self thread gungame_update_native_score();
-        }
-
-        attacker thread gungame_update_native_score();
-    }
-
     if ( isdefined( level.gungame_original_killed_callback ) )
     {
         [[ level.gungame_original_killed_callback ]](
@@ -290,18 +280,23 @@ gungame_callback_player_killed(
         return;
     }
 
+    // Replace native kill points with the updated Gun Game stage score.
     if ( meleeKill )
     {
-        self thread gungame_update_native_score();
+        self gungame_update_native_score();
     }
 
-    attacker thread gungame_update_native_score();
+    attacker gungame_update_native_score();
 
     if ( isdefined( attacker.gungame_stage ) &&
          attacker.gungame_stage <
          level.gungame_weapons.size )
     {
         attacker thread gungame_equip_stage();
+    }
+    else
+    {
+        attacker maps\mp\gametypes\_gamelogic::checkScoreLimit();
     }
 }
 
@@ -332,14 +327,8 @@ gungame_equip_stage()
         return;
     }
 
-    weaponIndex = self.gungame_stage;
-
-    if ( weaponIndex >= level.gungame_weapons.size )
-    {
-        weaponIndex = level.gungame_weapons.size - 1;
-    }
-
-    weapon = level.gungame_weapons[weaponIndex];
+    weapon =
+        level.gungame_weapons[self.gungame_stage];
 
     self takeallweapons();
     self giveweapon( weapon );
