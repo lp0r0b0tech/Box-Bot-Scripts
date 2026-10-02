@@ -7,9 +7,6 @@
 
 #define GG_SCORE_PER_KILL 100
 
-#include maps\mp\gametypes\_hud_util;
-
-
 init()
 {
     if ( isdefined( level.gungame_started ) )
@@ -112,15 +109,6 @@ gungame_track_player()
     self endon( "disconnect" );
 
     self.gungame_stage = 0;
-    self.gungame_score = 0;
-    self.gungame_hud = self createFontString( "objective", 1.5 );
-    self.gungame_hud setPoint(
-        "TOPRIGHT",
-        "TOPRIGHT",
-        -20,
-        70
-    );
-    self thread gungame_update_hud();
 
     for ( ;; )
     {
@@ -191,8 +179,6 @@ gungame_advance_player( player )
         player.gungame_stage++;
     }
 
-    player.gungame_score += GG_SCORE_PER_KILL;
-    player thread gungame_update_hud();
     player thread gungame_equip_stage();
 }
 
@@ -211,23 +197,4 @@ gungame_set_back_player( player )
         player.gungame_stage--;
     }
 
-    player thread gungame_update_hud();
-}
-
-
-gungame_update_hud()
-{
-    if ( !isdefined( self.gungame_hud ) )
-    {
-        return;
-    }
-
-    self.gungame_hud setText(
-        "SCORE: " +
-        self.gungame_score +
-        "  |  WEAPON: " +
-        ( self.gungame_stage + 1 ) +
-        "/" +
-        level.gungame_weapons.size
-    );
 }
