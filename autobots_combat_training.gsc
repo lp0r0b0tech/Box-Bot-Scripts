@@ -757,6 +757,9 @@ applyOpLoadout(ent)
     if (!opWeaponsEnable || !isDefined(ent))
         return;
 
+    if (isDefined(level.gungame_active) && level.gungame_active)
+        return;
+
     if (!isDefined(ent.pers))
         ent.pers = [];
 
