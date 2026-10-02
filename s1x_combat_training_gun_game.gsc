@@ -12,6 +12,7 @@
 #define GG_EQUIP_DELAY 0.5
 #define GG_SETUP_WAIT_SECONDS 30
 #define GG_SETUP_WAIT_INTERVAL 0.05
+#define GG_SETUP_WAIT_ATTEMPTS 600
 
 init()
 {
@@ -116,14 +117,23 @@ gungame_start_existing_players()
 {
     level endon( "game_ended" );
 
-    if ( !gungame_wait_for_setup( false ) )
-    {
-        return;
-    }
+    gungame_wait_for_setup( false );
 
-    foreach ( player in level.players )
+    if ( isdefined( level.players ) )
     {
-        gungame_start_player( player );
+        foreach ( player in level.players )
+        {
+            gungame_start_player( player );
+        }
+    }
+    else
+    {
+        players = getentarray( "player", "classname" );
+
+        foreach ( player in players )
+        {
+            gungame_start_player( player );
+        }
     }
 }
 
@@ -197,13 +207,13 @@ gungame_install_kill_callback()
 
 gungame_wait_for_setup( waitForCallback )
 {
-    waitedSeconds = 0;
+    waitAttempts = 0;
 
     while ( !gungame_setup_is_ready( waitForCallback ) &&
-            waitedSeconds < GG_SETUP_WAIT_SECONDS )
+            waitAttempts < GG_SETUP_WAIT_ATTEMPTS )
     {
         wait GG_SETUP_WAIT_INTERVAL;
-        waitedSeconds += GG_SETUP_WAIT_INTERVAL;
+        waitAttempts++;
     }
 
     if ( !gungame_setup_is_ready( waitForCallback ) )
@@ -281,6 +291,14 @@ gungame_callback_player_killed(
         }
 
         gungame_advance_player( attacker );
+
+        if ( meleeKill )
+        {
+            gungame_set_native_player_score( self );
+        }
+
+        gungame_set_native_player_score( attacker );
+        gungame_refresh_native_scores();
     }
 
     if ( isdefined( level.gungame_original_killed_callback ) )
