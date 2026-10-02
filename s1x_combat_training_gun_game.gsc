@@ -12,6 +12,7 @@
 #define GG_EQUIP_DELAY 0.5
 #define GG_SETUP_WAIT_INTERVAL 0.05
 #define GG_SETUP_WAIT_ATTEMPTS 600
+#define GG_SCORELIMIT_GUARD 999999
 
 init()
 {
@@ -76,15 +77,7 @@ init()
 
     level.gungame_scorelimit =
         level.gungame_weapons.size * GG_SCORE_PER_KILL;
-    level.scorelimit = level.gungame_scorelimit;
-    setdvar(
-        "scr_dm_scorelimit",
-        "" + level.gungame_scorelimit
-    );
-    setdvar(
-        "scr_war_scorelimit",
-        "" + level.gungame_scorelimit
-    );
+    gungame_set_scorelimit( GG_SCORELIMIT_GUARD );
 
     level thread gungame_install_kill_callback();
     level thread gungame_watch_connections();
@@ -193,15 +186,7 @@ gungame_install_kill_callback()
         return;
     }
 
-    level.scorelimit = level.gungame_scorelimit;
-    setdvar(
-        "scr_dm_scorelimit",
-        "" + level.gungame_scorelimit
-    );
-    setdvar(
-        "scr_war_scorelimit",
-        "" + level.gungame_scorelimit
-    );
+    gungame_set_scorelimit( GG_SCORELIMIT_GUARD );
 
     level.gungame_original_killed_callback =
         level.callbackPlayerKilled;
@@ -321,6 +306,15 @@ gungame_callback_player_killed(
         return;
     }
 
+    if ( isdefined( attacker.gungame_stage ) &&
+         attacker.gungame_stage >=
+         level.gungame_weapons.size )
+    {
+        gungame_set_scorelimit( level.gungame_scorelimit );
+    }
+
+    gungame_update_team_scores();
+
     // Replace native kill points with the updated Gun Game stage score.
     if ( meleeKill )
     {
@@ -328,7 +322,6 @@ gungame_callback_player_killed(
     }
 
     gungame_set_native_player_score( attacker );
-    gungame_update_team_scores();
     gungame_refresh_native_scores();
 
     if ( isdefined( attacker.gungame_stage ) )
@@ -343,6 +336,14 @@ gungame_callback_player_killed(
             attacker maps\mp\gametypes\_gamelogic::checkScoreLimit();
         }
     }
+}
+
+
+gungame_set_scorelimit( scorelimit )
+{
+    level.scorelimit = scorelimit;
+    setdvar( "scr_dm_scorelimit", "" + scorelimit );
+    setdvar( "scr_war_scorelimit", "" + scorelimit );
 }
 
 
