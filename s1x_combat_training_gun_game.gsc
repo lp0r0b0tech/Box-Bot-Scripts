@@ -109,10 +109,12 @@ gungame_track_player()
     self endon( "disconnect" );
 
     self.gungame_stage = 0;
+    self thread gungame_update_native_score();
 
     for ( ;; )
     {
         self waittill( "spawned_player" );
+        self thread gungame_update_native_score();
         self thread gungame_equip_stage();
 
         self waittill(
@@ -155,8 +157,14 @@ gungame_equip_stage()
         self.gungame_stage = 0;
     }
 
-    weapon =
-        level.gungame_weapons[self.gungame_stage];
+    weaponIndex = self.gungame_stage;
+
+    if ( weaponIndex >= level.gungame_weapons.size )
+    {
+        weaponIndex = level.gungame_weapons.size - 1;
+    }
+
+    weapon = level.gungame_weapons[weaponIndex];
 
     self takeallweapons();
     self giveweapon( weapon );
@@ -174,12 +182,18 @@ gungame_advance_player( player )
     }
 
     if ( player.gungame_stage <
-         level.gungame_weapons.size - 1 )
+         level.gungame_weapons.size )
     {
         player.gungame_stage++;
     }
 
-    player thread gungame_equip_stage();
+    player thread gungame_update_native_score();
+
+    if ( player.gungame_stage <
+         level.gungame_weapons.size )
+    {
+        player thread gungame_equip_stage();
+    }
 }
 
 
@@ -197,4 +211,66 @@ gungame_set_back_player( player )
         player.gungame_stage--;
     }
 
+    player thread gungame_update_native_score();
+}
+
+
+gungame_update_native_score()
+{
+    score =
+        self.gungame_stage * GG_SCORE_PER_KILL;
+
+    maps\mp\gametypes\_gamescore::_setPlayerScore(
+        self,
+        score
+    );
+
+    self setExtraScore0( score );
+
+    level thread
+        maps\mp\gametypes\_gamescore::sendUpdatedDMScores();
+
+    gungame_update_team_scores();
+}
+
+
+gungame_update_team_scores()
+{
+    if ( !isdefined( level.teambased ) ||
+         !level.teambased ||
+         !isdefined( level.teamNameList ) )
+    {
+        return;
+    }
+
+    foreach ( team in level.teamNameList )
+    {
+        teamLeadScore = 0;
+
+        foreach ( player in level.players )
+        {
+            if ( !isdefined( player ) ||
+                 !isdefined( player.gungame_stage ) ||
+                 !isdefined( player.pers ) ||
+                 !isdefined( player.pers["team"] ) ||
+                 player.pers["team"] != team )
+            {
+                continue;
+            }
+
+            playerScore =
+                player.gungame_stage *
+                GG_SCORE_PER_KILL;
+
+            if ( playerScore > teamLeadScore )
+            {
+                teamLeadScore = playerScore;
+            }
+        }
+
+        maps\mp\gametypes\_gamescore::_setTeamScore(
+            team,
+            teamLeadScore
+        );
+    }
 }
