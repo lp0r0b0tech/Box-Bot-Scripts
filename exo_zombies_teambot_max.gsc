@@ -305,7 +305,9 @@ eztbIsDescentMap()
 {
     mapName = toLower( getdvar( "mapname" ) + "" );
     return mapName == "zombie_descent" ||
-           mapName == "mp_zombie_descent";
+           mapName == "mp_zombie_descent" ||
+           mapName == "mp_zombie_h2o" ||
+           mapName == "zombie_h2o";
 }
 
 eztbDescentBotBehavior( player )
@@ -329,6 +331,12 @@ eztbTryUseDescentTube( player )
                 "zombie_tube",
                 "targetname"
             );
+    }
+
+    if ( !isdefined( level.eztbDescentTubes ) ||
+         level.eztbDescentTubes.size == 0 )
+    {
+        return;
     }
 
     foreach ( tube in level.eztbDescentTubes )
@@ -414,6 +422,14 @@ eztbDamageHookLoop()
 
                 level.eztbOriginalDamage[weaponName] = currentCallback;
                 level.modifyweapondamage[weaponName] =
+                    ::eztbModifyWeaponDamage;
+            }
+
+            if ( !isdefined(
+                    level.modifyweapondamage[EZTB_CAUTERIZER]
+                ) )
+            {
+                level.modifyweapondamage[EZTB_CAUTERIZER] =
                     ::eztbModifyWeaponDamage;
             }
         }
