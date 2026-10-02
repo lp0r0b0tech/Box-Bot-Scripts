@@ -33,6 +33,7 @@ init()
     gungame_add_weapon( "iw5_maul_mp" );
     gungame_add_weapon( "iw5_dlcgun8loot0_mp" );
     gungame_add_weapon( "iw5_combatknife_mp" );
+    gungame_add_weapon( "iw5_exocrossbow_mp" );
     gungame_add_weapon( "iw5_em1_mp" );
     gungame_add_weapon( "iw5_epm3_mp" );
     gungame_add_weapon( "iw5_hbra3_mp" );
@@ -131,7 +132,12 @@ gungame_equip_stage()
 {
     self endon( "disconnect" );
 
-    wait 0.1;
+    wait 0.5;
+
+    if ( !isAlive( self ) )
+    {
+        return;
+    }
 
     if ( !isdefined( self.gungame_stage ) )
     {
