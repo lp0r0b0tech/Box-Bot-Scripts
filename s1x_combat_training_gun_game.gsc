@@ -6,6 +6,8 @@
 */
 
 #define GG_SCORE_PER_KILL 100
+#define GG_EQUIP_DELAY 0.5
+#define GG_CALLBACK_WAIT_TICKS 600
 
 init()
 {
@@ -136,7 +138,7 @@ gungame_install_kill_callback()
     while ( ( !isdefined( level.callbackPlayerKilled ) ||
               !isdefined( level.gametypestarted ) ||
               !level.gametypestarted ) &&
-            waitCount < 600 )
+            waitCount < GG_CALLBACK_WAIT_TICKS )
     {
         waitCount++;
         wait 0.05;
@@ -169,6 +171,25 @@ gungame_callback_player_killed(
     deathAnimDuration
 )
 {
+    hasAttacker =
+        isdefined( attacker ) &&
+        isplayer( attacker ) &&
+        attacker != self;
+
+    meleeKill =
+        isdefined( meansOfDeath ) &&
+        ismeleeMOD( meansOfDeath );
+
+    if ( hasAttacker )
+    {
+        if ( meleeKill )
+        {
+            gungame_set_back_player( self );
+        }
+
+        gungame_advance_player( attacker );
+    }
+
     if ( isdefined( level.gungame_original_killed_callback ) )
     {
         [[ level.gungame_original_killed_callback ]](
@@ -184,20 +205,23 @@ gungame_callback_player_killed(
         );
     }
 
-    if ( !isdefined( attacker ) ||
-         !isplayer( attacker ) ||
-         attacker == self )
+    if ( !hasAttacker )
     {
         return;
     }
 
-    if ( isdefined( meansOfDeath ) &&
-         ismeleeMOD( meansOfDeath ) )
+    if ( meleeKill )
     {
-        gungame_set_back_player( self );
+        self thread gungame_update_native_score();
     }
 
-    gungame_advance_player( attacker );
+    attacker thread gungame_update_native_score();
+
+    if ( attacker.gungame_stage <
+         level.gungame_weapons.size )
+    {
+        attacker thread gungame_equip_stage();
+    }
 }
 
 
@@ -205,7 +229,10 @@ gungame_equip_stage()
 {
     self endon( "disconnect" );
 
-    wait 0.5;
+    self notify( "gungame_equip_stage" );
+    self endon( "gungame_equip_stage" );
+
+    wait GG_EQUIP_DELAY;
 
     if ( !isAlive( self ) )
     {
@@ -247,13 +274,6 @@ gungame_advance_player( player )
         player.gungame_stage++;
     }
 
-    player thread gungame_update_native_score();
-
-    if ( player.gungame_stage <
-         level.gungame_weapons.size )
-    {
-        player thread gungame_equip_stage();
-    }
 }
 
 
@@ -271,7 +291,6 @@ gungame_set_back_player( player )
         player.gungame_stage--;
     }
 
-    player thread gungame_update_native_score();
 }
 
 
