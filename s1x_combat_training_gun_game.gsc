@@ -122,6 +122,8 @@ gungame_setup()
     level.gungame_active = true;
     level.gungame_original_killed_callback = level.callbackPlayerKilled;
     level.callbackPlayerKilled = ::gungame_callback_player_killed;
+    level.gungame_original_gametype_killed = level.onPlayerKilled;
+    level.onPlayerKilled = ::gungame_on_player_killed;
     level.gungame_original_score_callback = level.onPlayerScore;
     level.onPlayerScore = ::gungame_on_player_score;
 
@@ -220,6 +222,21 @@ gungame_callback_player_killed(
     direction, hitLocation, timeOffset, deathAnimDuration
 )
 {
+    // Repair native suicide, teamkill, and environmental-death penalties.
+    // Nothing after this call may depend on death/killcam processing returning.
+    gungame_refresh_native_scores();
+    [[ level.gungame_original_killed_callback ]](
+        inflictor, attacker, damage, meansOfDeath, weapon,
+        direction, hitLocation, timeOffset, deathAnimDuration
+    );
+}
+
+gungame_on_player_killed(
+    inflictor, attacker, damage, meansOfDeath, weapon,
+    direction, hitLocation, timeOffset, deathAnimDuration, lifeId
+)
+{
+    // This native hook receives resolved owners and last-stand kill attribution.
     if ( !level.gungame_finished && game["state"] == "playing" &&
          gungame_is_enemy( attacker ) )
     {
@@ -246,18 +263,20 @@ gungame_callback_player_killed(
         }
     }
 
-    // Run on level, independently of native death/killcam waits and respawns.
-    // Also repair native suicide, teamkill, and environmental-death penalties.
     gungame_refresh_native_scores();
-    [[ level.gungame_original_killed_callback ]](
-        inflictor, attacker, damage, meansOfDeath, weapon,
-        direction, hitLocation, timeOffset, deathAnimDuration
-    );
+    if ( isdefined( level.gungame_original_gametype_killed ) )
+    {
+        [[ level.gungame_original_gametype_killed ]](
+            inflictor, attacker, damage, meansOfDeath, weapon,
+            direction, hitLocation, timeOffset, deathAnimDuration, lifeId
+        );
+    }
 }
 
 gungame_is_enemy( attacker )
 {
-    if ( !isdefined( attacker ) || !isplayer( attacker ) || attacker == self ||
+    if ( !isplayer( self ) || !isdefined( attacker ) ||
+         !isplayer( attacker ) || attacker == self ||
          !isdefined( attacker.pers["team"] ) || !isdefined( self.pers["team"] ) ||
          attacker.pers["team"] == "spectator" || self.pers["team"] == "spectator" )
         return false;
