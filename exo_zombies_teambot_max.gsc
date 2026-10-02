@@ -9,8 +9,8 @@
 
 #define EZTB_BOT_HEALTH             30000
 #define EZTB_BOT_DAMAGE              30000
-#define EZTB_CAUTERIZER              "iw5_fusionzm_mp"
-#define EZTB_CAUTERIZER_LEVEL        25
+#define EZTB_ATLAS45                 "iw5_atlas45zm_mp"
+#define EZTB_ATLAS45_LEVEL           25
 #define EZTB_INFINITE_AMMO           999
 #define EZTB_REFRESH_INTERVAL        0.25
 #define EZTB_HOOK_INTERVAL           0.5
@@ -88,7 +88,7 @@ eztbPlayerLoop()
                     player thread eztbApplyBotLoadout();
                 }
 
-                eztbKeepCauterizerAmmo( player );
+                eztbKeepAtlas45Ammo( player );
 
                 if ( eztbIsDescentMap() )
                 {
@@ -204,22 +204,22 @@ eztbApplyBotLoadout()
         undefined
     );
 
-    weapon = eztbFindCauterizer( self );
+    weapon = eztbFindAtlas45( self );
     if ( weapon == "" )
     {
         maps\mp\zombies\_wall_buys::givezombieweapon(
             self,
-            EZTB_CAUTERIZER,
+            EZTB_ATLAS45,
             0,
             1
         );
-        weapon = EZTB_CAUTERIZER;
+        weapon = EZTB_ATLAS45;
     }
 
     maps\mp\zombies\_wall_buys::setweaponlevel(
         self,
         weapon,
-        EZTB_CAUTERIZER_LEVEL
+        EZTB_ATLAS45_LEVEL
     );
 
     self.maxhealth = EZTB_BOT_HEALTH;
@@ -227,7 +227,7 @@ eztbApplyBotLoadout()
     self.health = EZTB_BOT_HEALTH;
 }
 
-eztbFindCauterizer( player )
+eztbFindAtlas45( player )
 {
     weapons = player getweaponslistprimariesminusalts();
     if ( !isdefined( weapons ) )
@@ -237,7 +237,7 @@ eztbFindCauterizer( player )
 
     foreach ( weapon in weapons )
     {
-        if ( getweaponbasename( weapon ) == EZTB_CAUTERIZER )
+        if ( getweaponbasename( weapon ) == EZTB_ATLAS45 )
         {
             return weapon;
         }
@@ -246,7 +246,7 @@ eztbFindCauterizer( player )
     return "";
 }
 
-eztbKeepCauterizerAmmo( player )
+eztbKeepAtlas45Ammo( player )
 {
     weapons = player getweaponslistall();
     if ( !isdefined( weapons ) )
@@ -256,7 +256,7 @@ eztbKeepCauterizerAmmo( player )
 
     foreach ( weapon in weapons )
     {
-        if ( getweaponbasename( weapon ) != EZTB_CAUTERIZER )
+        if ( getweaponbasename( weapon ) != EZTB_ATLAS45 )
         {
             continue;
         }
@@ -426,10 +426,10 @@ eztbDamageHookLoop()
             }
 
             if ( !isdefined(
-                    level.modifyweapondamage[EZTB_CAUTERIZER]
+                    level.modifyweapondamage[EZTB_ATLAS45]
                 ) )
             {
-                level.modifyweapondamage[EZTB_CAUTERIZER] =
+                level.modifyweapondamage[EZTB_ATLAS45] =
                     ::eztbModifyWeaponDamage;
             }
         }
