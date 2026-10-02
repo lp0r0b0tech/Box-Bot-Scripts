@@ -10,7 +10,6 @@
 
 #define GG_SCORE_PER_KILL 100
 #define GG_EQUIP_DELAY 0.5
-#define GG_SETUP_WAIT_SECONDS 30
 #define GG_SETUP_WAIT_INTERVAL 0.05
 #define GG_SETUP_WAIT_ATTEMPTS 600
 
@@ -117,9 +116,9 @@ gungame_start_existing_players()
 {
     level endon( "game_ended" );
 
-    gungame_wait_for_setup( false );
+    setupReady = gungame_wait_for_setup( false );
 
-    if ( isdefined( level.players ) )
+    if ( setupReady )
     {
         foreach ( player in level.players )
         {
@@ -222,7 +221,8 @@ gungame_wait_for_setup( waitForCallback )
         {
             println(
                 "GunGame: timed out after " +
-                GG_SETUP_WAIT_SECONDS +
+                ( GG_SETUP_WAIT_ATTEMPTS *
+                  GG_SETUP_WAIT_INTERVAL ) +
                 " seconds waiting for native kill callback setup."
             );
         }
@@ -230,7 +230,8 @@ gungame_wait_for_setup( waitForCallback )
         {
             println(
                 "GunGame: timed out after " +
-                GG_SETUP_WAIT_SECONDS +
+                ( GG_SETUP_WAIT_ATTEMPTS *
+                  GG_SETUP_WAIT_INTERVAL ) +
                 " seconds waiting for the player list or gametype start."
             );
         }
@@ -292,13 +293,6 @@ gungame_callback_player_killed(
 
         gungame_advance_player( attacker );
 
-        if ( meleeKill )
-        {
-            gungame_set_native_player_score( self );
-        }
-
-        gungame_set_native_player_score( attacker );
-        gungame_refresh_native_scores();
     }
 
     if ( isdefined( level.gungame_original_killed_callback ) )
@@ -454,7 +448,8 @@ gungame_update_team_scores()
 {
     if ( !isdefined( level.teambased ) ||
          !level.teambased ||
-         !isdefined( level.teamNameList ) )
+         !isdefined( level.teamNameList ) ||
+         !isdefined( level.players ) )
     {
         return;
     }
