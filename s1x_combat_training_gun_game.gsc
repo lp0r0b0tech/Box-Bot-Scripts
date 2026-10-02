@@ -1,10 +1,11 @@
 /*
     S1x Combat Training Gun Game.
 
-    Load this script alongside the other MP scripts. Each kill advances
-    the player through the usable Advanced Warfare multiplayer weapons.
-    Each stage is worth 100 points; a kill with the final weapon reaches
-    the score limit. Melee kills set the victim back one stage.
+    Load this script alongside the other MP scripts. A kill of another
+    player advances the attacker through the usable weapon list.
+    Each stage is worth GG_SCORE_PER_KILL points; a kill with the
+    final weapon reaches the score limit. Melee kills set the victim
+    back one stage.
 */
 
 #define GG_SCORE_PER_KILL 100
@@ -115,26 +116,8 @@ gungame_start_existing_players()
 {
     level endon( "game_ended" );
 
-    waitedSeconds = 0;
-
-    while ( ( !isdefined( level.players ) ||
-              !isdefined( level.gametypestarted ) ||
-              !level.gametypestarted ) &&
-            waitedSeconds < GG_SETUP_WAIT_SECONDS )
+    if ( !gungame_wait_for_setup( false ) )
     {
-        wait GG_SETUP_WAIT_INTERVAL;
-        waitedSeconds += GG_SETUP_WAIT_INTERVAL;
-    }
-
-    if ( !isdefined( level.players ) ||
-         !isdefined( level.gametypestarted ) ||
-         !level.gametypestarted )
-    {
-        println(
-             "GunGame: timed out after " +
-             GG_SETUP_WAIT_SECONDS +
-             " seconds waiting for the player list or gametype start."
-         );
         return;
     }
 
@@ -200,26 +183,8 @@ gungame_install_kill_callback()
 {
     level endon( "game_ended" );
 
-    waitedSeconds = 0;
-
-    while ( ( !isdefined( level.callbackPlayerKilled ) ||
-              !isdefined( level.gametypestarted ) ||
-              !level.gametypestarted ) &&
-            waitedSeconds < GG_SETUP_WAIT_SECONDS )
+    if ( !gungame_wait_for_setup( true ) )
     {
-        wait GG_SETUP_WAIT_INTERVAL;
-        waitedSeconds += GG_SETUP_WAIT_INTERVAL;
-    }
-
-    if ( !isdefined( level.callbackPlayerKilled ) ||
-         !isdefined( level.gametypestarted ) ||
-         !level.gametypestarted )
-    {
-        println(
-             "GunGame: timed out after " +
-             GG_SETUP_WAIT_SECONDS +
-             " seconds waiting for native kill callback setup."
-         );
         return;
     }
 
@@ -227,6 +192,60 @@ gungame_install_kill_callback()
         level.callbackPlayerKilled;
     level.callbackPlayerKilled =
         ::gungame_callback_player_killed;
+}
+
+
+gungame_wait_for_setup( waitForCallback )
+{
+    waitedSeconds = 0;
+
+    while ( !gungame_setup_is_ready( waitForCallback ) &&
+            waitedSeconds < GG_SETUP_WAIT_SECONDS )
+    {
+        wait GG_SETUP_WAIT_INTERVAL;
+        waitedSeconds += GG_SETUP_WAIT_INTERVAL;
+    }
+
+    if ( !gungame_setup_is_ready( waitForCallback ) )
+    {
+        if ( waitForCallback )
+        {
+            println(
+                "GunGame: timed out after " +
+                GG_SETUP_WAIT_SECONDS +
+                " seconds waiting for native kill callback setup."
+            );
+        }
+        else
+        {
+            println(
+                "GunGame: timed out after " +
+                GG_SETUP_WAIT_SECONDS +
+                " seconds waiting for the player list or gametype start."
+            );
+        }
+
+        return false;
+    }
+
+    return true;
+}
+
+
+gungame_setup_is_ready( waitForCallback )
+{
+    if ( !isdefined( level.gametypestarted ) ||
+         !level.gametypestarted )
+    {
+        return false;
+    }
+
+    if ( waitForCallback )
+    {
+        return isdefined( level.callbackPlayerKilled );
+    }
+
+    return isdefined( level.players );
 }
 
 
@@ -293,15 +312,17 @@ gungame_callback_player_killed(
     gungame_set_native_player_score( attacker );
     gungame_refresh_native_scores();
 
-    if ( isdefined( attacker.gungame_stage ) &&
-         attacker.gungame_stage <
-         level.gungame_weapons.size )
+    if ( isdefined( attacker.gungame_stage ) )
     {
-        attacker thread gungame_equip_stage();
-    }
-    else
-    {
-        attacker maps\mp\gametypes\_gamelogic::checkScoreLimit();
+        if ( attacker.gungame_stage <
+             level.gungame_weapons.size )
+        {
+            attacker thread gungame_equip_stage();
+        }
+        else
+        {
+            attacker maps\mp\gametypes\_gamelogic::checkScoreLimit();
+        }
     }
 }
 
