@@ -68,9 +68,11 @@ eztbPlayerLoop()
                         player.pers["eztbLoadoutGiven"] = false;
                     }
 
+                    player.eztbExoHealthGranted = false;
                     continue;
                 }
 
+                eztbEnsureExoSuitAndPerks( player );
                 player.maxhealth = EZTB_BOT_HEALTH;
                 player.maxHealth = EZTB_BOT_HEALTH;
                 player.health = EZTB_BOT_HEALTH;
@@ -171,39 +173,6 @@ eztbApplyBotLoadout()
         return;
     }
 
-    if ( !self hasexosuit() )
-    {
-        self maps\mp\zombies\_terminals::perkterminalsetexosuit(
-            "exo_suit",
-            undefined
-        );
-    }
-
-    self maps\mp\zombies\_terminals::perkterminalsetexohealth(
-        "exo_health",
-        undefined
-    );
-    self maps\mp\zombies\_terminals::perkterminalsetexofastreload(
-        "specialty_fastreload",
-        undefined
-    );
-    self maps\mp\zombies\_terminals::perkterminalsetexorevive(
-        "exo_revive",
-        undefined
-    );
-    self maps\mp\zombies\_terminals::perkterminalsetexostabilizer(
-        "exo_stabilizer",
-        undefined
-    );
-    self maps\mp\zombies\_terminals::perkterminalsetexoslam(
-        "exo_slam",
-        undefined
-    );
-    self maps\mp\zombies\_terminals::perkterminalsetexotacticalarmor(
-        "exo_tacticalArmor",
-        undefined
-    );
-
     weapon = eztbFindAtlas45( self );
     if ( weapon == "" )
     {
@@ -225,6 +194,77 @@ eztbApplyBotLoadout()
     self.maxhealth = EZTB_BOT_HEALTH;
     self.maxHealth = EZTB_BOT_HEALTH;
     self.health = EZTB_BOT_HEALTH;
+}
+
+eztbEnsureExoSuitAndPerks( player )
+{
+    if ( !player hasexosuit() )
+    {
+        player maps\mp\zombies\_terminals::perkterminalsetexosuit(
+            "exo_suit",
+            undefined
+        );
+    }
+
+    player.exosuitonline = 1;
+
+    if ( !isdefined( player.eztbExoHealthGranted ) ||
+         !player.eztbExoHealthGranted )
+    {
+        player maps\mp\zombies\_terminals::perkterminalsetexohealth(
+            "exo_health",
+            undefined
+        );
+        player.eztbExoHealthGranted = true;
+    }
+
+    if ( !player hasperk( "specialty_fastreload", 1 ) ||
+         !player hasperk( "specialty_sprintreload", 1 ) )
+    {
+        player maps\mp\zombies\_terminals::perkterminalsetexofastreload(
+            "specialty_fastreload",
+            undefined
+        );
+    }
+
+    if ( !isdefined( player.isexostimactive ) ||
+         !player.isexostimactive )
+    {
+        player maps\mp\zombies\_terminals::perkterminalsetexorevive(
+            "exo_revive",
+            undefined
+        );
+    }
+
+    if ( !player hasperk( "specialty_bulletaccuracy", 1 ) ||
+         !player hasperk( "specialty_sprintfire", 1 ) ||
+         !player hasperk( "specialty_quickswap", 1 ) ||
+         !player hasperk( "specialty_fastoffhand", 1 ) )
+    {
+        player maps\mp\zombies\_terminals::perkterminalsetexostabilizer(
+            "exo_stabilizer",
+            undefined
+        );
+    }
+
+    if ( !isdefined( player.isexoslamactive ) ||
+         !player.isexoslamactive )
+    {
+        player maps\mp\zombies\_terminals::perkterminalsetexoslam(
+            "exo_slam",
+            undefined
+        );
+    }
+
+    if ( !player hasperk( "specialty_stockpile", 1 ) ||
+         !player hasperk( "specialty_extralethal", 1 ) ||
+         !player hasperk( "specialty_extratactical", 1 ) )
+    {
+        player maps\mp\zombies\_terminals::perkterminalsetexotacticalarmor(
+            "exo_tacticalArmor",
+            undefined
+        );
+    }
 }
 
 eztbFindAtlas45( player )
