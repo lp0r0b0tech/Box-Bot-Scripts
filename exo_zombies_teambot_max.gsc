@@ -9,8 +9,12 @@
 
 #define EZTB_BOT_HEALTH             30000
 #define EZTB_BOT_DAMAGE              30000
+#define EZTB_CAUTERIZER              "iw5_fusionzm_mp"
+#define EZTB_CAUTERIZER_LEVEL        25
+#define EZTB_INFINITE_AMMO           999
 #define EZTB_REFRESH_INTERVAL        0.25
 #define EZTB_HOOK_INTERVAL           0.5
+#define EZTB_REVIVE_DISTANCE         128
 
 main()
 {
@@ -52,14 +56,44 @@ eztbPlayerLoop()
         {
             foreach ( player in players )
             {
-                if ( !eztbIsTeammateBot( player ) || !isAlive( player ) )
+                if ( !eztbIsTeammateBot( player ) )
                 {
+                    continue;
+                }
+
+                if ( !isAlive( player ) )
+                {
+                    if ( isdefined( player.pers ) )
+                    {
+                        player.pers["eztbLoadoutGiven"] = false;
+                    }
+
                     continue;
                 }
 
                 player.maxhealth = EZTB_BOT_HEALTH;
                 player.maxHealth = EZTB_BOT_HEALTH;
                 player.health = EZTB_BOT_HEALTH;
+                eztbReviveNearbyPlayers( player, players );
+
+                if ( !isdefined( player.pers ) )
+                {
+                    player.pers = [];
+                }
+
+                if ( !isdefined( player.pers["eztbLoadoutGiven"] ) ||
+                     !player.pers["eztbLoadoutGiven"] )
+                {
+                    player.pers["eztbLoadoutGiven"] = true;
+                    player thread eztbApplyBotLoadout();
+                }
+
+                eztbKeepCauterizerAmmo( player );
+
+                if ( eztbIsDescentMap() )
+                {
+                    eztbDescentBotBehavior( player );
+                }
             }
         }
 
@@ -124,6 +158,239 @@ eztbValueIsTrue( value )
            stringValue == "true" ||
            stringValue == "yes" ||
            stringValue == "bot";
+}
+
+eztbApplyBotLoadout()
+{
+    self endon( "disconnect" );
+    self endon( "death" );
+
+    wait 0.5;
+    if ( !isdefined( self ) || !isAlive( self ) )
+    {
+        return;
+    }
+
+    if ( !self hasexosuit() )
+    {
+        self maps\mp\zombies\_terminals::perkterminalsetexosuit(
+            "exo_suit",
+            undefined
+        );
+    }
+
+    self maps\mp\zombies\_terminals::perkterminalsetexohealth(
+        "exo_health",
+        undefined
+    );
+    self maps\mp\zombies\_terminals::perkterminalsetexofastreload(
+        "specialty_fastreload",
+        undefined
+    );
+    self maps\mp\zombies\_terminals::perkterminalsetexorevive(
+        "exo_revive",
+        undefined
+    );
+    self maps\mp\zombies\_terminals::perkterminalsetexostabilizer(
+        "exo_stabilizer",
+        undefined
+    );
+    self maps\mp\zombies\_terminals::perkterminalsetexoslam(
+        "exo_slam",
+        undefined
+    );
+    self maps\mp\zombies\_terminals::perkterminalsetexotacticalarmor(
+        "exo_tacticalArmor",
+        undefined
+    );
+
+    weapon = eztbFindCauterizer( self );
+    if ( weapon == "" )
+    {
+        maps\mp\zombies\_wall_buys::givezombieweapon(
+            self,
+            EZTB_CAUTERIZER,
+            0,
+            1
+        );
+        weapon = EZTB_CAUTERIZER;
+    }
+
+    maps\mp\zombies\_wall_buys::setweaponlevel(
+        self,
+        weapon,
+        EZTB_CAUTERIZER_LEVEL
+    );
+
+    self.maxhealth = EZTB_BOT_HEALTH;
+    self.maxHealth = EZTB_BOT_HEALTH;
+    self.health = EZTB_BOT_HEALTH;
+}
+
+eztbFindCauterizer( player )
+{
+    weapons = player getweaponslistprimariesminusalts();
+    if ( !isdefined( weapons ) )
+    {
+        return "";
+    }
+
+    foreach ( weapon in weapons )
+    {
+        if ( getweaponbasename( weapon ) == EZTB_CAUTERIZER )
+        {
+            return weapon;
+        }
+    }
+
+    return "";
+}
+
+eztbKeepCauterizerAmmo( player )
+{
+    weapons = player getweaponslistall();
+    if ( !isdefined( weapons ) )
+    {
+        return;
+    }
+
+    foreach ( weapon in weapons )
+    {
+        if ( getweaponbasename( weapon ) != EZTB_CAUTERIZER )
+        {
+            continue;
+        }
+
+        player setweaponammoclip( weapon, EZTB_INFINITE_AMMO );
+        player setweaponammostock( weapon, EZTB_INFINITE_AMMO );
+    }
+}
+
+eztbReviveNearbyPlayers( bot, players )
+{
+    if ( isdefined( bot.eztbReviveActive ) && bot.eztbReviveActive )
+    {
+        return;
+    }
+
+    foreach ( player in players )
+    {
+        if ( !isdefined( player ) ||
+             player == bot ||
+             !isdefined( player.inlaststand ) ||
+             !player.inlaststand ||
+             !isdefined( player.revivetrigger ) ||
+             ( isdefined( player.beingrevived ) && player.beingrevived ) ||
+             !isdefined( player.origin ) ||
+             distance( bot.origin, player.origin ) > EZTB_REVIVE_DISTANCE )
+        {
+            continue;
+        }
+
+        bot.eztbReviveActive = true;
+        player notify( "revive_trigger", bot );
+        bot thread eztbClearReviveCooldown();
+        return;
+    }
+}
+
+eztbClearReviveCooldown()
+{
+    self endon( "disconnect" );
+    wait 1;
+    self.eztbReviveActive = false;
+}
+
+eztbIsDescentMap()
+{
+    mapName = toLower( getdvar( "mapname" ) + "" );
+    return mapName == "zombie_descent" ||
+           mapName == "mp_zombie_descent";
+}
+
+eztbDescentBotBehavior( player )
+{
+    eztbTryUseDescentTube( player );
+    eztbTryBuyNearbyDescentDoor( player );
+}
+
+eztbTryUseDescentTube( player )
+{
+    if ( isdefined( player.eztbTubeUseActive ) &&
+         player.eztbTubeUseActive )
+    {
+        return;
+    }
+
+    if ( !isdefined( level.eztbDescentTubes ) )
+    {
+        level.eztbDescentTubes =
+            common_scripts\utility::getStructArray(
+                "zombie_tube",
+                "targetname"
+            );
+    }
+
+    foreach ( tube in level.eztbDescentTubes )
+    {
+        if ( !isdefined( tube ) ||
+             !isdefined( tube.trigger ) ||
+             !player istouching( tube.trigger ) )
+        {
+            continue;
+        }
+
+        player.eztbTubeUseActive = true;
+        tube.trigger notify( "trigger", player );
+        player thread eztbClearTubeCooldown();
+        return;
+    }
+}
+
+eztbClearTubeCooldown()
+{
+    self endon( "disconnect" );
+    wait 3;
+    self.eztbTubeUseActive = false;
+}
+
+eztbTryBuyNearbyDescentDoor( player )
+{
+    if ( ( isdefined( player.eztbDoorBuyActive ) &&
+           player.eztbDoorBuyActive ) ||
+         !isdefined( level.zombiedoors ) )
+    {
+        return;
+    }
+
+    foreach ( door in level.zombiedoors )
+    {
+        if ( !isdefined( door ) ||
+             ( isdefined( door.open ) && door.open ) ||
+             !isdefined( door.triggers ) )
+        {
+            continue;
+        }
+
+        foreach ( trigger in door.triggers )
+        {
+            if ( isdefined( trigger ) &&
+                 player istouching( trigger ) )
+            {
+                player.eztbDoorBuyActive = true;
+                trigger notify( "trigger", player );
+                player thread eztbClearDoorBuyCooldown();
+                return;
+            }
+        }
+    }
+}
+
+eztbClearDoorBuyCooldown()
+{
+    self endon( "disconnect" );
+    wait 1;
+    self.eztbDoorBuyActive = false;
 }
 
 eztbDamageHookLoop()
