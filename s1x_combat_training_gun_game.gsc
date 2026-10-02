@@ -104,6 +104,11 @@ gungame_watch_connections()
 {
     level endon( "game_ended" );
 
+    if ( !gungame_wait_for_setup( false ) )
+    {
+        return;
+    }
+
     for ( ;; )
     {
         level waittill( "connected", player );
@@ -116,23 +121,14 @@ gungame_start_existing_players()
 {
     level endon( "game_ended" );
 
-    setupReady = gungame_wait_for_setup( false );
-
-    if ( setupReady )
+    if ( !gungame_wait_for_setup( false ) )
     {
-        foreach ( player in level.players )
-        {
-            gungame_start_player( player );
-        }
+        return;
     }
-    else
-    {
-        players = getentarray( "player", "classname" );
 
-        foreach ( player in players )
-        {
-            gungame_start_player( player );
-        }
+    foreach ( player in level.players )
+    {
+        gungame_start_player( player );
     }
 }
 
@@ -196,6 +192,16 @@ gungame_install_kill_callback()
     {
         return;
     }
+
+    level.scorelimit = level.gungame_scorelimit;
+    setdvar(
+        "scr_dm_scorelimit",
+        "" + level.gungame_scorelimit
+    );
+    setdvar(
+        "scr_war_scorelimit",
+        "" + level.gungame_scorelimit
+    );
 
     level.gungame_original_killed_callback =
         level.callbackPlayerKilled;
@@ -322,6 +328,7 @@ gungame_callback_player_killed(
     }
 
     gungame_set_native_player_score( attacker );
+    gungame_update_team_scores();
     gungame_refresh_native_scores();
 
     if ( isdefined( attacker.gungame_stage ) )
@@ -411,6 +418,7 @@ gungame_set_back_player( player )
 gungame_update_native_score()
 {
     gungame_set_native_player_score( self );
+    gungame_update_team_scores();
     gungame_refresh_native_scores();
 }
 
@@ -437,10 +445,25 @@ gungame_set_native_player_score( player )
 
 gungame_refresh_native_scores()
 {
+    if ( isdefined( level.gungame_score_refresh_pending ) )
+    {
+        return;
+    }
+
+    level.gungame_score_refresh_pending = 1;
+    level thread gungame_refresh_native_scores_next_frame();
+}
+
+
+gungame_refresh_native_scores_next_frame()
+{
+    level endon( "game_ended" );
+
+    wait 0;
+
+    level.gungame_score_refresh_pending = undefined;
     level thread
         maps\mp\gametypes\_gamescore::sendUpdatedDMScores();
-
-    gungame_update_team_scores();
 }
 
 
