@@ -14,6 +14,9 @@ init()
     level.bo2_emz_started = true;
     level.bo2_health_cap = 30000;
     level.bo2_speed_cap = 0.75;
+    level.bo2_goliath_min_health = 60000;
+    level.bo2_oz_min_health_per_player = 100000;
+    level.bo2_boss_health_multiplier = 4;
     level.bo2_last_round = -1;
     level.bo2_health = 150;
     level.emz_debug = true;
@@ -35,6 +38,7 @@ bo2_emz_wait_for_zombies()
         {
             emz_log("init: enabled");
             level thread bo2_round_monitor();
+            level thread bo2_oz_stage1_monitor();
             return;
         }
 
@@ -91,8 +95,14 @@ bo2_round_monitor()
 
             foreach (zombie in zombies)
             {
-                if (!isDefined(zombie) || !isAlive(zombie) || bo2_is_boss(zombie))
+                if (!isDefined(zombie) || !isAlive(zombie))
                     continue;
+
+                if (bo2_is_boss(zombie))
+                {
+                    bo2_apply_boss_health(zombie);
+                    continue;
+                }
 
                 bo2_apply_health(zombie, health);
                 bo2_apply_speed_cap(zombie);
@@ -196,6 +206,141 @@ bo2_apply_health(zombie, health)
         zombie.health = 1;
 
     zombie.bo2_applied_health = health;
+}
+
+bo2_apply_boss_health(zombie)
+{
+    if (!isDefined(zombie.agent_type) || !isDefined(zombie.maxhealth) ||
+        !isDefined(zombie.health) || isDefined(zombie.bo2_boss_health_applied))
+        return;
+
+    agentType = toLower(zombie.agent_type);
+    if (agentType == "zombie_boss_oz_stage2")
+    {
+        // Native postspawn multiplies health by player count and sets up phase thresholds.
+        if (!isDefined(zombie.postspawnfinished) || !zombie.postspawnfinished)
+            return;
+
+        playerCount = 1;
+        players = getplayers();
+        if (isDefined(players) && players.size > 0)
+            playerCount = players.size;
+
+        minimum = level.bo2_oz_min_health_per_player * playerCount;
+    }
+    else if (issubstr(agentType, "goliath"))
+    {
+        // Enhanced Goliaths reset native health shortly after spawning.
+        if (!isDefined(zombie.bo2_boss_first_seen_time))
+        {
+            zombie.bo2_boss_first_seen_time = level.time;
+            return;
+        }
+        if (level.time - zombie.bo2_boss_first_seen_time < 500)
+            return;
+
+        minimum = level.bo2_goliath_min_health;
+    }
+    else
+        return;
+
+    oldMax = zombie.maxhealth;
+    if (oldMax <= 0)
+        return;
+
+    target = oldMax * level.bo2_boss_health_multiplier;
+    if (target < minimum)
+        target = minimum;
+
+    zombie.maxhealth = target;
+    if (isDefined(zombie.agenthealth))
+        zombie.agenthealth = target;
+    zombie.health = int(zombie.health * target / oldMax);
+    if (zombie.health > target)
+        zombie.health = target;
+    if (zombie.health < 1)
+        zombie.health = 1;
+
+    zombie.bo2_boss_health_applied = true;
+    if (agentType == "zombie_boss_oz_stage2")
+        setomnvar("ui_zm_fight_health_max", target);
+}
+
+bo2_oz_stage1_monitor()
+{
+    level endon("game_ended");
+
+    for (;;)
+    {
+        bo2_limit_oz_stage1_damage();
+        wait 0.05;
+    }
+}
+
+bo2_limit_oz_stage1_damage()
+{
+    if (!isDefined(level.bossozstage1))
+        return;
+
+    oz = level.bossozstage1;
+    if (!isDefined(oz.damagecallback))
+        return;
+
+    if (oz.damagecallback == ::bo2_oz_stage1_damage)
+        return;
+
+    // Keep the game's room transitions and exposed/armored state; wrap only
+    // the damage value passed to its own callback.
+    oz.bo2_original_damagecallback = oz.damagecallback;
+    oz.damagecallback = ::bo2_oz_stage1_damage;
+}
+
+bo2_oz_stage1_damage(
+    inflictor, attacker, damage, damageFlags, meansOfDeath, weapon,
+    point, direction, hitLocation, timeOffset, modelIndex, partName
+)
+{
+    if (!isDefined(self.bo2_original_damagecallback))
+        return;
+
+    players = getplayers();
+    playerCount = 1;
+    if (isDefined(players) && players.size > 0)
+        playerCount = players.size;
+
+    // Oz's native room threshold is 4900 per player. Bound each ordinary
+    // weapon hit to about a quarter of it, accounting for native Mk scaling.
+    maxDamage = int(4900 * playerCount / 4);
+    if (isDefined(attacker) && isPlayer(attacker) && isDefined(weapon))
+    {
+        weaponName = getweaponbasename(weapon);
+        if (isDefined(weaponName) && isDefined(level.damageweapontoweapon) &&
+            isDefined(level.damageweapontoweapon[weaponName]))
+            weaponName = level.damageweapontoweapon[weaponName];
+
+        if (isDefined(weaponName) && isDefined(attacker.weaponstate) &&
+            isDefined(attacker.weaponstate[weaponName]) &&
+            isDefined(attacker.weaponstate[weaponName]["level"]))
+        {
+            increase = 0.2;
+            if (isDefined(attacker.weaponstate[weaponName]["weapon_level_increase"]))
+                increase = attacker.weaponstate[weaponName]["weapon_level_increase"];
+
+            multiplier = 1 + increase * (attacker.weaponstate[weaponName]["level"] - 1);
+            if (multiplier > 1)
+                maxDamage = int(maxDamage / multiplier);
+        }
+    }
+
+    if (maxDamage < 1)
+        maxDamage = 1;
+    if (damage > maxDamage)
+        damage = maxDamage;
+
+    self [[ self.bo2_original_damagecallback ]](
+        inflictor, attacker, damage, damageFlags, meansOfDeath, weapon,
+        point, direction, hitLocation, timeOffset, modelIndex, partName
+    );
 }
 
 bo2_apply_speed_cap(zombie)
