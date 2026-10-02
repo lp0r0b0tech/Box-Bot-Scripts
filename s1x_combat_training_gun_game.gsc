@@ -80,6 +80,7 @@ init()
         "" + level.gungame_scorelimit
     );
 
+    level thread gungame_install_kill_callback();
     level thread gungame_watch_connections();
 }
 
@@ -109,35 +110,94 @@ gungame_track_player()
     self endon( "disconnect" );
 
     self.gungame_stage = 0;
-    self thread gungame_update_native_score();
+    self.gungame_score_initialized = 0;
 
     for ( ;; )
     {
         self waittill( "spawned_player" );
-        self thread gungame_update_native_score();
-        self thread gungame_equip_stage();
 
-        self waittill(
-            "death",
-            attacker,
-            meansOfDeath
-        );
-
-        if ( isdefined( attacker ) &&
-             isplayer( attacker ) &&
-             attacker != self )
+        if ( !self.gungame_score_initialized )
         {
-            if ( isdefined( meansOfDeath ) &&
-                 ismeleeMOD( meansOfDeath ) )
-            {
-                gungame_set_back_player( self );
-            }
-            else
-            {
-                gungame_advance_player( attacker );
-            }
+            self.gungame_score_initialized = 1;
+            self thread gungame_update_native_score();
         }
+
+        self thread gungame_equip_stage();
     }
+}
+
+
+gungame_install_kill_callback()
+{
+    level endon( "game_ended" );
+
+    waitCount = 0;
+
+    while ( ( !isdefined( level.callbackPlayerKilled ) ||
+              !isdefined( level.gametypestarted ) ||
+              !level.gametypestarted ) &&
+            waitCount < 600 )
+    {
+        waitCount++;
+        wait 0.05;
+    }
+
+    if ( !isdefined( level.callbackPlayerKilled ) )
+    {
+        println(
+            "GunGame: couldn't find the native player-killed callback."
+        );
+        return;
+    }
+
+    level.gungame_original_killed_callback =
+        level.callbackPlayerKilled;
+    level.callbackPlayerKilled =
+        ::gungame_callback_player_killed;
+}
+
+
+gungame_callback_player_killed(
+    inflictor,
+    attacker,
+    damage,
+    meansOfDeath,
+    weapon,
+    direction,
+    hitLocation,
+    timeOffset,
+    deathAnimDuration
+)
+{
+    if ( isdefined( level.gungame_original_killed_callback ) )
+    {
+        [[ level.gungame_original_killed_callback ]](
+            inflictor,
+            attacker,
+            damage,
+            meansOfDeath,
+            weapon,
+            direction,
+            hitLocation,
+            timeOffset,
+            deathAnimDuration
+        );
+    }
+
+    if ( !isdefined( attacker ) ||
+         !isplayer( attacker ) ||
+         attacker == self )
+    {
+        return;
+    }
+
+    if ( isdefined( meansOfDeath ) &&
+         ismeleeMOD( meansOfDeath ) )
+    {
+        gungame_set_back_player( self );
+    }
+
+    gungame_advance_player( attacker );
 }
 
 
