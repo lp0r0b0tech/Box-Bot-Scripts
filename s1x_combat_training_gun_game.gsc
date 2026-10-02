@@ -274,17 +274,34 @@ gungame_callback_player_killed(
         isdefined( meansOfDeath ) &&
         ismeleeMOD( meansOfDeath );
 
+    isFinalWeaponKill = false;
+
     if ( hasAttacker )
     {
         gungame_start_player( self );
         gungame_start_player( attacker );
+
+        if ( isdefined( attacker.gungame_stage ) &&
+             attacker.gungame_stage ==
+             level.gungame_weapons.size - 1 &&
+             isdefined( weapon ) &&
+             weapon ==
+             level.gungame_weapons[
+                 attacker.gungame_stage
+             ] )
+        {
+            isFinalWeaponKill = true;
+        }
 
         if ( meleeKill )
         {
             gungame_set_back_player( self );
         }
 
-        gungame_advance_player( attacker );
+        if ( !isFinalWeaponKill )
+        {
+            gungame_advance_player( attacker );
+        }
 
     }
 
@@ -313,10 +330,10 @@ gungame_callback_player_killed(
         return;
     }
 
-    if ( isdefined( attacker.gungame_stage ) &&
-         attacker.gungame_stage >=
-         level.gungame_weapons.size )
+    if ( isFinalWeaponKill )
     {
+        attacker.gungame_stage =
+            level.gungame_weapons.size;
         gungame_set_scorelimit( level.gungame_scorelimit );
     }
 
@@ -331,17 +348,13 @@ gungame_callback_player_killed(
     gungame_set_native_player_score( attacker );
     gungame_refresh_native_scores();
 
-    if ( isdefined( attacker.gungame_stage ) )
+    if ( isFinalWeaponKill )
     {
-        if ( attacker.gungame_stage <
-             level.gungame_weapons.size )
-        {
-            attacker thread gungame_equip_stage();
-        }
-        else
-        {
-            attacker maps\mp\gametypes\_gamelogic::checkScoreLimit();
-        }
+        attacker maps\mp\gametypes\_gamelogic::checkScoreLimit();
+    }
+    else
+    {
+        attacker thread gungame_equip_stage();
     }
 }
 
@@ -398,7 +411,7 @@ gungame_advance_player( player )
     }
 
     if ( player.gungame_stage <
-         level.gungame_weapons.size )
+         level.gungame_weapons.size - 1 )
     {
         player.gungame_stage++;
     }
