@@ -131,8 +131,10 @@ gungame_start_existing_players()
          !level.gametypestarted )
     {
         println(
-            "GunGame: timed out waiting for the player list."
-        );
+             "GunGame: timed out after " +
+             GG_SETUP_WAIT_SECONDS +
+             " seconds waiting for the player list or gametype start."
+         );
         return;
     }
 
@@ -214,8 +216,10 @@ gungame_install_kill_callback()
          !level.gametypestarted )
     {
         println(
-            "GunGame: timed out waiting for native kill callback setup."
-        );
+             "GunGame: timed out after " +
+             GG_SETUP_WAIT_SECONDS +
+             " seconds waiting for native kill callback setup."
+         );
         return;
     }
 
@@ -283,10 +287,11 @@ gungame_callback_player_killed(
     // Replace native kill points with the updated Gun Game stage score.
     if ( meleeKill )
     {
-        self gungame_update_native_score();
+        gungame_set_native_player_score( self );
     }
 
-    attacker gungame_update_native_score();
+    gungame_set_native_player_score( attacker );
+    gungame_refresh_native_scores();
 
     if ( isdefined( attacker.gungame_stage ) &&
          attacker.gungame_stage <
@@ -323,7 +328,6 @@ gungame_equip_stage()
     if ( self.gungame_stage >=
          level.gungame_weapons.size )
     {
-        self maps\mp\gametypes\_gamelogic::checkScoreLimit();
         return;
     }
 
@@ -373,21 +377,33 @@ gungame_set_back_player( player )
 
 gungame_update_native_score()
 {
-    if ( !isdefined( self.gungame_stage ) )
+    gungame_set_native_player_score( self );
+    gungame_refresh_native_scores();
+}
+
+
+gungame_set_native_player_score( player )
+{
+    if ( !isdefined( player ) ||
+         !isdefined( player.gungame_stage ) )
     {
         return;
     }
 
     score =
-        self.gungame_stage * GG_SCORE_PER_KILL;
+        player.gungame_stage * GG_SCORE_PER_KILL;
 
     maps\mp\gametypes\_gamescore::_setPlayerScore(
-        self,
+        player,
         score
     );
 
-    self setExtraScore0( score );
+    player setExtraScore0( score );
+}
 
+
+gungame_refresh_native_scores()
+{
     level thread
         maps\mp\gametypes\_gamescore::sendUpdatedDMScores();
 
