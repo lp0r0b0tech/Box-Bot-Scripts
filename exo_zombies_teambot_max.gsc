@@ -9,12 +9,13 @@
 
 #define EZTB_BOT_HEALTH             30000
 #define EZTB_BOT_DAMAGE              30000
-#define EZTB_ATLAS45                 "iw5_atlas45zm_mp"
-#define EZTB_ATLAS45_LEVEL           25
+#define EZTB_CEL3                    "iw5_fusionzm_mp"
+#define EZTB_CEL3_LEVEL              25
 #define EZTB_INFINITE_AMMO           999
 #define EZTB_REFRESH_INTERVAL        0.25
 #define EZTB_HOOK_INTERVAL           0.5
 #define EZTB_REVIVE_DISTANCE         128
+#define EZTB_DOOR_GOAL_RADIUS        16
 
 main()
 {
@@ -90,11 +91,12 @@ eztbPlayerLoop()
                     player thread eztbApplyBotLoadout();
                 }
 
-                eztbKeepAtlas45Ammo( player );
+                eztbKeepCel3Ammo( player );
+                eztbTryOpenNearestDoor( player );
 
                 if ( eztbIsDescentMap() )
                 {
-                    eztbDescentBotBehavior( player );
+                    eztbTryUseDescentTube( player );
                 }
             }
         }
@@ -173,22 +175,22 @@ eztbApplyBotLoadout()
         return;
     }
 
-    weapon = eztbFindAtlas45( self );
+    weapon = eztbFindCel3( self );
     if ( weapon == "" )
     {
         maps\mp\zombies\_wall_buys::givezombieweapon(
             self,
-            EZTB_ATLAS45,
+            EZTB_CEL3,
             0,
             1
         );
-        weapon = EZTB_ATLAS45;
+        weapon = EZTB_CEL3;
     }
 
     maps\mp\zombies\_wall_buys::setweaponlevel(
         self,
         weapon,
-        EZTB_ATLAS45_LEVEL
+        EZTB_CEL3_LEVEL
     );
 
     self.maxhealth = EZTB_BOT_HEALTH;
@@ -267,7 +269,7 @@ eztbEnsureExoSuitAndPerks( player )
     }
 }
 
-eztbFindAtlas45( player )
+eztbFindCel3( player )
 {
     weapons = player getweaponslistprimariesminusalts();
     if ( !isdefined( weapons ) )
@@ -277,7 +279,7 @@ eztbFindAtlas45( player )
 
     foreach ( weapon in weapons )
     {
-        if ( getweaponbasename( weapon ) == EZTB_ATLAS45 )
+        if ( getweaponbasename( weapon ) == EZTB_CEL3 )
         {
             return weapon;
         }
@@ -286,7 +288,7 @@ eztbFindAtlas45( player )
     return "";
 }
 
-eztbKeepAtlas45Ammo( player )
+eztbKeepCel3Ammo( player )
 {
     weapons = player getweaponslistall();
     if ( !isdefined( weapons ) )
@@ -296,7 +298,7 @@ eztbKeepAtlas45Ammo( player )
 
     foreach ( weapon in weapons )
     {
-        if ( getweaponbasename( weapon ) != EZTB_ATLAS45 )
+        if ( getweaponbasename( weapon ) != EZTB_CEL3 )
         {
             continue;
         }
@@ -350,12 +352,6 @@ eztbIsDescentMap()
            mapName == "zombie_h2o";
 }
 
-eztbDescentBotBehavior( player )
-{
-    eztbTryUseDescentTube( player );
-    eztbTryBuyNearbyDescentDoor( player );
-}
-
 eztbTryUseDescentTube( player )
 {
     if ( isdefined( player.eztbTubeUseActive ) &&
@@ -402,14 +398,22 @@ eztbClearTubeCooldown()
     self.eztbTubeUseActive = false;
 }
 
-eztbTryBuyNearbyDescentDoor( player )
+eztbTryOpenNearestDoor( player )
 {
-    if ( ( isdefined( player.eztbDoorBuyActive ) &&
-           player.eztbDoorBuyActive ) ||
-         !isdefined( level.zombiedoors ) )
+    if ( isdefined( player.eztbDoorBuyActive ) &&
+         player.eztbDoorBuyActive )
     {
         return;
     }
+
+    if ( !isdefined( level.zombiedoors ) )
+    {
+        eztbClearDoorGoal( player );
+        return;
+    }
+
+    closestTrigger = undefined;
+    closestDistance = 999999;
 
     foreach ( door in level.zombiedoors )
     {
@@ -422,15 +426,55 @@ eztbTryBuyNearbyDescentDoor( player )
 
         foreach ( trigger in door.triggers )
         {
-            if ( isdefined( trigger ) &&
-                 player istouching( trigger ) )
+            if ( !isdefined( trigger ) ||
+                 !isdefined( trigger.origin ) )
             {
-                player.eztbDoorBuyActive = true;
-                trigger notify( "trigger", player );
-                player thread eztbClearDoorBuyCooldown();
-                return;
+                continue;
+            }
+
+            doorDistance = distance( player.origin, trigger.origin );
+            if ( doorDistance < closestDistance )
+            {
+                closestDistance = doorDistance;
+                closestTrigger = trigger;
             }
         }
+    }
+
+    if ( !isdefined( closestTrigger ) )
+    {
+        eztbClearDoorGoal( player );
+        return;
+    }
+
+    if ( !isdefined( player.eztbDoorGoal ) ||
+         player.eztbDoorGoal != closestTrigger )
+    {
+        eztbClearDoorGoal( player );
+        if ( player botsetscriptgoal(
+                closestTrigger.origin,
+                EZTB_DOOR_GOAL_RADIUS,
+                "objective"
+            ) )
+        {
+            player.eztbDoorGoal = closestTrigger;
+        }
+    }
+
+    if ( player istouching( closestTrigger ) )
+    {
+        player.eztbDoorBuyActive = true;
+        closestTrigger notify( "trigger", player );
+        player thread eztbClearDoorBuyCooldown();
+    }
+}
+
+eztbClearDoorGoal( player )
+{
+    if ( isdefined( player.eztbDoorGoal ) )
+    {
+        player botclearscriptgoal();
+        player.eztbDoorGoal = undefined;
     }
 }
 
@@ -466,10 +510,10 @@ eztbDamageHookLoop()
             }
 
             if ( !isdefined(
-                    level.modifyweapondamage[EZTB_ATLAS45]
+                    level.modifyweapondamage[EZTB_CEL3]
                 ) )
             {
-                level.modifyweapondamage[EZTB_ATLAS45] =
+                level.modifyweapondamage[EZTB_CEL3] =
                     ::eztbModifyWeaponDamage;
             }
         }
