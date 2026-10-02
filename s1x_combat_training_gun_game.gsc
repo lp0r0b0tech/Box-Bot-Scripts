@@ -288,6 +288,11 @@ gungame_callback_player_killed(
 
     }
 
+    if ( hasAttacker )
+    {
+        gungame_set_scorelimit( GG_SCORELIMIT_GUARD );
+    }
+
     if ( isdefined( level.gungame_original_killed_callback ) )
     {
         [[ level.gungame_original_killed_callback ]](
