@@ -3,11 +3,14 @@
 
     Load this script alongside the other MP scripts. Each kill advances
     the player through the usable Advanced Warfare multiplayer weapons.
+    Each stage is worth 100 points; a kill with the final weapon reaches
+    the score limit. Melee kills set the victim back one stage.
 */
 
 #define GG_SCORE_PER_KILL 100
 #define GG_EQUIP_DELAY 0.5
-#define GG_CALLBACK_WAIT_TICKS 600
+#define GG_CALLBACK_WAIT_SECONDS 30
+#define GG_CALLBACK_WAIT_INTERVAL 0.05
 
 init()
 {
@@ -133,21 +136,23 @@ gungame_install_kill_callback()
 {
     level endon( "game_ended" );
 
-    waitCount = 0;
+    waitedSeconds = 0;
 
     while ( ( !isdefined( level.callbackPlayerKilled ) ||
               !isdefined( level.gametypestarted ) ||
               !level.gametypestarted ) &&
-            waitCount < GG_CALLBACK_WAIT_TICKS )
+            waitedSeconds < GG_CALLBACK_WAIT_SECONDS )
     {
-        waitCount++;
-        wait 0.05;
+        wait GG_CALLBACK_WAIT_INTERVAL;
+        waitedSeconds += GG_CALLBACK_WAIT_INTERVAL;
     }
 
-    if ( !isdefined( level.callbackPlayerKilled ) )
+    if ( !isdefined( level.callbackPlayerKilled ) ||
+         !isdefined( level.gametypestarted ) ||
+         !level.gametypestarted )
     {
         println(
-            "GunGame: couldn't find the native player-killed callback."
+            "GunGame: timed out waiting for native kill callback setup."
         );
         return;
     }
