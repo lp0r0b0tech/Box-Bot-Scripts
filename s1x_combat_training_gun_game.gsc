@@ -2,10 +2,12 @@
     S1x Combat Training Gun Game.
 
     Load this script alongside the other MP scripts. Each kill advances
-    the player through the full Advanced Warfare multiplayer weapon list.
+    the player through the standard 20-weapon Gun Game progression.
 */
 
 #define GG_SCORE_PER_KILL 100
+
+#include maps\mp\gametypes\_hud_util;
 
 
 init()
@@ -18,56 +20,26 @@ init()
     level.gungame_started = 1;
     level.gungame_weapons = [];
 
-    gungame_add_weapon( "iw5_dlcgun13_mp" );
-    gungame_add_weapon( "iw5_dlcgun1_mp" );
-    gungame_add_weapon( "iw5_dlcgun7loot0_mp" );
-    gungame_add_weapon( "iw5_ak12_mp" );
-    gungame_add_weapon( "iw5_hmr9_mp" );
-    gungame_add_weapon( "iw5_asaw_mp" );
-    gungame_add_weapon( "iw5_arx160_mp" );
-    gungame_add_weapon( "iw5_asm1_mp" );
-    gungame_add_weapon( "iw5_thor_mp" );
-    gungame_add_weapon( "iw5_titan45_mp" );
-    gungame_add_weapon( "iw5_bal27_mp" );
-    gungame_add_weapon( "iw5_dlcgun4_mp" );
+    gungame_add_weapon( "iw5_pbw_mp" );
+    gungame_add_weapon( "iw5_vbr_mp" );
+    gungame_add_weapon( "iw5_uts19_mp" );
     gungame_add_weapon( "iw5_maul_mp" );
-    gungame_add_weapon( "iw5_dlcgun8loot0_mp" );
-    gungame_add_weapon( "iw5_combatknife_mp" );
-    gungame_add_weapon( "iw5_exocrossbow_mp" );
-    gungame_add_weapon( "iw5_em1_mp" );
-    gungame_add_weapon( "iw5_epm3_mp" );
+    gungame_add_weapon( "iw5_sac3_mp" );
+    gungame_add_weapon( "iw5_asm1_mp" );
     gungame_add_weapon( "iw5_hbra3_mp" );
-    gungame_add_weapon( "iw5_riotshieldt6_mp" );
-    gungame_add_weapon( "iw5_himar_mp" );
-    gungame_add_weapon( "iw5_kf5_mp" );
-    gungame_add_weapon( "iw5_dlcgun33_mp" );
-    gungame_add_weapon( "iw5_gm6_mp" );
-    gungame_add_weapon( "iw5_dlcgun23_mp" );
-    gungame_add_weapon( "iw5_dlcgun3_mp" );
-    gungame_add_weapon( "iw5_dlcgun8_mp" );
-    gungame_add_weapon( "iw5_maaws_mp" );
-    gungame_add_weapon( "iw5_mahem_mp" );
-    gungame_add_weapon( "iw5_microdronelauncher_m" );
     gungame_add_weapon( "iw5_m182spr_mp" );
     gungame_add_weapon( "iw5_mors_mp" );
-    gungame_add_weapon( "iw5_mp11_mp" );
-    gungame_add_weapon( "iw5_dlcgun18_mp" );
-    gungame_add_weapon( "iw5_pbw_mp" );
-    gungame_add_weapon( "iw5_m990_mp" );
-    gungame_add_weapon( "iw5_dlcgun2_mp" );
-    gungame_add_weapon( "iw5_vbr_mp" );
+    gungame_add_weapon( "iw5_mahem_mp" );
+    gungame_add_weapon( "iw5_bal27_mp" );
+    gungame_add_weapon( "iw5_em1_mp" );
+    gungame_add_weapon( "iw5_epm3_mp" );
+    gungame_add_weapon( "iw5_asaw_mp" );
     gungame_add_weapon( "iw5_lsat_mp" );
-    gungame_add_weapon( "iw5_dlcgun38_mp" );
     gungame_add_weapon( "iw5_rw1_mp" );
-    gungame_add_weapon( "iw5_rhino_mp" );
-    gungame_add_weapon( "iw5_sac3_mp" );
-    gungame_add_weapon( "iw5_sn6_mp" );
-    gungame_add_weapon( "iw5_dlcgun6_mp" );
-    gungame_add_weapon( "iw5_dlcgun7_mp" );
-    gungame_add_weapon( "iw5_stingerm7_mp" );
-    gungame_add_weapon( "iw5_dlcgun28_mp" );
-    gungame_add_weapon( "iw5_uts19_mp" );
     gungame_add_weapon( "iw5_exoxmg_mp" );
+    gungame_add_weapon( "iw5_himar_mp" );
+    gungame_add_weapon( "iw5_thor_mp" );
+    gungame_add_weapon( "iw5_exocrossbow_mp" );
 
     level.gungame_scorelimit =
         level.gungame_weapons.size * GG_SCORE_PER_KILL;
@@ -110,19 +82,40 @@ gungame_track_player()
     self endon( "disconnect" );
 
     self.gungame_stage = 0;
+    self.gungame_score = 0;
+    self.gungame_hud = self createFontString( "objective", 1.5 );
+    self.gungame_hud setPoint(
+        "TOPRIGHT",
+        "TOPRIGHT",
+        -20,
+        70
+    );
+    self thread gungame_update_hud();
 
     for ( ;; )
     {
         self waittill( "spawned_player" );
         self thread gungame_equip_stage();
 
-        self waittill( "death", attacker );
+        self waittill(
+            "death",
+            attacker,
+            meansOfDeath
+        );
 
         if ( isdefined( attacker ) &&
              isplayer( attacker ) &&
              attacker != self )
         {
-            gungame_advance_player( attacker );
+            if ( isdefined( meansOfDeath ) &&
+                 ismeleeMOD( meansOfDeath ) )
+            {
+                gungame_set_back_player( self );
+            }
+            else
+            {
+                gungame_advance_player( attacker );
+            }
         }
     }
 }
@@ -168,5 +161,43 @@ gungame_advance_player( player )
         player.gungame_stage++;
     }
 
+    player.gungame_score += GG_SCORE_PER_KILL;
+    player thread gungame_update_hud();
     player thread gungame_equip_stage();
+}
+
+
+gungame_set_back_player( player )
+{
+    if ( !isdefined( player ) ||
+         !isplayer( player ) ||
+         !isdefined( player.gungame_stage ) )
+    {
+        return;
+    }
+
+    if ( player.gungame_stage > 0 )
+    {
+        player.gungame_stage--;
+    }
+
+    player thread gungame_update_hud();
+}
+
+
+gungame_update_hud()
+{
+    if ( !isdefined( self.gungame_hud ) )
+    {
+        return;
+    }
+
+    self.gungame_hud setText(
+        "SCORE: " +
+        self.gungame_score +
+        "  |  WEAPON: " +
+        ( self.gungame_stage + 1 ) +
+        "/" +
+        level.gungame_weapons.size
+    );
 }
