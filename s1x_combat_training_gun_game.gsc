@@ -87,6 +87,7 @@ init()
 
     level thread gungame_install_kill_callback();
     level thread gungame_watch_connections();
+    level thread gungame_start_existing_players();
 }
 
 
@@ -105,8 +106,47 @@ gungame_watch_connections()
     for ( ;; )
     {
         level waittill( "connected", player );
-        player thread gungame_track_player();
+        gungame_start_player( player );
     }
+}
+
+
+gungame_start_existing_players()
+{
+    if ( !isdefined( level.players ) )
+    {
+        return;
+    }
+
+    foreach ( player in level.players )
+    {
+        gungame_start_player( player );
+    }
+}
+
+
+gungame_start_player( player )
+{
+    if ( !isdefined( player ) ||
+         !isplayer( player ) ||
+         isdefined( player.gungame_tracking ) )
+    {
+        return;
+    }
+
+    player.gungame_tracking = 1;
+
+    if ( !isdefined( player.gungame_stage ) )
+    {
+        player.gungame_stage = 0;
+    }
+
+    if ( !isdefined( player.gungame_score_initialized ) )
+    {
+        player.gungame_score_initialized = 0;
+    }
+
+    player thread gungame_track_player();
 }
 
 
@@ -114,8 +154,12 @@ gungame_track_player()
 {
     self endon( "disconnect" );
 
-    self.gungame_stage = 0;
-    self.gungame_score_initialized = 0;
+    if ( isAlive( self ) )
+    {
+        self.gungame_score_initialized = 1;
+        self thread gungame_update_native_score();
+        self thread gungame_equip_stage();
+    }
 
     for ( ;; )
     {
@@ -187,6 +231,9 @@ gungame_callback_player_killed(
 
     if ( hasAttacker )
     {
+        gungame_start_player( self );
+        gungame_start_player( attacker );
+
         if ( meleeKill )
         {
             gungame_set_back_player( self );
@@ -222,7 +269,8 @@ gungame_callback_player_killed(
 
     attacker thread gungame_update_native_score();
 
-    if ( attacker.gungame_stage <
+    if ( isdefined( attacker.gungame_stage ) &&
+         attacker.gungame_stage <
          level.gungame_weapons.size )
     {
         attacker thread gungame_equip_stage();
@@ -301,6 +349,11 @@ gungame_set_back_player( player )
 
 gungame_update_native_score()
 {
+    if ( !isdefined( self.gungame_stage ) )
+    {
+        return;
+    }
+
     score =
         self.gungame_stage * GG_SCORE_PER_KILL;
 
