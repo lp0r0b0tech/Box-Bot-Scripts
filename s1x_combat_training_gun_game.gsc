@@ -5,10 +5,11 @@
     Select native Gun Game (g_gametype gun) before starting the map.
     This script does nothing in other modes. Remove older copies.
 
-    Each weapon family cycles through its base weapon and all registered
-    variants before the next family, in the game's stats-table order.
-    Disable the native Randomize option to keep this grouped order.
-    Unlike native random variant selection, every variant is a stage.
+    Each weapon family is one stage. Pick one random registered variant
+    for each player whenever that weapon is equipped, including respawns
+    and revisits after setbacks. A qualifying kill advances to the next
+    weapon family, not another variant. Use the base if no variants exist.
+    The native Randomize option controls weapon-family order only.
 
     Extends the native weapon roster and promotes melee kills while
     holding the current knife/shield stage weapon. The native kill
@@ -74,7 +75,6 @@ gungame_setup()
     }
 
     level.gungame_weapons = [];
-    level.gungame_weapon_seen = [];
     level.gungame_family_seen = [];
     gungame_index_variants();
     gungame_add_weapon( "iw5_dlcgun13_mp" );
@@ -145,13 +145,16 @@ gungame_setup()
     level.gungame_active = true;
     level.gungame_original_killed = level.onPlayerKilled;
     level.onPlayerKilled = ::gungame_on_player_killed;
+    level.onSpawnPlayer = ::gungame_on_spawn_player;
 
-    // Native connection/spawn handlers use the new roster for later players.
+    // Native gun uses gunlist only in this mode. Preserve the user's order
+    // setting separately; variant choices must never mutate the shared roster.
+    level.gungame_randomize_order = level.matchrules_randomize;
+    level.matchrules_randomize = true;
     foreach ( player in level.players )
     {
-        if ( isdefined( player ) && isdefined( player.gungamegunindex ) &&
-             level.matchrules_randomize )
-            player.gunlist = common_scripts\utility::array_randomize( level.gun_guns );
+        if ( isdefined( player ) && isdefined( player.gungamegunindex ) )
+            player gungame_init_player_roster();
     }
 }
 
@@ -206,22 +209,81 @@ gungame_add_weapon( weapon )
         return;
     }
 
-    // Base first, then each actual variant exactly once, including special editions.
+    // A single representative per family keeps the native score limit in stages.
     if ( isdefined( level.gungame_registered_weapons[family] ) )
-        gungame_add_variant_stage( family );
-
-    foreach ( variant in level.gungame_variant_families[family] )
-        gungame_add_variant_stage( variant );
+        representative = family;
+    else
+        representative = level.gungame_variant_families[family][0];
+    level.gungame_weapons[level.gungame_weapons.size] = representative;
 }
 
-gungame_add_variant_stage( variant )
+gungame_init_player_roster()
 {
-    if ( isdefined( level.gungame_weapon_seen[variant] ) )
+    if ( isdefined( self.gungame_family_order ) )
         return;
 
-    level.gungame_weapon_seen[variant] = true;
-    // Keep the variant ID: native gun::addattachments assembles the weapon.
-    level.gungame_weapons[level.gungame_weapons.size] = variant;
+    self.gungame_family_order = [];
+    foreach ( weapon in level.gun_guns )
+    {
+        self.gungame_family_order[self.gungame_family_order.size] =
+            maps\mp\_utility::getbaseweaponname( weapon, 1 );
+    }
+    if ( level.gungame_randomize_order )
+        self.gungame_family_order =
+            common_scripts\utility::array_randomize( self.gungame_family_order );
+
+    self.gunlist = [];
+    for ( stage = 0; stage < self.gungame_family_order.size; stage++ )
+        self gungame_pick_variant( stage );
+}
+
+gungame_pick_variant( stage )
+{
+    if ( stage < 0 || stage >= self.gungame_family_order.size )
+        return;
+
+    family = self.gungame_family_order[stage];
+    variants = level.gungame_variant_families[family];
+    choices = [];
+    foreach ( variant in variants )
+    {
+        if ( variant != family )
+            choices[choices.size] = variant;
+    }
+    if ( !choices.size )
+        choices = variants;
+
+    self.gunlist[stage] = choices[randomint( choices.size )];
+}
+
+gungame_on_spawn_player()
+{
+    // Match-rule reinitialization must not switch native kills back to the
+    // shared representatives instead of this player's selected variants.
+    level.matchrules_randomize = true;
+    self notify( "gungame_variant_spawn" );
+    self gungame_init_player_roster();
+    if ( isdefined( self.gungamegunindex ) )
+        self gungame_pick_variant( self.gungamegunindex );
+
+    self thread gungame_spawn_loadout();
+}
+
+gungame_spawn_loadout()
+{
+    self endon( "disconnect" );
+    self endon( "death" );
+    self endon( "gungame_variant_spawn" );
+    level endon( "game_ended" );
+
+    // Same loadout boundary and setback event as native gun::waitloadoutdone.
+    level waittill( "player_spawned" );
+    self gungame_equip_stage( true );
+    if ( self.showsetbacksplash )
+    {
+        self.showsetbacksplash = false;
+        self thread maps\mp\_events::decreasegunlevelevent();
+    }
 }
 
 gungame_on_player_killed(
@@ -229,10 +291,29 @@ gungame_on_player_killed(
     direction, hitLocation, timeOffset, deathAnimDuration, lifeId
 )
 {
+    level.matchrules_randomize = true;
+    if ( isdefined( attacker ) && isplayer( attacker ) && attacker != self )
+    {
+        // Cancel the native promotion's streaming wait before a respawn can
+        // reroll the stage. Score events already run on independent threads.
+        attacker endon( "disconnect" );
+        attacker endon( "death" );
+        attacker endon( "gungame_variant_spawn" );
+        attacker endon( "joined_team" );
+        attacker endon( "joined_spectators" );
+    }
+
     if ( gungame_wrong_variant_kill( attacker, meansOfDeath, weapon ) )
         return;
 
     stage = gungame_melee_stage( attacker, meansOfDeath );
+
+    // Native onPlayerKilled increments and equips before returning, so prepare
+    // the next slot now. Leave the current variant unchanged for kill matching.
+    if ( isdefined( attacker ) && isplayer( attacker ) && attacker != self &&
+         isdefined( attacker.gungame_family_order ) &&
+         isdefined( attacker.gungamegunindex ) )
+        attacker gungame_pick_variant( attacker.gungamegunindex + 1 );
 
     // Call once, with the real kill data: native victim setbacks stay intact.
     [[ level.gungame_original_killed ]](
@@ -252,7 +333,7 @@ gungame_on_player_killed(
     attacker thread maps\mp\_events::increasegunlevelevent();
 
     if ( attacker.gungamegunindex < level.gun_guns.size )
-        attacker thread gungame_equip_after_melee();
+        attacker thread gungame_equip_stage( false );
 }
 
 gungame_melee_stage( attacker, meansOfDeath )
@@ -327,18 +408,20 @@ gungame_wrong_variant_kill( attacker, meansOfDeath, weapon )
         maps\mp\_utility::getbaseweaponname( guns[stage] );
 }
 
-gungame_equip_after_melee()
+gungame_equip_stage( spawnEquip )
 {
     self endon( "disconnect" );
     self endon( "death" );
-    self endon( "spawned_player" );
+    self endon( "gungame_variant_spawn" );
+    if ( !spawnEquip )
+        self endon( "spawned_player" );
     self endon( "joined_team" );
     self endon( "joined_spectators" );
     level endon( "game_ended" );
     self notify( "gungame_melee_equip" );
     self endon( "gungame_melee_equip" );
 
-    if ( !isalive( self ) || game["state"] != "playing" )
+    if ( !isalive( self ) || game["state"] == "postgame" )
         return;
 
     stage = self.gungamegunindex;
@@ -356,7 +439,7 @@ gungame_equip_after_melee()
     // Native giveNextGun can yield while streaming without rechecking its stage.
     // Revalidate here so a newer promotion or spawn keeps its own loadout.
     if ( !isalive( self ) || self.gungamegunindex != stage ||
-         game["state"] != "playing" )
+         self.gunlist[stage] != base || game["state"] == "postgame" )
         return;
 
     self.gun_curgun = base;
@@ -365,6 +448,8 @@ gungame_equip_after_melee()
     self.primaryweapon = weapon;
     self.pers["primaryWeapon"] = maps\mp\_utility::getbaseweaponname( weapon );
     self givestartammo( weapon );
+    if ( spawnEquip )
+        self setspawnweapon( weapon );
     self switchtoweaponimmediate( weapon );
     self switchtoweapon( weapon );
     self.gungameprevgunindex = self.gungamegunindex;
