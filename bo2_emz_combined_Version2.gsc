@@ -85,6 +85,10 @@ bo2_round_monitor()
             level.bo2_health = health;
 
             zombies = bo2_get_zombies();
+            players = [];
+            if (level.emz_debug && level.emz_emp_range > 0)
+                players = getplayers();
+
             foreach (zombie in zombies)
             {
                 if (!isDefined(zombie) || !isAlive(zombie) || bo2_is_boss(zombie))
@@ -92,7 +96,7 @@ bo2_round_monitor()
 
                 bo2_apply_health(zombie, health);
                 bo2_apply_speed_cap(zombie);
-                emz_check_players(zombie);
+                emz_check_players(zombie, players);
             }
         }
 
@@ -124,44 +128,22 @@ bo2_get_zombies()
 {
     zombies = [];
 
-    if (isDefined(level.agentarray))
+    if (!isDefined(level.agentarray) || !isDefined(level.enemyteam))
+        return zombies;
+
+    foreach (agent in level.agentarray)
     {
-        foreach (agent in level.agentarray)
-        {
-            if (!isDefined(agent) || !isAlive(agent) || !isDefined(agent.team))
-                continue;
+        if (!isDefined(agent) || !isAlive(agent) || !isDefined(agent.team))
+            continue;
 
-            if (isDefined(agent.agent_type) && agent.agent_type == "player")
-                continue;
+        if (isDefined(agent.isactive) && !agent.isactive)
+            continue;
 
-            if (isDefined(level.enemyteam))
-            {
-                if (agent.team != level.enemyteam)
-                    continue;
-            }
-            else if (agent.team != "axis")
-                continue;
+        if (!isDefined(agent.agent_type) || !issubstr(toLower(agent.agent_type), "zombie"))
+            continue;
 
+        if (agent.team == level.enemyteam)
             zombies[zombies.size] = agent;
-        }
-    }
-
-    if (isDefined(level.zombie_team))
-        actors = GetAITeamArray(level.zombie_team);
-    else if (isDefined(level.zombie_team_name))
-        actors = GetAITeamArray(level.zombie_team_name);
-    else if (isDefined(level.enemyteam))
-        actors = GetAITeamArray(level.enemyteam);
-    else
-        actors = [];
-
-    if (isDefined(actors))
-    {
-        foreach (actor in actors)
-        {
-            if (isDefined(actor) && isAlive(actor))
-                zombies[zombies.size] = actor;
-        }
     }
 
     return zombies;
@@ -178,7 +160,7 @@ bo2_is_boss(zombie)
     if (isDefined(zombie.agent_type))
     {
         agentType = toLower(zombie.agent_type);
-        if (issubstr(agentType, "boss") || issubstr(agentType, "oz"))
+        if (issubstr(agentType, "boss") || issubstr(agentType, "goliath"))
             return true;
     }
     if (isDefined(zombie.classname))
@@ -223,6 +205,9 @@ bo2_apply_speed_cap(zombie)
 
     if (!isDefined(zombie.buffs["bo2_speed_cap"]))
         zombie.buffs["bo2_speed_cap"] = spawnstruct();
+
+    // Native updatebuffs() subtracts from every buff's lifespan.
+    zombie.buffs["bo2_speed_cap"].lifespan = 1.0;
 
     if (!isDefined(zombie.buffs["bo2_speed_cap"].speedmultiplier) ||
         zombie.buffs["bo2_speed_cap"].speedmultiplier != level.bo2_speed_cap)
@@ -269,12 +254,11 @@ emz_log(msg)
     println("[EMZ] " + msg);
 }
 
-emz_check_players(zombie)
+emz_check_players(zombie, players)
 {
     if (!level.emz_debug || level.emz_emp_range <= 0)
         return;
 
-    players = getplayers();
     if (!isDefined(players))
         return;
 
