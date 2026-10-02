@@ -757,7 +757,7 @@ applyOpLoadout(ent)
     if (!opWeaponsEnable || !isDefined(ent))
         return;
 
-    if (isDefined(level.gungame_active) && level.gungame_active)
+    if (getdvar("g_gametype") == "gun")
         return;
 
     if (!isDefined(ent.pers))
