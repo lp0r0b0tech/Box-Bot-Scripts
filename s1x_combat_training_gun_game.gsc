@@ -360,6 +360,11 @@ gungame_on_player_score( event, player, victim )
     // Preserve native award statistics, not its additive match-score delta.
     // In particular, the delayed respawn setback must not subtract twice.
     player [[ level.gungame_original_score ]]( event, player, victim );
+    // Preserve native immediate victory on completion, before another setback.
+    if ( event == "gained_gun_score" &&
+         isdefined( player.gungamegunindex ) &&
+         player.gungamegunindex >= level.gun_guns.size )
+        gungame_apply_native_scores();
     gungame_refresh_native_scores();
     return 0;
 }
@@ -385,13 +390,16 @@ gungame_sync_native_scores()
     level endon( "game_ended" );
     wait 0;
     level.gungame_score_refresh_pending = undefined;
+    gungame_apply_native_scores();
+}
 
+gungame_apply_native_scores()
+{
     if ( game["state"] == "postgame" )
         return;
 
     setdvar( "ui_scorelimit", level.gun_guns.size );
-    // Queue the native HUD refresh before a winning score can end this thread.
-    level thread maps\mp\gametypes\_gamescore::sendUpdatedDMScores();
+    changedPlayers = [];
     foreach ( player in level.players )
     {
         if ( !isdefined( player ) || !isplayer( player ) ||
@@ -400,13 +408,22 @@ gungame_sync_native_scores()
             continue;
 
         score = int( max( 0, min( player.gungamegunindex, level.gun_guns.size ) ) );
-        changed = player.pers["score"] != score;
-        // This native setter also checks victory in the player's context.
-        maps\mp\gametypes\_gamescore::_setPlayerScore( player, score );
-        // The setter returns early if pers["score"] already matches.
+        if ( player.pers["score"] != score || player.score != score )
+            changedPlayers[changedPlayers.size] = player;
+        player.pers["score"] = score;
         player.score = score;
-        if ( changed )
-            player maps\mp\gametypes\_gamelogic::checkplayerscorelimitsoon();
+    }
+
+    // Finish all score writes and queue the HUD refresh before victory can
+    // terminate this thread, including simultaneous victim setbacks.
+    level thread maps\mp\gametypes\_gamescore::sendUpdatedDMScores();
+    foreach ( player in changedPlayers )
+    {
+        if ( !isdefined( player.pers["team"] ) ||
+             player.pers["team"] == "spectator" || player.pers["team"] == "none" )
+            continue;
+        player maps\mp\gametypes\_gamelogic::checkplayerscorelimitsoon();
+        player thread maps\mp\gametypes\_gamelogic::checkscorelimit();
     }
 }
 
