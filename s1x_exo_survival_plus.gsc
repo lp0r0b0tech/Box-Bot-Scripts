@@ -2,49 +2,50 @@
     Exo Survival Plus — S1x (Call of Duty: Advanced Warfare)
     Gametype: "horde" (Exo Survival)
 
+    SERVER SIDE — pair this with exo_survival_plus_ui.lua
+    (ui_scripts), which adds the new weapons to the NATIVE
+    armory buy menus. This script receives the purchases.
+
     Features:
 
-    1) Gun Shop
-        Adds every base-game weapon that is missing from the native armory
-        plus every base DLC weapon (AE4, Ohm, M1 Irons, Blunderbuss, STG-44,
-        SVO, AK-47, M16, CEL-3 Cauterizer, 1911, MP40, M1 Garand, Sten,
-        Lever Action, Repulsor) to a purchasable in-game shop.
+    1) Native shop weapons
+        The LUI script adds every missing base weapon and every
+        base DLC weapon (AE4, Ohm, M1 Irons, Blunderbuss, STG-44,
+        SVO, AK-47, M16, CEL-3 Cauterizer, 1911, MP40, M1 Garand,
+        Sten, Lever Action, Repulsor) to the native weapon armory
+        category menus. Buy buttons send the custom
+        "esp_weapon_upgrade" event with the shop index; this
+        script validates armory points, charges the player and
+        gives the gun through the native horde weapon pipeline
+        (maps\mp\gametypes\_horde_util::trygivehordeweapon) so
+        camo / weapon proficiency / class-slot bookkeeping all
+        behave exactly like a native purchase.
 
-        Weapons are bought with the normal Exo Survival armory points and
-        are given through the native horde weapon pipeline
-        (maps\mp\gametypes\_horde_util::trygivehordeweapon), so camo /
-        weapon proficiency / class-slot bookkeeping all behave natively.
-
-        Controls (anywhere on the map, while alive):
-            Hold [AIM] + press [MELEE]  -> open / toggle the gun shop
-            [FIRE]                      -> next weapon
-            [AIM]                       -> previous weapon
-            [USE]                       -> buy the selected weapon
-            [MELEE]                     -> close the shop
+        The index -> weapon/cost table here MUST stay in sync
+        with ESP_WEAPONS in exo_survival_plus_ui.lua.
 
     2) DLC map support
-        Makes all 16 DLC multiplayer maps (Havoc, Ascendance, Supremacy,
-        Reckoning) playable in Exo Survival. On maps that are missing the
-        native Exo Survival map data this script:
-            - spawns a working weapon armory and exo armory kiosk near the
-              player spawns (full native buy menus),
-            - injects collect ("horde_collect"), defend ("horde_defend")
-              and support-drop ("horde_drop") locations generated from the
-              map's TDM spawn points,
-            - limits objective rounds to Defend / Collect / Intel when the
-              map has no defuse-bomb or uplink entities, so no objective
-              round can fail from missing map data.
+        Makes all 16 DLC multiplayer maps (Havoc, Ascendance,
+        Supremacy, Reckoning) playable in Exo Survival. On maps
+        missing the native Exo Survival map data this script:
+            - spawns a working weapon armory and exo armory kiosk
+              near the player spawns (full native buy menus),
+            - injects collect ("horde_collect"), defend
+              ("horde_defend") and support-drop ("horde_drop")
+              locations generated from the map's TDM spawn points,
+            - limits objective rounds to Defend / Collect / Intel
+              when the map has no defuse-bomb or uplink entities,
+              so no objective round can fail from missing map data.
 
     Dvars:
-        esp_gun_cost          armory point cost per shop weapon  (default 3)
-        esp_shop_enabled      enable the custom gun shop         (default 1)
+        esp_shop_enabled      enable the shop purchase handler   (default 1)
         esp_dlc_maps_enabled  enable the DLC map support         (default 1)
         esp_dlc_rotation      1 = write a map rotation with all base + DLC
                               maps in gametype horde             (default 0)
 
     Install (s1x):
-        Place this file in  %localappdata%\Plutonium-style s1x scripts dir:
-        s1x > data > scripts  (loaded as a loose GSC by s1x)
+        <AW folder>/s1x/scripts/s1x_exo_survival_plus.gsc
+        <AW folder>/s1x/ui_scripts/exo_survival_plus/__init__.lua
 */
 
 main()
@@ -73,11 +74,6 @@ esp_init()
         return;
     }
 
-    if ( getdvar( "esp_gun_cost" ) == "" )
-    {
-        setdvar( "esp_gun_cost", "3" );
-    }
-
     if ( getdvar( "esp_shop_enabled" ) == "" )
     {
         setdvar( "esp_shop_enabled", "1" );
@@ -93,7 +89,7 @@ esp_init()
         setdvar( "esp_dlc_rotation", "0" );
     }
 
-    esp_build_weapon_list();
+    esp_build_shop_table();
 
     println( "[ESP] Exo Survival Plus initialized on " + getdvar( "mapname" ) );
 
@@ -116,50 +112,64 @@ esp_init()
 
 /*
     ============================================================
-    Gun shop weapon list
+    Shop table — index, weapon, display name, cost
     ============================================================
-    Base weapons missing from the native armory, then every
-    base DLC weapon by its GSC name.
+    Indexes and costs MUST match ESP_WEAPONS in
+    exo_survival_plus_ui.lua.
+
+    Pistols   600+ | SMGs 610+ | Assault 620+ | Shotguns 630+
+    Snipers   640+ | Heavy 650+ | Launcher 660+
 */
-esp_build_weapon_list()
+esp_build_shop_table()
 {
-    level.esp_weapons = [];
+    level.esp_shop = [];
 
-    esp_add_weapon( "iw5_exocrossbow_mp", "Crossbow" );
-    esp_add_weapon( "iw5_combatknife_mp", "Combat Knife" );
-    esp_add_weapon( "iw5_riotshieldt6_mp", "Riot Shield" );
+    esp_add_shop_item( 600, "iw5_dlcgun3_mp", "M1 Irons", 2 );
+    esp_add_shop_item( 601, "iw5_dlcgun13_mp", "1911", 2 );
+    esp_add_shop_item( 602, "iw5_combatknife_mp", "Combat Knife", 1 );
 
-    esp_add_weapon( "iw5_dlcgun1_mp", "AE4" );
-    esp_add_weapon( "iw5_dlcgun2_mp", "Ohm" );
-    esp_add_weapon( "iw5_dlcgun3_mp", "M1 Irons" );
-    esp_add_weapon( "iw5_dlcgun4_mp", "Blunderbuss" );
-    esp_add_weapon( "iw5_dlcgun6_mp", "STG-44" );
-    esp_add_weapon( "iw5_dlcgun7_mp", "SVO" );
-    esp_add_weapon( "iw5_dlcgun7loot0_mp", "AK-47" );
-    esp_add_weapon( "iw5_dlcgun8_mp", "M16" );
-    esp_add_weapon( "iw5_dlcgun8loot0_mp", "CEL-3 Cauterizer" );
-    esp_add_weapon( "iw5_dlcgun13_mp", "1911" );
-    esp_add_weapon( "iw5_dlcgun18_mp", "MP40" );
-    esp_add_weapon( "iw5_dlcgun23_mp", "M1 Garand" );
-    esp_add_weapon( "iw5_dlcgun28_mp", "Sten" );
-    esp_add_weapon( "iw5_dlcgun33_mp", "Lever Action" );
-    esp_add_weapon( "iw5_dlcgun38_mp", "Repulsor" );
+    esp_add_shop_item( 610, "iw5_dlcgun18_mp", "MP40", 3 );
+    esp_add_shop_item( 611, "iw5_dlcgun28_mp", "Sten", 3 );
+
+    esp_add_shop_item( 620, "iw5_dlcgun6_mp", "STG-44", 3 );
+    esp_add_shop_item( 621, "iw5_dlcgun7loot0_mp", "AK-47", 3 );
+    esp_add_shop_item( 622, "iw5_dlcgun8_mp", "M16", 3 );
+    esp_add_shop_item( 623, "iw5_dlcgun23_mp", "M1 Garand", 3 );
+    esp_add_shop_item( 624, "iw5_dlcgun1_mp", "AE4", 3 );
+
+    esp_add_shop_item( 630, "iw5_dlcgun4_mp", "Blunderbuss", 3 );
+    esp_add_shop_item( 631, "iw5_dlcgun8loot0_mp", "CEL-3 Cauterizer", 4 );
+    esp_add_shop_item( 632, "iw5_dlcgun33_mp", "Lever Action", 3 );
+
+    esp_add_shop_item( 640, "iw5_dlcgun7_mp", "SVO", 3 );
+
+    esp_add_shop_item( 650, "iw5_dlcgun2_mp", "Ohm", 4 );
+    esp_add_shop_item( 651, "iw5_dlcgun38_mp", "Repulsor", 4 );
+    esp_add_shop_item( 652, "iw5_riotshieldt6_mp", "Riot Shield", 2 );
+
+    esp_add_shop_item( 660, "iw5_exocrossbow_mp", "Crossbow", 3 );
 }
 
 
-esp_add_weapon( var_0, var_1 )
+esp_add_shop_item( var_0, var_1, var_2, var_3 )
 {
-    var_2 = spawnstruct();
-    var_2.weapon = var_0;
-    var_2.display = var_1;
-    level.esp_weapons[level.esp_weapons.size] = var_2;
+    var_4 = spawnstruct();
+    var_4.weapon = var_1;
+    var_4.display = var_2;
+    var_4.cost = var_3;
+    level.esp_shop[var_0] = var_4;
 }
 
 
 /*
     ============================================================
-    Gun shop — per player
+    Native shop purchase handler
     ============================================================
+    The LUI buy buttons call Engine.NotifyServer with the custom
+    event type "esp_weapon_upgrade" and the shop index. The
+    native armory handler in _horde_armory.gsc ignores unknown
+    event types (hordeisarmoryupgrade), so this listener is the
+    only consumer and there is no double handling.
 */
 esp_on_player_connect()
 {
@@ -168,159 +178,81 @@ esp_on_player_connect()
     for (;;)
     {
         level waittill( "connected", var_0 );
-        var_0 thread esp_player_shop_watcher();
+        var_0 thread esp_player_purchase_listener();
     }
 }
 
 
-esp_player_shop_watcher()
+esp_player_purchase_listener()
 {
     self endon( "disconnect" );
     level endon( "game_ended" );
 
-    self.esp_menu_open = 0;
-    self.esp_index = 0;
-
-    self iprintln( "^2Gun Shop:^7 hold [{+speed_throw}] and press [{+melee}]" );
-
     for (;;)
     {
-        wait 0.05;
+        self waittill( "luinotifyserver", var_0, var_1 );
 
-        if ( !isalive( self ) )
+        if ( var_0 != "esp_weapon_upgrade" )
         {
             continue;
         }
 
-        if ( isdefined( self.usingarmory ) && self.usingarmory )
+        var_2 = int( var_1 );
+
+        if ( !isdefined( level.esp_shop[var_2] ) )
         {
             continue;
         }
 
-        if ( isdefined( self.laststand ) && self.laststand )
+        if ( !isalive( self ) || maps\mp\gametypes\_horde_util::isplayerinlaststand( self ) )
         {
             continue;
         }
 
-        if ( self adsbuttonpressed() && self meleebuttonpressed() )
-        {
-            self esp_open_shop();
-
-            while ( self meleebuttonpressed() || self adsbuttonpressed() )
-            {
-                wait 0.05;
-            }
-        }
+        self esp_handle_purchase( var_2 );
     }
 }
 
 
-esp_open_shop()
+esp_handle_purchase( var_0 )
 {
-    if ( self.esp_menu_open )
+    var_1 = level.esp_shop[var_0];
+
+    if ( isdefined( level.hordeweaponsjammed ) && level.hordeweaponsjammed )
     {
+        self setclientomnvar( "ui_horde_armory_purchase_fail", 4 );
         return;
     }
 
-    self.esp_menu_open = 1;
-    self freezecontrols( 1 );
-    self esp_create_hud();
+    var_2 = self getcurrentprimaryweapon();
 
-    while ( self meleebuttonpressed() || self adsbuttonpressed() || self usebuttonpressed() || self attackbuttonpressed() )
+    if ( var_2 == "none" || issubstr( var_2, "turret" ) )
     {
-        wait 0.05;
+        self setclientomnvar( "ui_horde_armory_purchase_fail", 1 );
+        return;
     }
 
-    self esp_render_hud();
-
-    for (;;)
+    if ( self esp_owns_weapon( var_1.weapon ) )
     {
-        wait 0.05;
-
-        if ( !isalive( self ) || isdefined( self.laststand ) && self.laststand )
-        {
-            break;
-        }
-
-        if ( self meleebuttonpressed() )
-        {
-            break;
-        }
-
-        if ( self attackbuttonpressed() )
-        {
-            self.esp_index = ( self.esp_index + 1 ) % level.esp_weapons.size;
-            self esp_render_hud();
-            self esp_wait_buttons_released();
-            continue;
-        }
-
-        if ( self adsbuttonpressed() )
-        {
-            self.esp_index = ( self.esp_index - 1 + level.esp_weapons.size ) % level.esp_weapons.size;
-            self esp_render_hud();
-            self esp_wait_buttons_released();
-            continue;
-        }
-
-        if ( self usebuttonpressed() )
-        {
-            var_0 = self esp_try_buy();
-            self esp_wait_buttons_released();
-
-            if ( var_0 )
-            {
-                break;
-            }
-
-            self esp_render_hud();
-        }
+        self setclientomnvar( "ui_horde_armory_purchase_fail", 1 );
+        self iprintlnbold( "^1You already have the " + var_1.display );
+        return;
     }
 
-    self esp_destroy_hud();
-    self freezecontrols( 0 );
-    self.esp_menu_open = 0;
-}
-
-
-esp_wait_buttons_released()
-{
-    self endon( "disconnect" );
-
-    while ( self attackbuttonpressed() || self adsbuttonpressed() || self usebuttonpressed() )
+    if ( !isdefined( self.armorypoints ) || self.armorypoints < var_1.cost )
     {
-        wait 0.05;
-    }
-}
-
-
-esp_try_buy()
-{
-    var_0 = level.esp_weapons[self.esp_index];
-    var_1 = getdvarint( "esp_gun_cost" );
-
-    if ( self esp_owns_weapon( var_0.weapon ) )
-    {
-        self iprintlnbold( "^1You already have the " + var_0.display );
-        return 0;
+        self setclientomnvar( "ui_horde_armory_purchase_fail", 0 );
+        return;
     }
 
-    if ( !isdefined( self.armorypoints ) || self.armorypoints < var_1 )
-    {
-        self iprintlnbold( "^1Not enough upgrade points (" + var_1 + " needed)" );
-        return 0;
-    }
-
-    self.armorypoints = self.armorypoints - var_1;
+    self.armorypoints = self.armorypoints - var_1.cost;
     self setclientomnvar( "ui_horde_player_points", self.armorypoints );
+    self setclientomnvar( "ui_horde_armory_purchase", var_0 );
+    self playsoundtoplayer( "new_title_unlocks", self );
 
-    self esp_destroy_hud();
-    self freezecontrols( 0 );
-    maps\mp\gametypes\_horde_util::trygivehordeweapon( self, var_0.weapon, 1, 1 );
-    self freezecontrols( 1 );
-
-    self iprintlnbold( "^2Bought " + var_0.display );
-    return 1;
+    wait 0.05;
+    maps\mp\gametypes\_horde_util::trygivehordeweapon( self, var_1.weapon, 1, 1 );
+    self iprintlnbold( "^2Bought " + var_1.display );
 }
 
 
@@ -338,103 +270,6 @@ esp_owns_weapon( var_0 )
     }
 
     return 0;
-}
-
-
-esp_create_hud()
-{
-    if ( isdefined( self.esp_hud_title ) )
-    {
-        return;
-    }
-
-    self.esp_hud_title = newclienthudelem( self );
-    self.esp_hud_title.alignx = "center";
-    self.esp_hud_title.aligny = "middle";
-    self.esp_hud_title.horzalign = "center";
-    self.esp_hud_title.vertalign = "middle";
-    self.esp_hud_title.y = -60;
-    self.esp_hud_title.fontscale = 1.6;
-    self.esp_hud_title.color = ( 0.2, 1.0, 0.2 );
-    self.esp_hud_title.alpha = 1;
-    self.esp_hud_title.sort = 20;
-    self.esp_hud_title settext( "GUN SHOP" );
-
-    self.esp_hud_item = newclienthudelem( self );
-    self.esp_hud_item.alignx = "center";
-    self.esp_hud_item.aligny = "middle";
-    self.esp_hud_item.horzalign = "center";
-    self.esp_hud_item.vertalign = "middle";
-    self.esp_hud_item.y = -35;
-    self.esp_hud_item.fontscale = 1.4;
-    self.esp_hud_item.alpha = 1;
-    self.esp_hud_item.sort = 20;
-
-    self.esp_hud_info = newclienthudelem( self );
-    self.esp_hud_info.alignx = "center";
-    self.esp_hud_info.aligny = "middle";
-    self.esp_hud_info.horzalign = "center";
-    self.esp_hud_info.vertalign = "middle";
-    self.esp_hud_info.y = -15;
-    self.esp_hud_info.fontscale = 1.0;
-    self.esp_hud_info.alpha = 1;
-    self.esp_hud_info.sort = 20;
-
-    self.esp_hud_help = newclienthudelem( self );
-    self.esp_hud_help.alignx = "center";
-    self.esp_hud_help.aligny = "middle";
-    self.esp_hud_help.horzalign = "center";
-    self.esp_hud_help.vertalign = "middle";
-    self.esp_hud_help.y = 5;
-    self.esp_hud_help.fontscale = 0.9;
-    self.esp_hud_help.alpha = 0.8;
-    self.esp_hud_help.sort = 20;
-    self.esp_hud_help settext( "[FIRE] next  [AIM] prev  [USE] buy  [MELEE] close" );
-}
-
-
-esp_render_hud()
-{
-    if ( !isdefined( self.esp_hud_item ) )
-    {
-        return;
-    }
-
-    var_0 = level.esp_weapons[self.esp_index];
-    var_1 = getdvarint( "esp_gun_cost" );
-    var_2 = 0;
-
-    if ( isdefined( self.armorypoints ) )
-    {
-        var_2 = self.armorypoints;
-    }
-
-    self.esp_hud_item settext( "< " + var_0.display + " >" );
-    self.esp_hud_info settext( "Cost: " + var_1 + "   Your points: " + var_2 + "   (" + ( self.esp_index + 1 ) + "/" + level.esp_weapons.size + ")" );
-}
-
-
-esp_destroy_hud()
-{
-    if ( isdefined( self.esp_hud_title ) )
-    {
-        self.esp_hud_title destroy();
-    }
-
-    if ( isdefined( self.esp_hud_item ) )
-    {
-        self.esp_hud_item destroy();
-    }
-
-    if ( isdefined( self.esp_hud_info ) )
-    {
-        self.esp_hud_info destroy();
-    }
-
-    if ( isdefined( self.esp_hud_help ) )
-    {
-        self.esp_hud_help destroy();
-    }
 }
 
 
