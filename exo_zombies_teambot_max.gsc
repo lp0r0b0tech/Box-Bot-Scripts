@@ -1,7 +1,8 @@
 /*
     S1x Exo Zombies teammate bot boosts.
-    Install in your game folder at s1/scripts/zm/exo_zombies_teambot_max.gsc.
-    Restart the match after installing.
+    S1x: install at <game folder>/s1x/scripts/exo_zombies_teambot_max.gsc.
+    Put it directly in scripts, not in a zm subfolder. Remove older copies
+    of this bot script and restart the game after installing.
 
     - Veteran is the highest native bot difficulty.
     - Living teammate bots receive 30,000 health, refreshed every 0.25 seconds.
@@ -20,6 +21,7 @@
 
 main()
 {
+    println( "[EZTB] main loaded." );
     init();
 }
 
@@ -28,13 +30,43 @@ init()
     if ( isdefined( level.eztb_started ) )
         return;
 
-    if ( getdvar( "g_gametype" ) != "zombies" )
-        return;
-
     level.eztb_started = true;
+    level thread eztb_start();
+}
+
+eztb_start()
+{
+    level endon( "game_ended" );
+
+    // main can run before the gametype creates its callbacks and teams.
+    wait 0.05;
+    if ( getdvar( "g_gametype" ) != "zombies" )
+    {
+        println( "[EZTB] Disabled outside Exo Zombies." );
+        return;
+    }
+
+    for ( attempt = 0; attempt < 600; attempt++ )
+    {
+        if ( isdefined( level.playerteam ) && isdefined( level.enemyteam ) &&
+             isdefined( level.modifyplayerdamage ) && isdefined( level.modifyweapondamage ) )
+            break;
+        wait 0.05;
+    }
+
+    if ( !isdefined( level.playerteam ) || !isdefined( level.enemyteam ) ||
+         !isdefined( level.modifyplayerdamage ) || !isdefined( level.modifyweapondamage ) )
+    {
+        println( "[EZTB] ERROR: Zombies initialization timed out." );
+        iprintlnbold( "^1EZTB: Zombies initialization failed. Check console." );
+        return;
+    }
+
+    level.eztb_ready = true;
     setdvar( "bot_difficulty", "veteran" );
     level thread eztb_monitor_bots();
     level thread eztb_install_damage_hook();
+    level thread eztb_status();
     println( "[EZTB] Veteran bots, 30000 health, and lethal Atlas 45 enabled." );
 }
 
@@ -57,7 +89,7 @@ eztb_monitor_bots()
             setdvar( "bot_difficulty", "veteran" );
 
         // level.players may be filtered to humans by the easter egg script.
-        players = getplayers();
+        players = getentarray( "player", "classname" );
         foreach ( player in players )
         {
             if ( !eztb_is_teammate_bot( player ) || !isalive( player ) )
@@ -65,6 +97,12 @@ eztb_monitor_bots()
 
             if ( !isdefined( player.sessionstate ) || player.sessionstate != "playing" )
                 continue;
+
+            if ( !isdefined( player.eztb_detected ) )
+            {
+                player.eztb_detected = true;
+                println( "[EZTB] Native teammate bot detected: " + player.name );
+            }
 
             if ( player botgetdifficulty() != "veteran" )
                 player botsetdifficulty( "veteran" );
@@ -79,6 +117,32 @@ eztb_monitor_bots()
         }
 
         wait EZTB_REFRESH_INTERVAL;
+    }
+}
+
+eztb_status()
+{
+    level endon( "game_ended" );
+    for ( ;; )
+    {
+        players = getentarray( "player", "classname" );
+        count = 0;
+        foreach ( player in players )
+        {
+            if ( eztb_is_teammate_bot( player ) )
+                count++;
+        }
+
+        foreach ( player in players )
+        {
+            if ( !isbot( player ) && isalive( player ) &&
+                 ( !isdefined( player.eztb_status_count ) || player.eztb_status_count != count ) )
+            {
+                player iprintlnbold( "^2EZTB active - teammate bots: " + count );
+                player.eztb_status_count = count;
+            }
+        }
+        wait 1;
     }
 }
 
