@@ -119,7 +119,12 @@ esp_init()
     Gun shop weapon list
     ============================================================
     Base weapons missing from the native armory, then every
-    base DLC weapon by its GSC name.
+    base DLC weapon by its GSC name. Base versions only — no
+    loot / royalty variants. Note: the internal names of the
+    AK-47, M16 and CEL-3 contain "loot" because Sledgehammer
+    packed those base guns into leftover variant slots of
+    dlcgun7/8; they are the true base weapons per the game's
+    stats table.
 */
 esp_build_weapon_list()
 {
@@ -136,9 +141,9 @@ esp_build_weapon_list()
     esp_add_weapon( "iw5_dlcgun6_mp", "STG-44" );
     esp_add_weapon( "iw5_dlcgun7_mp", "SVO" );
     esp_add_weapon( "iw5_dlcgun7loot0_mp", "AK-47" );
-    esp_add_weapon( "iw5_dlcgun8_mp", "M16" );
-    esp_add_weapon( "iw5_dlcgun8loot0_mp", "CEL-3 Cauterizer" );
-    esp_add_weapon( "iw5_dlcgun13_mp", "1911" );
+    esp_add_weapon( "iw5_dlcgun7loot6_mp", "M16" );
+    esp_add_weapon( "iw5_dlcgun8loot1_mp", "CEL-3 Cauterizer" );
+    esp_add_weapon( "iw5_dlcgun14_mp", "1911" );
     esp_add_weapon( "iw5_dlcgun18_mp", "MP40" );
     esp_add_weapon( "iw5_dlcgun23_mp", "M1 Garand" );
     esp_add_weapon( "iw5_dlcgun28_mp", "Sten" );
