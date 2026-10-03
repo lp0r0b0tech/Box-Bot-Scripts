@@ -121,6 +121,11 @@ eztbIsTeammateBot( player )
         }
     }
 
+    if ( isbot( player ) )
+    {
+        return true;
+    }
+
     if ( isdefined( player.isBot ) && eztbValueIsTrue( player.isBot ) )
     {
         return true;
@@ -200,7 +205,7 @@ eztbApplyBotLoadout()
 
 eztbEnsureExoSuitAndPerks( player )
 {
-    if ( !player hasexosuit() )
+    if ( !player maps\mp\zombies\_terminals::hasexosuit() )
     {
         player maps\mp\zombies\_terminals::perkterminalsetexosuit(
             "exo_suit",
