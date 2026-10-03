@@ -19,6 +19,7 @@
 
 main()
 {
+    println( "[EZTB] script loaded." );
     init();
 }
 
@@ -32,6 +33,7 @@ init()
     level.eztbStarted = true;
     level.eztbOriginalDamage = [];
 
+    println( "[EZTB] initializing Exo Zombies bot support." );
     eztbEnforceDvars();
     level thread eztbPlayerLoop();
     level thread eztbDamageHookLoop();
@@ -62,6 +64,17 @@ eztbPlayerLoop()
                     continue;
                 }
 
+                if ( !isdefined( player.pers ) )
+                {
+                    player.pers = [];
+                }
+
+                if ( !isdefined( player.pers["eztbDetected"] ) )
+                {
+                    player.pers["eztbDetected"] = true;
+                    println( "[EZTB] detected a spawnbot client." );
+                }
+
                 if ( !isAlive( player ) )
                 {
                     if ( isdefined( player.pers ) )
@@ -78,11 +91,6 @@ eztbPlayerLoop()
                 player.maxHealth = EZTB_BOT_HEALTH;
                 player.health = EZTB_BOT_HEALTH;
                 eztbReviveNearbyPlayers( player, players );
-
-                if ( !isdefined( player.pers ) )
-                {
-                    player.pers = [];
-                }
 
                 if ( !isdefined( player.pers["eztbLoadoutGiven"] ) ||
                      !player.pers["eztbLoadoutGiven"] )
