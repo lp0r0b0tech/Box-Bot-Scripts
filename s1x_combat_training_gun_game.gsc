@@ -18,6 +18,8 @@
     time limits, and victory. Match score is one point per stage;
     native award points are separate. Matches have a 15-minute time limit;
     completing the weapon progression can still end the match sooner.
+    The native bottom-left score follows completed weapon stages,
+    including setbacks immediately; award/XP points remain separate.
 
     Variants and built-in attachments come from the native stats table,
     not guessed loot numbers. Missing weapon families are logged and skipped.
@@ -151,6 +153,8 @@ gungame_setup()
     level.gungame_active = true;
     level.gungame_original_killed = level.onPlayerKilled;
     level.onPlayerKilled = ::gungame_on_player_killed;
+    level.gungame_original_score = level.onPlayerScore;
+    level.onPlayerScore = ::gungame_on_player_score;
     level.onSpawnPlayer = ::gungame_on_spawn_player;
 
     // Native gun uses gunlist only in this mode. Preserve the user's order
@@ -162,12 +166,14 @@ gungame_setup()
         if ( isdefined( player ) && isdefined( player.gungamegunindex ) )
             player gungame_init_player_roster();
     }
+    gungame_refresh_native_scores();
 }
 
 gungame_setup_ready()
 {
     return isdefined( level.gun_guns ) && isdefined( level.onSpawnPlayer ) &&
         isdefined( level.onPlayerKilled ) &&
+        isdefined( level.onPlayerScore ) &&
         isdefined( level.matchrules_randomize ) &&
         isdefined( level.players ) && isdefined( level.weaponlist ) &&
         isdefined( level.teambased ) && isdefined( level.watchdvars );
@@ -241,6 +247,7 @@ gungame_init_player_roster()
     self.gunlist = [];
     for ( stage = 0; stage < self.gungame_family_order.size; stage++ )
         self gungame_pick_variant( stage );
+    self thread gungame_watch_score_disconnect();
 }
 
 gungame_pick_variant( stage )
@@ -273,6 +280,7 @@ gungame_on_spawn_player()
         self gungame_pick_variant( self.gungamegunindex );
 
     self thread gungame_spawn_loadout();
+    gungame_refresh_native_scores();
 }
 
 gungame_spawn_loadout()
@@ -284,12 +292,14 @@ gungame_spawn_loadout()
 
     // Same loadout boundary and setback event as native gun::waitloadoutdone.
     level waittill( "player_spawned" );
-    self gungame_equip_stage( true );
+    // A weapon-streaming wait must not delay the native setback splash/stats.
     if ( self.showsetbacksplash )
     {
         self.showsetbacksplash = false;
         self thread maps\mp\_events::decreasegunlevelevent();
     }
+    gungame_refresh_native_scores();
+    self gungame_equip_stage( true );
 }
 
 gungame_on_player_killed(
@@ -297,6 +307,8 @@ gungame_on_player_killed(
     direction, hitLocation, timeOffset, deathAnimDuration, lifeId
 )
 {
+    // Schedule before native handling: promotions can wait for weapon streaming.
+    gungame_refresh_native_scores();
     level.matchrules_randomize = true;
     if ( isdefined( attacker ) && isplayer( attacker ) && attacker != self )
     {
@@ -337,9 +349,65 @@ gungame_on_player_killed(
     attacker.lastkillweapon = weapon;
     attacker.lastleveluptime = gettime();
     attacker thread maps\mp\_events::increasegunlevelevent();
+    gungame_refresh_native_scores();
 
     if ( attacker.gungamegunindex < level.gun_guns.size )
         attacker thread gungame_equip_stage( false );
+}
+
+gungame_on_player_score( event, player, victim )
+{
+    // Preserve native award statistics, not its additive match-score delta.
+    // In particular, the delayed respawn setback must not subtract twice.
+    player [[ level.gungame_original_score ]]( event, player, victim );
+    gungame_refresh_native_scores();
+    return 0;
+}
+
+gungame_watch_score_disconnect()
+{
+    level endon( "game_ended" );
+    self waittill( "disconnect" );
+    gungame_refresh_native_scores();
+}
+
+gungame_refresh_native_scores()
+{
+    if ( isdefined( level.gungame_score_refresh_pending ) )
+        return;
+
+    level.gungame_score_refresh_pending = true;
+    level thread gungame_sync_native_scores();
+}
+
+gungame_sync_native_scores()
+{
+    level endon( "game_ended" );
+    wait 0;
+    level.gungame_score_refresh_pending = undefined;
+
+    if ( game["state"] == "postgame" )
+        return;
+
+    setdvar( "ui_scorelimit", level.gun_guns.size );
+    // Queue the native HUD refresh before a winning score can end this thread.
+    level thread maps\mp\gametypes\_gamescore::sendUpdatedDMScores();
+    foreach ( player in level.players )
+    {
+        if ( !isdefined( player ) || !isplayer( player ) ||
+             !isdefined( player.gungamegunindex ) ||
+             !isdefined( player.pers ) || !isdefined( player.pers["score"] ) )
+            continue;
+
+        score = int( max( 0, min( player.gungamegunindex, level.gun_guns.size ) ) );
+        changed = player.pers["score"] != score;
+        // This native setter also checks victory in the player's context.
+        maps\mp\gametypes\_gamescore::_setPlayerScore( player, score );
+        // The setter returns early if pers["score"] already matches.
+        player.score = score;
+        if ( changed )
+            player maps\mp\gametypes\_gamelogic::checkplayerscorelimitsoon();
+    }
 }
 
 gungame_melee_stage( attacker, meansOfDeath )
