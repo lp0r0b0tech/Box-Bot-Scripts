@@ -10,8 +10,8 @@
     - Human health, human weapon damage, and bot counts are unchanged.
       Spawn teammate bots using your usual S1x bot controls.
 
-    Works standalone. When using allweapondamage_Version2.gsc, install the
-    accompanying updated version too so its repeated hooks retain this boost.
+    Install only this file. Works with or without the original
+    allweapondamage_Version2.gsc; no changes to that file are needed.
 */
 
 #define EZTB_BOT_HEALTH       30000
@@ -33,7 +33,6 @@ init()
 
     level.eztb_started = true;
     setdvar( "bot_difficulty", "veteran" );
-    level.eztb_atlas_damage = ::eztb_atlas_damage;
     level thread eztb_monitor_bots();
     level thread eztb_install_damage_hook();
     println( "[EZTB] Veteran bots, 30000 health, and lethal Atlas 45 enabled." );
@@ -87,11 +86,28 @@ eztb_install_damage_hook()
 {
     level endon( "game_ended" );
 
-    while ( !isdefined( level.modifyweapondamage ) )
+    while ( !isdefined( level.modifyplayerdamage ) || !isdefined( level.modifyweapondamage ) )
         wait 0.05;
 
-    level.eztb_previous_atlas_damage = level.modifyweapondamage[EZTB_ATLAS45];
+    level.eztb_previous_player_damage = level.modifyplayerdamage;
+    level.modifyplayerdamage = ::eztb_modify_player_damage;
+}
+
+eztb_modify_player_damage( victim, inflictor, attacker, damage, meansOfDeath, weapon, point, direction, hitLocation )
+{
+    botDamage = eztb_atlas_damage( victim, attacker, damage, meansOfDeath, weapon, point, direction, hitLocation );
+    if ( !isdefined( botDamage ) )
+        return self [[ level.eztb_previous_player_damage ]]( victim, inflictor, attacker, damage, meansOfDeath, weapon, point, direction, hitLocation );
+
+    // Scope the weapon override to this synchronous native damage call.
+    // AllWeaponDamage can keep registering its own hook between hits.
+    previousWeaponDamage = level.modifyweapondamage[EZTB_ATLAS45];
     level.modifyweapondamage[EZTB_ATLAS45] = ::eztb_modify_damage;
+    result = self [[ level.eztb_previous_player_damage ]]( victim, inflictor, attacker, damage, meansOfDeath, weapon, point, direction, hitLocation );
+    level.modifyweapondamage[EZTB_ATLAS45] = previousWeaponDamage;
+
+    // Keep native points, armor, boss immunity and deferred-death decisions.
+    return result;
 }
 
 eztb_modify_damage( victim, attacker, damage, meansOfDeath, weapon, point, direction, hitLocation )
@@ -100,13 +116,9 @@ eztb_modify_damage( victim, attacker, damage, meansOfDeath, weapon, point, direc
     if ( isdefined( botDamage ) )
         return botDamage;
 
-    if ( isdefined( level.eztb_previous_atlas_damage ) )
-        return [[ level.eztb_previous_atlas_damage ]]( victim, attacker, damage, meansOfDeath, weapon, point, direction, hitLocation );
-
     return damage;
 }
 
-// Also called by the all-weapon script so load order cannot remove the boost.
 // Undefined means that the caller must retain its normal damage handling.
 eztb_atlas_damage( victim, attacker, damage, meansOfDeath, weapon, point, direction, hitLocation )
 {

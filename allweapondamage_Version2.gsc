@@ -496,18 +496,6 @@ awd_modify_damage(
     hitLocation
 )
 {
-    // Preserve the optional teammate-bot boost when our monitor reinstalls hooks.
-    if ( isdefined( level.eztb_atlas_damage ) )
-    {
-        botDamage = [[ level.eztb_atlas_damage ]](
-            victim, attacker, damage, meansOfDeath,
-            weapon, point, direction, hitLocation
-        );
-
-        if ( isdefined( botDamage ) )
-            return botDamage;
-    }
-
     if ( !isdefined( attacker ) ||
          !isplayer( attacker ) )
     {
