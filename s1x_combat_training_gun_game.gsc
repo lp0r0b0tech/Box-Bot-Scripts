@@ -16,7 +16,8 @@
     handler still handles victim setbacks and all other kills.
     Native Gun Game owns scoring, HUD, ammo, spawning, randomization,
     time limits, and victory. Match score is one point per stage;
-    native award points are separate.
+    native award points are separate. Matches have a 15-minute time limit;
+    completing the weapon progression can still end the match sooner.
 
     Variants and built-in attachments come from the native stats table,
     not guessed loot numbers. Missing weapon families are logged and skipped.
@@ -26,6 +27,7 @@
 
 #define GG_WAIT_INTERVAL 0.05
 #define GG_WAIT_ATTEMPTS 600
+#define GG_MATCH_MINUTES 15
 
 main()
 {
@@ -142,6 +144,10 @@ gungame_setup()
     // Private-match properties must not restore the old roster's limit.
     maps\mp\_utility::setoverridewatchdvar( "scorelimit", level.gun_guns.size );
     level notify( "update_scorelimit", level.gun_guns.size );
+    setdynamicdvar( "scr_gun_timelimit", GG_MATCH_MINUTES );
+    maps\mp\_utility::setoverridewatchdvar( "timelimit", GG_MATCH_MINUTES );
+    maps\mp\_utility::registertimelimitdvar( "gun", GG_MATCH_MINUTES );
+    level notify( "update_timelimit", GG_MATCH_MINUTES );
     level.gungame_active = true;
     level.gungame_original_killed = level.onPlayerKilled;
     level.onPlayerKilled = ::gungame_on_player_killed;
