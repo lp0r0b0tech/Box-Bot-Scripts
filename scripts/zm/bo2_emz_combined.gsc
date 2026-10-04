@@ -19,6 +19,10 @@ init()
     level.bo2_boss_health_multiplier = 4;
     level.bo2_last_round = -1;
     level.bo2_health = 150;
+    level.bo2_orig_moveratescalefunc = [];
+    level.bo2_orig_nonmoveratescalefunc = [];
+    level.bo2_orig_traverseratescalefunc = [];
+    level.bo2_speed_hooked = [];
     level.emz_debug = true;
     level.emz_emp_range = 128;
     level.emz_tick = 0.25;
@@ -345,21 +349,230 @@ bo2_oz_stage1_damage(
 
 bo2_apply_speed_cap(zombie)
 {
-    if (!isDefined(zombie.buffs))
-        zombie.buffs = [];
+    // S1 zombies move at the playback rate of their move anims. The native
+    // zombie_speed_monitor recomputes self.moveratescale / nonmoveratescale /
+    // traverseratescale about once per second and prefers the per-agent-type
+    // level.*ratescalefunc hooks when they exist, so wrap those hooks to clamp
+    // every recomputed rate to level.bo2_speed_cap.
+    if (isDefined(zombie.agent_type))
+        bo2_hook_speed_funcs(zombie.agent_type);
 
-    if (!isDefined(zombie.buffs["bo2_speed_cap"]))
-        zombie.buffs["bo2_speed_cap"] = spawnstruct();
+    // Also clamp the live values so the cap applies immediately; the humanoid
+    // anim code polls self.moveratescale every 0.05s and re-plays the move
+    // anim at the new rate whenever it changes.
+    cap = level.bo2_speed_cap;
+    if (isDefined(zombie.moveratescale) && zombie.moveratescale > cap)
+        zombie.moveratescale = cap;
+    if (isDefined(zombie.nonmoveratescale) && zombie.nonmoveratescale > cap)
+        zombie.nonmoveratescale = cap;
+    if (isDefined(zombie.traverseratescale) && zombie.traverseratescale > cap)
+        zombie.traverseratescale = cap;
+    if (isDefined(zombie.generalspeedratescale) && zombie.generalspeedratescale > cap)
+        zombie.generalspeedratescale = cap;
 
-    // Native updatebuffs() subtracts from every buff's lifespan.
-    zombie.buffs["bo2_speed_cap"].lifespan = 1.0;
-
-    if (!isDefined(zombie.buffs["bo2_speed_cap"].speedmultiplier) ||
-        zombie.buffs["bo2_speed_cap"].speedmultiplier != level.bo2_speed_cap)
+    // Wake the native speed monitor when the cap value changes so the hooked
+    // recompute runs right away instead of after its 1-second poll.
+    if (!isDefined(zombie.bo2_speed_cap_applied) || zombie.bo2_speed_cap_applied != cap)
     {
-        zombie.buffs["bo2_speed_cap"].speedmultiplier = level.bo2_speed_cap;
+        zombie.bo2_speed_cap_applied = cap;
         zombie notify("speed_debuffs_changed");
     }
+}
+
+bo2_hook_speed_funcs(agentType)
+{
+    if (isDefined(level.bo2_speed_hooked[agentType]))
+        return;
+
+    level.bo2_speed_hooked[agentType] = true;
+
+    if (isDefined(level.moveratescalefunc) && isDefined(level.moveratescalefunc[agentType]))
+        level.bo2_orig_moveratescalefunc[agentType] = level.moveratescalefunc[agentType];
+    level.moveratescalefunc[agentType] = ::bo2_moveratescale;
+
+    if (isDefined(level.nonmoveratescalefunc) && isDefined(level.nonmoveratescalefunc[agentType]))
+        level.bo2_orig_nonmoveratescalefunc[agentType] = level.nonmoveratescalefunc[agentType];
+    level.nonmoveratescalefunc[agentType] = ::bo2_nonmoveratescale;
+
+    if (isDefined(level.traverseratescalefunc) && isDefined(level.traverseratescalefunc[agentType]))
+        level.bo2_orig_traverseratescalefunc[agentType] = level.traverseratescalefunc[agentType];
+    level.traverseratescalefunc[agentType] = ::bo2_traverseratescale;
+}
+
+// The three hooks below run on the zombie entity from zombie_speed_monitor.
+// They defer to the agent type's original native func when one was registered
+// (goliath, oz boss, dogs, etc.), otherwise they replicate the native default
+// calculation, then clamp the result to the cap.
+bo2_moveratescale()
+{
+    rate = undefined;
+    if (isDefined(self.agent_type) && isDefined(level.bo2_orig_moveratescalefunc[self.agent_type]))
+        rate = [[ level.bo2_orig_moveratescalefunc[self.agent_type] ]]();
+    else
+        rate = bo2_default_moveratescale();
+
+    return bo2_clamp_rate(rate);
+}
+
+bo2_nonmoveratescale()
+{
+    rate = undefined;
+    if (isDefined(self.agent_type) && isDefined(level.bo2_orig_nonmoveratescalefunc[self.agent_type]))
+        rate = [[ level.bo2_orig_nonmoveratescalefunc[self.agent_type] ]]();
+    else
+        rate = bo2_default_nonmoveratescale();
+
+    return bo2_clamp_rate(rate);
+}
+
+bo2_traverseratescale()
+{
+    rate = undefined;
+    if (isDefined(self.agent_type) && isDefined(level.bo2_orig_traverseratescalefunc[self.agent_type]))
+        rate = [[ level.bo2_orig_traverseratescalefunc[self.agent_type] ]]();
+    else
+        rate = bo2_default_traverseratescale();
+
+    return bo2_clamp_rate(rate);
+}
+
+bo2_clamp_rate(rate)
+{
+    if (!isDefined(rate))
+        rate = 1.0;
+    if (rate > level.bo2_speed_cap)
+        rate = level.bo2_speed_cap;
+    if (rate < 0.01)
+        rate = 0.01;
+
+    return rate;
+}
+
+bo2_wave_cycle()
+{
+    cycle = 7;
+    if (isDefined(level.wavecycleoverride))
+        cycle = level.wavecycleoverride;
+    if (cycle < 2)
+        cycle = 2;
+
+    return cycle;
+}
+
+bo2_move_mode_count()
+{
+    if (isDefined(level.zombie_move_modes))
+        return level.zombie_move_modes.size;
+
+    return 3;
+}
+
+bo2_round_index(cycle)
+{
+    wave = 1;
+    if (isDefined(level.wavecounter))
+        wave = level.wavecounter;
+
+    index = wave - 1;
+    if (isDefined(self.moverateroundmod))
+        index = index + self.moverateroundmod;
+
+    maxIndex = bo2_move_mode_count() * cycle - 1;
+    if (index < 0)
+        index = 0;
+    if (index > maxIndex)
+        index = maxIndex;
+
+    return int(index);
+}
+
+bo2_wave_bonus(rate)
+{
+    if (isDefined(level.wavecounter))
+    {
+        if (level.wavecounter > 24)
+            rate = rate + 0.05;
+        if (level.wavecounter > 29)
+            rate = rate + 0.05;
+    }
+
+    return rate;
+}
+
+bo2_buff_speed_multiplier()
+{
+    multiplier = 1.0;
+    if (!isDefined(self.buffs))
+        return multiplier;
+
+    foreach (buff in self.buffs)
+    {
+        if (isDefined(buff) && isDefined(buff.speedmultiplier))
+            multiplier = multiplier * buff.speedmultiplier;
+    }
+
+    return multiplier;
+}
+
+// Mirrors the native calculatezombiemoveratescale for agent types with no
+// registered native moveratescalefunc.
+bo2_default_moveratescale()
+{
+    cycle = bo2_wave_cycle();
+
+    mode = "run";
+    if (isDefined(self.movemode))
+        mode = self.movemode;
+
+    low = 0.7;
+    high = 1.25;
+    if (isDefined(level.moveratescalemod) && isDefined(level.moveratescalemod[mode]))
+    {
+        low = level.moveratescalemod[mode][0];
+        high = level.moveratescalemod[mode][1];
+    }
+
+    index = bo2_round_index(cycle);
+    fraction = float(index % cycle) / float(cycle - 1);
+    rate = low + (high - low) * fraction;
+    rate = bo2_wave_bonus(rate);
+    rate = rate * bo2_buff_speed_multiplier();
+
+    return rate;
+}
+
+bo2_default_nonmoveratescale()
+{
+    mode = "run";
+    if (isDefined(self.movemode))
+        mode = self.movemode;
+
+    rate = 1.0;
+    if (isDefined(level.nonmoveratescalemod) && isDefined(level.nonmoveratescalemod[mode]))
+        rate = level.nonmoveratescalemod[mode];
+
+    return rate * bo2_buff_speed_multiplier();
+}
+
+bo2_default_traverseratescale()
+{
+    cycle = bo2_wave_cycle();
+
+    low = 0.55;
+    high = 1.55;
+    if (isDefined(level.traverseratescalemod))
+    {
+        low = level.traverseratescalemod[0];
+        high = level.traverseratescalemod[1];
+    }
+
+    index = bo2_round_index(cycle);
+    fraction = float(index) / (bo2_move_mode_count() * cycle - 1.0);
+    rate = low + (high - low) * fraction;
+    rate = bo2_wave_bonus(rate);
+    rate = rate * bo2_buff_speed_multiplier();
+
+    return rate;
 }
 
 emz_should_run_here()
