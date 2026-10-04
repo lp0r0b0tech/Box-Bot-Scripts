@@ -25,15 +25,23 @@
         set scr_zm_dlc_shop_enabled 1
         set scr_zm_dlc_shop_debug   0
 
-    Note on weapon precaching:
-        Weapons must already be precached by the map/mod (normally via
-        that map's own precache() callback, run by the engine before
-        players connect). precacheitem() cannot legally be called at
-        runtime from here - doing so throws a script error and breaks
-        this entire shop for every player. If a purchase reports
-        "Failed to give <weapon>" and refunds itself, that weapon's
-        asset is not loaded on the current map and must be added to the
-        map's precache() function instead.
+    Weapon precaching - REQUIRED, one line per map:
+        precacheitem() can only legally run during the engine's
+        precache phase (inside a precache() function called before
+        players connect). Calling it at runtime from this script's
+        main()/init() throws a script error and breaks the entire shop
+        for every player, so this file no longer attempts it.
+
+        Instead, add this single line inside every map's own precache()
+        function (e.g. maps/zm/<mapname>.gsc or the map's zombies mod
+        precache() callback):
+
+            maps\zm\exo_zombies_dlc_weapon_shop::precache();
+
+        If that line is missing from a map's precache(), purchases of
+        weapons not already used elsewhere on that map will fail and
+        automatically refund the player with an on-screen message
+        naming the weapon that needs to be added.
 */
 
 #define DLCWS_DEFAULT_ENABLED        1
@@ -52,6 +60,23 @@ main()
 init()
 {
     dlcws_init();
+}
+
+/*
+    Call this from every map's own precache() function, e.g.:
+        maps\zm\exo_zombies_dlc_weapon_shop::precache();
+
+    This is the only place precacheitem() is legal - it must run
+    during the engine's precache phase, before players connect.
+*/
+precache()
+{
+    dlcws_build_weapon_list();
+
+    for ( i = 0; i < level.dlcws_weapons.size; i++ )
+    {
+        precacheitem( level.dlcws_weapons[i].weaponName );
+    }
 }
 
 dlcws_init()
