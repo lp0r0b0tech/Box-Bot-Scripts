@@ -153,6 +153,10 @@ bo2_get_zombies()
         if (!isDefined(agent) || !isAlive(agent) || !isDefined(agent.team))
             continue;
 
+        // Never touch player entities; this script tunes zombie agents only.
+        if (isPlayer(agent))
+            continue;
+
         if (isDefined(agent.isactive) && !agent.isactive)
             continue;
 
@@ -352,6 +356,11 @@ bo2_oz_stage1_damage(
 
 bo2_apply_speed_cap(zombie)
 {
+    // Never touch players: this caps zombie agent anim rates only and must
+    // not affect player movement, sprinting, or Exo abilities in any way.
+    if (!isDefined(zombie) || isPlayer(zombie))
+        return;
+
     // S1 zombies move at the playback rate of their move anims. The native
     // zombie_speed_monitor recomputes self.moveratescale / nonmoveratescale /
     // traverseratescale about once per second and prefers the per-agent-type
@@ -444,6 +453,12 @@ bo2_clamp_rate(rate)
 {
     if (!isDefined(rate))
         rate = 1.0;
+
+    // Safety: never clamp a player's rate (players shouldn't reach these
+    // hooks, but keep sprint/movement untouched if one ever does).
+    if (isDefined(self) && isPlayer(self))
+        return rate;
+
     if (rate > level.bo2_speed_cap)
         rate = level.bo2_speed_cap;
     if (rate < 0.01)
