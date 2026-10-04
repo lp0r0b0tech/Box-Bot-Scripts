@@ -223,8 +223,6 @@ dlcws_open_shop()
     self.dlcws_shopOpen = true;
     self.dlcws_shopIndex = 0;
 
-    self freezecontrols( true );
-
     self.dlcws_hud = newclienthudelem( self );
     self.dlcws_hud.alignx = "center";
     self.dlcws_hud.aligny = "middle";
@@ -413,6 +411,4 @@ dlcws_close_shop( player )
         player.dlcws_hint destroy();
         player.dlcws_hint = undefined;
     }
-
-    player freezecontrols( false );
 }
