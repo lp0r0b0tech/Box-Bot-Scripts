@@ -55,10 +55,24 @@ dlcws_init()
 
     dlcws_init_dvars();
     dlcws_build_weapon_list();
+    dlcws_precache_weapons();
 
     level thread dlcws_watch_players();
 
     println( "DLCWeaponShop: initialized." );
+}
+
+/*
+    Weapons that are not already used elsewhere on the current map are
+    not guaranteed to be loaded. Without this, giveweapon() can silently
+    fail to hand the player anything.
+*/
+dlcws_precache_weapons()
+{
+    for ( i = 0; i < level.dlcws_weapons.size; i++ )
+    {
+        precacheitem( level.dlcws_weapons[i].weaponName );
+    }
 }
 
 dlcws_init_dvars()
@@ -316,7 +330,23 @@ dlcws_try_purchase( player )
 
     player.score -= DLCWS_WEAPON_COST;
 
+    /*
+        Zombies players can only hold a limited number of weapons.
+        If their slots are already full, giveweapon() silently does
+        nothing, so drop whatever is currently in hand first to make
+        room for the purchased weapon.
+    */
+    currentWeapon = player getcurrentweapon();
+
+    if ( isdefined( currentWeapon ) &&
+         currentWeapon != "none" &&
+         currentWeapon != entry.weaponName )
+    {
+        player takeweapon( currentWeapon );
+    }
+
     player giveweapon( entry.weaponName );
+    player givemaxammo( entry.weaponName );
     player switchtoweapon( entry.weaponName );
 
     player iprintln( "Purchased " + entry.displayName + " for " + DLCWS_WEAPON_COST + " points." );
