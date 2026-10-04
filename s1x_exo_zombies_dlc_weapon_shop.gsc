@@ -68,30 +68,32 @@ dlcws_init_dvars()
 }
 
 /*
-    Only the Exo Zombies DLC-exclusive weapons from the Mk2-Mk25 damage
-    system roster. Standard Advanced Warfare multiplayer weapons (AK12,
-    BAL-27, ASM1, etc.) are intentionally excluded — they are not DLC
-    weapons, just base-game guns also usable in zombies.
+    Exo Zombies DLC-exclusive weapon roster, using the exact DLC gun IDs
+    (plus Microwave, Line Gun, and Trident wonder weapons alongside them).
 */
 dlcws_build_weapon_list()
 {
     level.dlcws_weapons = [];
 
-    dlcws_add_weapon( "iw5_exocrossbowzm_mp", "Exo Crossbow" );
-    dlcws_add_weapon( "iw5_mahemzm_mp", "MAHEM" );
+    dlcws_add_weapon( "iw5_dlcgun1_mp", "AE4" );
+    dlcws_add_weapon( "iw5_dlcgun2_mp", "Ohm" );
+    dlcws_add_weapon( "iw5_dlcgun3_mp", "M1 Irons" );
+    dlcws_add_weapon( "iw5_dlcgun4_mp", "Blunderbuss" );
+    dlcws_add_weapon( "iw5_dlcgun6_mp", "STG-44" );
+    dlcws_add_weapon( "iw5_dlcgun6loot5_mp", "SVO" );
+    dlcws_add_weapon( "iw5_dlcgun7loot0_mp", "AK-47" );
+    dlcws_add_weapon( "iw5_dlcgun7loot6_mp", "M16" );
+    dlcws_add_weapon( "iw5_dlcgun8loot1_mp", "CEL-3 Cauterizer" );
+    dlcws_add_weapon( "iw5_dlcgun13_mp", "1911" );
+    dlcws_add_weapon( "iw5_dlcgun18_mp", "MP40" );
+    dlcws_add_weapon( "iw5_dlcgun23_mp", "M1 Garand" );
+    dlcws_add_weapon( "iw5_dlcgun28_mp", "Sten" );
+    dlcws_add_weapon( "iw5_dlcgun33_mp", "Lever Action" );
+    dlcws_add_weapon( "iw5_dlcgun38_mp", "Repulsor" );
 
-    dlcws_add_weapon( "iw5_fusionzm_mp", "CEL-3 Cauterizer" );
     dlcws_add_weapon( "iw5_microwavezm_mp", "Microwave" );
     dlcws_add_weapon( "iw5_linegunzm_mp", "Line Gun" );
     dlcws_add_weapon( "iw5_tridentzm_mp", "Trident" );
-
-    dlcws_add_weapon( "iw5_dlcgun1zm_mp", "DLC Weapon I" );
-    dlcws_add_weapon( "iw5_dlcgun2zm_mp", "DLC Weapon II" );
-    dlcws_add_weapon( "iw5_dlcgun3zm_mp", "DLC Weapon III" );
-    dlcws_add_weapon( "iw5_dlcgun4zm_mp", "DLC Weapon IV" );
-
-    dlcws_add_weapon( "iw5_exominigunzm_mp", "Exo Minigun" );
-    dlcws_add_weapon( "iw5_blunderbusszm_mp", "Blunderbuss" );
 }
 
 dlcws_add_weapon( weaponName, displayName )
