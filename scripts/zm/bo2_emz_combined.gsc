@@ -13,7 +13,10 @@ init()
 
     level.bo2_emz_started = true;
     level.bo2_health_cap = 30000;
-    level.bo2_speed_cap = 0.25;
+    // Speed ceiling: zombies run at their natural rate but can never exceed
+    // this anim-rate scale, no matter how high the round gets. 1.0 = normal
+    // max sprint speed. Lower it (e.g. 0.8) to also slow late-round zombies.
+    level.bo2_speed_cap = 1.0;
     level.bo2_goliath_min_health = 60000;
     level.bo2_oz_min_health_per_player = 100000;
     level.bo2_boss_health_multiplier = 4;
@@ -65,13 +68,13 @@ bo2_round_monitor()
             cap = 1;
         level.bo2_health_cap = cap;
 
-        speed = 0.25;
+        speed = 1.0;
         if (getDvar("scr_bo2_speed_cap") != "")
             speed = getDvarFloat("scr_bo2_speed_cap");
         if (speed <= 0)
             speed = 0.01;
-        if (speed > 1)
-            speed = 1;
+        if (speed > 2)
+            speed = 2;
         level.bo2_speed_cap = speed;
 
         roundValue = undefined;
@@ -352,8 +355,9 @@ bo2_apply_speed_cap(zombie)
     // S1 zombies move at the playback rate of their move anims. The native
     // zombie_speed_monitor recomputes self.moveratescale / nonmoveratescale /
     // traverseratescale about once per second and prefers the per-agent-type
-    // level.*ratescalefunc hooks when they exist, so wrap those hooks to clamp
-    // every recomputed rate to level.bo2_speed_cap.
+    // level.*ratescalefunc hooks when they exist, so wrap those hooks to cap
+    // every recomputed rate at level.bo2_speed_cap. This is a ceiling only:
+    // zombies below the cap keep their natural speed.
     if (isDefined(zombie.agent_type))
         bo2_hook_speed_funcs(zombie.agent_type);
 
