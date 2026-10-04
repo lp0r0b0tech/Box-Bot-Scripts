@@ -6,28 +6,21 @@
 
     Purpose:
         - Only runs in Exo Survival (g_gametype "horde").
-        - Gives bots on the survival side (level.playerteam) max Exo Survival
-          Armor upgrade and max Weapon Proficiency upgrade.
-        - Sets survival-side teammate client bots to the max native bot
+        - Gives teammate bot players on the survival side (level.playerteam)
+          max Exo Survival Armor upgrade and max Weapon Proficiency upgrade.
+        - Sets survival-side teammate bot players to the max native bot
           difficulty.
-        - Enemy team (level.enemyteam) bots/agents are never touched.
-
-    Covers both bot types found on the survival side:
-        - Client bots (pers["isBot"] / "bot" GUIDs) that use the normal
-          armory stats.
-        - Squadmate agents (entries from level.agentarray) that do not use
-          the armory, so their weapon proficiency bonus is applied through
-          the damage callback.
+        - Only affects client bot players (pers["isBot"] / "bot" GUIDs).
+          Squadmate agents, human players, and the enemy team
+          (level.enemyteam) are never touched.
 
     S1x compatibility notes:
         - No references to game script files (maps\mp\...) so the script
           loads standalone regardless of the dumped script set.
         - Bot detection uses pers["isBot"] with a GUID fallback instead of
           the isbot() builtin, matching the other scripts in this repo.
-        - botgetdifficulty()/botsetdifficulty() are only ever called on
-          client bots, never on agents.
 
-    Dvars (survival side only):
+    Dvars (survival-side bot players only):
         set scr_es_teambot_max 1                       // 1 = on, 0 = off
         set scr_es_teambot_armor 10                    // 0-10, 10 = max armor upgrade
         set scr_es_teambot_weapon_proficiency 10       // 0-10, 10 = max weapon proficiency
@@ -101,8 +94,6 @@ esTeambotLoop()
     {
         if ( getdvarint( "scr_es_teambot_max" ) > 0 && isdefined( level.playerteam ) )
         {
-            esTeambotInstallDamageHook();
-
             teammates = esTeambotGetSurvivalBots();
 
             for ( i = 0; i < teammates.size; i++ )
@@ -119,49 +110,18 @@ esTeambotGetSurvivalBots()
 {
     result = [];
 
-    if ( isdefined( level.players ) )
+    if ( !isdefined( level.players ) )
     {
-        for ( i = 0; i < level.players.size; i++ )
-        {
-            player = level.players[i];
-
-            if ( esTeambotIsSurvivalBot( player ) )
-            {
-                result[result.size] = player;
-            }
-        }
+        return result;
     }
 
-    if ( isdefined( level.agentarray ) )
+    for ( i = 0; i < level.players.size; i++ )
     {
-        for ( i = 0; i < level.agentarray.size; i++ )
+        player = level.players[i];
+
+        if ( esTeambotIsSurvivalBot( player ) )
         {
-            agent = level.agentarray[i];
-
-            if ( !esTeambotIsSurvivalBot( agent ) )
-            {
-                continue;
-            }
-
-            duplicate = false;
-
-            for ( j = 0; j < result.size; j++ )
-            {
-                if ( result[j] == agent )
-                {
-                    duplicate = true;
-                    break;
-                }
-            }
-
-            if ( !duplicate )
-            {
-                // Anything from level.agentarray is a squadmate agent, not
-                // a client bot. Mark it so later code never calls bot
-                // builtins on it.
-                agent.esTeambotIsAgent = true;
-                result[result.size] = agent;
-            }
+            result[result.size] = player;
         }
     }
 
@@ -186,15 +146,10 @@ esTeambotIsSurvivalBot( ent )
         return false;
     }
 
+    // Teammate bot players only; squadmate agents are not players.
     if ( !isplayer( ent ) )
     {
-        // Non-player teammate: squadmate agent from level.agentarray.
-        if ( isdefined( ent.isactive ) && !ent.isactive )
-        {
-            return false;
-        }
-
-        return true;
+        return false;
     }
 
     return esTeambotIsClientBot( ent );
@@ -249,13 +204,6 @@ esTeambotApply( bot )
 
 esTeambotApplyDifficulty( bot )
 {
-    // Difficulty builtins only exist on client bots; calling them on a
-    // squadmate agent is a script error.
-    if ( !isplayer( bot ) || ( isdefined( bot.esTeambotIsAgent ) && bot.esTeambotIsAgent ) )
-    {
-        return;
-    }
-
     difficulty = tolower( getdvar( "scr_es_teambot_difficulty" ) );
 
     if ( difficulty != "recruit" && difficulty != "regular" && difficulty != "hardened" && difficulty != "veteran" )
@@ -275,142 +223,38 @@ esTeambotApplyDifficulty( bot )
 
 esTeambotApplyArmor( bot, armor )
 {
-    if ( isplayer( bot ) )
+    // Client bots use the stock armory formula: classmaxhealth + armor * 40.
+    if ( !isdefined( bot.hordearmor ) || bot.hordearmor < armor )
     {
-        // Client bots use the stock armory formula: classmaxhealth + armor * 40.
-        if ( !isdefined( bot.hordearmor ) || bot.hordearmor < armor )
-        {
-            bot.hordearmor = armor;
-            esTeambotDebug( bot, "armor " + armor );
-        }
-
-        // Class not chosen yet; horde applies hordearmor when the class is set.
-        if ( !isdefined( bot.classmaxhealth ) )
-        {
-            return;
-        }
-
-        target = bot.classmaxhealth + bot.hordearmor * 40;
-
-        if ( bot.maxhealth < target )
-        {
-            bot.maxhealth = target;
-            bot.health = target;
-        }
-
-        return;
-    }
-
-    // Squadmate agents: cache the spawn max health once per life and add armor.
-    if ( !isdefined( bot.maxhealth ) )
-    {
-        return;
-    }
-
-    if ( !isdefined( bot.esTeambotArmorApplied ) || bot.esTeambotArmorApplied != armor )
-    {
-        if ( !isdefined( bot.esTeambotBaseMaxHealth ) )
-        {
-            bot.esTeambotBaseMaxHealth = bot.maxhealth;
-            bot thread esTeambotClearOnDeath();
-        }
-
         bot.hordearmor = armor;
-        bot.maxhealth = bot.esTeambotBaseMaxHealth + armor * 40;
-        bot.health = bot.maxhealth;
-        bot.esTeambotArmorApplied = armor;
         esTeambotDebug( bot, "armor " + armor );
     }
-}
 
-esTeambotClearOnDeath()
-{
-    self notify( "esTeambotClearOnDeath" );
-    self endon( "esTeambotClearOnDeath" );
+    // Class not chosen yet; horde applies hordearmor when the class is set.
+    if ( !isdefined( bot.classmaxhealth ) )
+    {
+        return;
+    }
 
-    self waittill( "death" );
+    target = bot.classmaxhealth + bot.hordearmor * 40;
 
-    self.esTeambotBaseMaxHealth = undefined;
-    self.esTeambotArmorApplied = undefined;
-    self.esTeambotProficiency = undefined;
+    if ( bot.maxhealth < target )
+    {
+        bot.maxhealth = target;
+        bot.health = target;
+    }
 }
 
 esTeambotApplyProficiency( bot, proficiency )
 {
-    if ( isplayer( bot ) )
+    if ( !isdefined( bot.weaponproficiency ) || bot.weaponproficiency < proficiency )
     {
-        if ( !isdefined( bot.weaponproficiency ) || bot.weaponproficiency < proficiency )
-        {
-            bot.weaponproficiency = proficiency;
-            esTeambotDebug( bot, "weapon proficiency " + proficiency );
-        }
-
-        // Stock armory adds +0.2 damage per proficiency level.
-        bot.weapondmgmod = 1 + bot.weaponproficiency * 0.2;
-        return;
+        bot.weaponproficiency = proficiency;
+        esTeambotDebug( bot, "weapon proficiency " + proficiency );
     }
 
-    // Squadmate agents: damage bonus is applied in esTeambotModifyDamage.
-    bot.weaponproficiency = proficiency;
-    bot.esTeambotProficiency = proficiency;
-}
-
-esTeambotInstallDamageHook()
-{
-    if ( !isdefined( level.modifyplayerdamage ) )
-    {
-        return;
-    }
-
-    if ( level.modifyplayerdamage == ::esTeambotModifyDamage )
-    {
-        return;
-    }
-
-    level.esTeambotPrevModifyDamage = level.modifyplayerdamage;
-    level.modifyplayerdamage = ::esTeambotModifyDamage;
-}
-
-esTeambotModifyDamage( victim, inflictor, attacker, damage, meansOfDeath, weapon, point, dir, hitLoc )
-{
-    if ( isdefined( level.esTeambotPrevModifyDamage ) )
-    {
-        damage = [[ level.esTeambotPrevModifyDamage ]]( victim, inflictor, attacker, damage, meansOfDeath, weapon, point, dir, hitLoc );
-    }
-
-    if ( !isdefined( damage ) || damage <= 0 )
-    {
-        return damage;
-    }
-
-    if ( getdvarint( "scr_es_teambot_max" ) <= 0 )
-    {
-        return damage;
-    }
-
-    // Only boost survival-side squadmate agents hitting the enemy team.
-    // Client bots already get weapondmgmod from the stock horde callback.
-    if ( !isdefined( attacker ) || !isdefined( victim ) || isplayer( attacker ) )
-    {
-        return damage;
-    }
-
-    if ( !isdefined( attacker.esTeambotProficiency ) || attacker.esTeambotProficiency <= 0 )
-    {
-        return damage;
-    }
-
-    if ( !isdefined( level.playerteam ) || !isdefined( level.enemyteam ) )
-    {
-        return damage;
-    }
-
-    if ( !isdefined( attacker.team ) || !isdefined( victim.team ) || attacker.team != level.playerteam || victim.team != level.enemyteam )
-    {
-        return damage;
-    }
-
-    return int( damage * ( 1 + attacker.esTeambotProficiency * 0.2 ) );
+    // Stock armory adds +0.2 damage per proficiency level.
+    bot.weapondmgmod = 1 + bot.weaponproficiency * 0.2;
 }
 
 esTeambotDebug( bot, message )
@@ -420,7 +264,7 @@ esTeambotDebug( bot, message )
         return;
     }
 
-    name = "agent";
+    name = "bot";
 
     if ( isdefined( bot.name ) )
     {
