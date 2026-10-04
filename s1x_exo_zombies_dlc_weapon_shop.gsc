@@ -1,20 +1,21 @@
 /*
-    Exo Zombies base DLC weapon shop for S1x v0.0.4
+    Exo Zombies DLC-exclusive weapon shop for S1x v0.0.4
 
     Place this file at:
         s1/scripts/zm/exo_zombies_dlc_weapon_shop.gsc
 
     Purpose:
-        - Give players a self-contained points shop that sells every base
-          Exo Zombies DLC weapon (the same roster used by the Mk2-Mk25
-          damage system), without requiring any map-specific trigger or
-          Radiant placement.
+        - Give players a self-contained points shop that sells only the
+          Exo Zombies DLC-exclusive weapons (the wonder-weapon-style guns
+          added by the Exo Zombies map packs — not the standard Advanced
+          Warfare multiplayer weapons also usable in zombies), without
+          requiring any map-specific trigger or Radiant placement.
         - Every purchase costs a flat 1000 points, deducted from
           self.score, and the chosen weapon/attachment set is handed to
           the player immediately.
 
     Controls (per player, once connected and spawned):
-        Hold  [Use]     for DLCWS_OPEN_HOLD_SECONDS to open/close the shop.
+        Hold  [ADS] + [Melee] together for DLCWS_OPEN_HOLD_SECONDS to open the shop.
         Tap   [Attack]  to move to the next weapon in the list.
         Tap   [Melee]   to move to the previous weapon in the list.
         Tap   [Use]     to purchase the highlighted weapon for 1000 points.
@@ -67,41 +68,14 @@ dlcws_init_dvars()
 }
 
 /*
-    Same base Exo Zombies weapon roster used by the Mk2-Mk25 damage
-    system, minus melee / knife / last-stand entries which are not
-    sold in the shop.
+    Only the Exo Zombies DLC-exclusive weapons from the Mk2-Mk25 damage
+    system roster. Standard Advanced Warfare multiplayer weapons (AK12,
+    BAL-27, ASM1, etc.) are intentionally excluded — they are not DLC
+    weapons, just base-game guns also usable in zombies.
 */
 dlcws_build_weapon_list()
 {
     level.dlcws_weapons = [];
-
-    dlcws_add_weapon( "iw5_rw1zm_mp", "RW1" );
-    dlcws_add_weapon( "iw5_vbrzm_mp", "VBR" );
-    dlcws_add_weapon( "iw5_gm6zm_mp", "GM6" );
-
-    dlcws_add_weapon( "iw5_rhinozm_mp", "Rhino" );
-    dlcws_add_weapon( "iw5_lsatzm_mp", "LSAT" );
-    dlcws_add_weapon( "iw5_asawzm_mp", "ASAW" );
-
-    dlcws_add_weapon( "iw5_ak12zm_mp", "AK12" );
-    dlcws_add_weapon( "iw5_bal27zm_mp", "BAL-27" );
-    dlcws_add_weapon( "iw5_himarzm_mp", "Himar" );
-    dlcws_add_weapon( "iw5_arx160zm_mp", "ARX-160" );
-    dlcws_add_weapon( "iw5_hbra3zm_mp", "HBRa3" );
-    dlcws_add_weapon( "iw5_m182sprzm_mp", "M182 SPR" );
-
-    dlcws_add_weapon( "iw5_mp11zm_mp", "MP11" );
-    dlcws_add_weapon( "iw5_asm1zm_mp", "ASM1" );
-    dlcws_add_weapon( "iw5_sn6zm_mp", "SN6" );
-    dlcws_add_weapon( "iw5_sac3zm_mp", "SAC3" );
-    dlcws_add_weapon( "iw5_hmr9zm_mp", "HMR9" );
-
-    dlcws_add_weapon( "iw5_maulzm_mp", "Maul" );
-    dlcws_add_weapon( "iw5_uts19zm_mp", "UTS-19" );
-
-    dlcws_add_weapon( "iw5_em1zm_mp", "EM1" );
-
-    dlcws_add_weapon( "iw5_titan45zm_mp", "Titan 45" );
 
     dlcws_add_weapon( "iw5_exocrossbowzm_mp", "Exo Crossbow" );
     dlcws_add_weapon( "iw5_mahemzm_mp", "MAHEM" );
@@ -180,14 +154,14 @@ dlcws_player_monitor()
             continue;
         }
 
-        if ( !self usebuttonpressed() )
+        if ( !self adsbuttonpressed() || !self meleebuttonpressed() )
         {
             continue;
         }
 
         holdStart = gettime();
 
-        while ( self usebuttonpressed() )
+        while ( self adsbuttonpressed() && self meleebuttonpressed() )
         {
             if ( ( gettime() - holdStart ) >= int( DLCWS_OPEN_HOLD_SECONDS * 1000 ) )
             {
