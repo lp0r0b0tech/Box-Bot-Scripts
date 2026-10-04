@@ -24,6 +24,16 @@
     Toggles:
         set scr_zm_dlc_shop_enabled 1
         set scr_zm_dlc_shop_debug   0
+
+    Note on weapon precaching:
+        Weapons must already be precached by the map/mod (normally via
+        that map's own precache() callback, run by the engine before
+        players connect). precacheitem() cannot legally be called at
+        runtime from here - doing so throws a script error and breaks
+        this entire shop for every player. If a purchase reports
+        "Failed to give <weapon>" and refunds itself, that weapon's
+        asset is not loaded on the current map and must be added to the
+        map's precache() function instead.
 */
 
 #define DLCWS_DEFAULT_ENABLED        1
@@ -55,24 +65,10 @@ dlcws_init()
 
     dlcws_init_dvars();
     dlcws_build_weapon_list();
-    dlcws_precache_weapons();
 
     level thread dlcws_watch_players();
 
     println( "DLCWeaponShop: initialized." );
-}
-
-/*
-    Weapons that are not already used elsewhere on the current map are
-    not guaranteed to be loaded. Without this, giveweapon() can silently
-    fail to hand the player anything.
-*/
-dlcws_precache_weapons()
-{
-    for ( i = 0; i < level.dlcws_weapons.size; i++ )
-    {
-        precacheitem( level.dlcws_weapons[i].weaponName );
-    }
 }
 
 dlcws_init_dvars()
@@ -333,28 +329,34 @@ dlcws_try_purchase( player )
     /*
         Zombies players can only hold a limited number of weapons.
         If their slots are already full, giveweapon() silently does
-        nothing, so drop whatever is currently in hand first to make
-        room for the purchased weapon.
+        nothing, so clear every weapon slot first to guarantee room
+        for the purchased weapon.
     */
-    currentWeapon = player getcurrentweapon();
-
-    if ( isdefined( currentWeapon ) &&
-         currentWeapon != "none" &&
-         currentWeapon != entry.weaponName )
-    {
-        player takeweapon( currentWeapon );
-    }
+    player takeallweapons();
 
     player giveweapon( entry.weaponName );
     player givemaxammo( entry.weaponName );
     player switchtoweapon( entry.weaponName );
 
-    player iprintln( "Purchased " + entry.displayName + " for " + DLCWS_WEAPON_COST + " points." );
-
     if ( getdvarint( "scr_zm_dlc_shop_debug" ) > 0 )
     {
-        println( "DLCWeaponShop: " + player.name + " bought " + entry.weaponName );
+        println( "DLCWeaponShop: " + player.name + " bought " + entry.weaponName + " - hasweapon=" + player hasweapon( entry.weaponName ) );
     }
+
+    if ( !( player hasweapon( entry.weaponName ) ) )
+    {
+        /*
+            giveweapon() failed (most likely because the weapon asset
+            is not loaded on this map's zone). Refund the points so the
+            player is not charged for nothing, and surface the problem.
+        */
+        player.score += DLCWS_WEAPON_COST;
+        player iprintlnbold( "Failed to give " + entry.displayName + " - refunded. Ask the map owner to precache this weapon." );
+        dlcws_close_shop( player );
+        return;
+    }
+
+    player iprintln( "Purchased " + entry.displayName + " for " + DLCWS_WEAPON_COST + " points." );
 
     dlcws_close_shop( player );
 }
