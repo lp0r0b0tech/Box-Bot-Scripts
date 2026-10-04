@@ -12,3 +12,5 @@ for auto_bots_zombies.gsc and zm_emz.gsc and
 s1_scripts_zm_atlas45_damage.gsc put them in zm folder
 
 for custom names put Bots.txt next to where you made the scrips folder
+
+for s1x_exo_zombies_god_mode.gsc put it in the zm folder — in Exo Zombies hold ADS (aim) and press Melee to toggle god mode on/off (persists across respawns, humans only)
