@@ -25,23 +25,22 @@
         set scr_zm_dlc_shop_enabled 1
         set scr_zm_dlc_shop_debug   0
 
-    Weapon precaching - REQUIRED, one line per map:
+    Weapon precaching - recommended, one line per map:
         precacheitem() can only legally run during the engine's
         precache phase (inside a precache() function called before
-        players connect). Calling it at runtime from this script's
-        main()/init() throws a script error and breaks the entire shop
-        for every player, so this file no longer attempts it.
-
-        Instead, add this single line inside every map's own precache()
-        function (e.g. maps/zm/<mapname>.gsc or the map's zombies mod
-        precache() callback):
+        players connect). This file exposes its own precache() for
+        that purpose - add this single line inside every map's own
+        precache() function (e.g. maps/zm/<mapname>.gsc or the map's
+        zombies mod precache() callback):
 
             maps\zm\exo_zombies_dlc_weapon_shop::precache();
 
-        If that line is missing from a map's precache(), purchases of
-        weapons not already used elsewhere on that map will fail and
-        automatically refund the player with an on-screen message
-        naming the weapon that needs to be added.
+        Weapons already used elsewhere on a map (as a wall-buy, mystery
+        box drop, etc.) do not need this, since they are already
+        precached by that map. Purchases are never gated/refunded by
+        this script based on precache state; with scr_zm_dlc_shop_debug
+        set to 1, each purchase logs a hasweapon() check to the server
+        console a moment later, purely for troubleshooting.
 */
 
 #define DLCWS_DEFAULT_ENABLED        1
@@ -363,27 +362,35 @@ dlcws_try_purchase( player )
     player givemaxammo( entry.weaponName );
     player switchtoweapon( entry.weaponName );
 
+    player iprintln( "Purchased " + entry.displayName + " for " + DLCWS_WEAPON_COST + " points." );
+
     if ( getdvarint( "scr_zm_dlc_shop_debug" ) > 0 )
     {
-        println( "DLCWeaponShop: " + player.name + " bought " + entry.weaponName + " - hasweapon=" + player hasweapon( entry.weaponName ) );
+        /*
+            hasweapon() is only checked here for a debug log, after a
+            short delay so the engine's inventory update has applied.
+            Checking it immediately in the same frame as giveweapon()
+            reads stale state and would incorrectly report failure for
+            every purchase, so this never blocks/refunds the sale.
+        */
+        player thread dlcws_log_purchase_result( entry );
     }
 
-    if ( !( player hasweapon( entry.weaponName ) ) )
+    dlcws_close_shop( player );
+}
+
+dlcws_log_purchase_result( entry )
+{
+    self endon( "disconnect" );
+
+    wait 0.1;
+
+    if ( !isdefined( self ) )
     {
-        /*
-            giveweapon() failed (most likely because the weapon asset
-            is not loaded on this map's zone). Refund the points so the
-            player is not charged for nothing, and surface the problem.
-        */
-        player.score += DLCWS_WEAPON_COST;
-        player iprintlnbold( "Failed to give " + entry.displayName + " - refunded. Ask the map owner to precache this weapon." );
-        dlcws_close_shop( player );
         return;
     }
 
-    player iprintln( "Purchased " + entry.displayName + " for " + DLCWS_WEAPON_COST + " points." );
-
-    dlcws_close_shop( player );
+    println( "DLCWeaponShop: " + self.name + " bought " + entry.weaponName + " - hasweapon=" + self hasweapon( entry.weaponName ) );
 }
 
 dlcws_close_shop( player )
