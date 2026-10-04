@@ -12,6 +12,10 @@
         - Every purchase costs a flat 1000 points, deducted from
           self.score, and the chosen weapon/attachment set is handed to
           the player immediately.
+        - Weapons are given through the native Exo Zombies weapon
+          pipeline (givezombieweapon), so every purchased weapon gets a
+          Mk-level weaponstate entry and can be upgraded at any weapon
+          upgrade station, exactly like 3D-printer weapons.
 
     Controls (per player, once connected and spawned):
         Hold  [Aim] + tap [Melee]  to open the shop.
@@ -204,8 +208,6 @@ dlcws_open_shop()
     self.dlcws_shopOpen = true;
     self.dlcws_shopIndex = 0;
 
-    self freezecontrols( true );
-
     self.dlcws_hud = newclienthudelem( self );
     self.dlcws_hud.alignx = "center";
     self.dlcws_hud.aligny = "middle";
@@ -331,8 +333,14 @@ dlcws_try_purchase( player )
 
     player.score -= DLCWS_WEAPON_COST;
 
-    player giveweapon( entry.weaponName );
-    player switchtoweapon( entry.weaponName );
+    // Give the weapon through the native Exo Zombies pipeline so the
+    // player gets a weaponstate entry (Mk level tracking). This is what
+    // the weapon upgrade station checks before allowing upgrades, so
+    // shop-bought weapons can be upgraded just like 3D-printer weapons.
+    // If the player already upgraded this weapon before, hand back the
+    // correct Mk variant instead of the base weapon.
+    weaponToGive = maps\mp\zombies\_wall_buys::getupgradeweaponname( player, entry.weaponName );
+    maps\mp\zombies\_wall_buys::givezombieweapon( player, weaponToGive, 0, 1 );
 
     player iprintln( "Purchased " + entry.displayName + " for " + DLCWS_WEAPON_COST + " points." );
 
@@ -364,6 +372,4 @@ dlcws_close_shop( player )
         player.dlcws_hint destroy();
         player.dlcws_hint = undefined;
     }
-
-    player freezecontrols( false );
 }
