@@ -27,8 +27,17 @@
         callbacks (e.g. Oz stage 2 armor) are wrapped and still run afterwards.
 
     Max-damage weapons:
-        Grenades, equipment, rockets, turrets, and killstreak weapons
-        always use their configured Mk25 damage (15,000 base).
+        Exo slam ("boost_slam_mp"), grenades, equipment, rockets, turrets,
+        killstreak weapons, and every map trap weapon are guaranteed 1-hit /
+        1-shot kills on standard zombies, but deal configured Mk25 damage
+        on bosses.
+
+        The 1-hit damage is enforced twice: in level.modifyweapondamage and
+        again in level.modifydamagebyagenttype[agentType], which the native
+        callback runs AFTER its own equipment/melee damage rescaling.
+        Sniper and turret traps additionally use a delayed finisher thread,
+        because the native trapmodifydamage() overwrites their damage after
+        every script callback has run.
 
     Hit-location multipliers (configurable):
         Head / helmet = x4 (AWD_HEAD_MULTIPLIER)
@@ -241,17 +250,21 @@ awd_init_weapon_list()
 
 
 /*
-    Grenades, equipment, rockets, turrets, and killstreak weapons.
+    Grenades, equipment, rockets, turrets, killstreak weapons,
+    exo slam, and map traps are guaranteed 1-hit / 1-shot kills on
+    standard zombies (configured Mk25 damage on bosses), even if they
+    do not have a normal player weaponstate entry.
 
-    These always use Mk25 damage, even if they do not have a
-    normal player weaponstate entry.
+    The listed special guns keep the previous behavior: they always
+    use configured Mk25 damage.
 */
 awd_init_max_damage_weapons()
 {
     level.awd_max_damage_weapons = [];
+    level.awd_one_hit_weapons = [];
 
     /*
-        Melee weapon forced to Mk25 damage.
+        Melee weapons (1-hit kills handled by the melee paths).
     */
     awd_add_max_damage_weapon(
         "exo_melee_zm"
@@ -264,103 +277,114 @@ awd_init_max_damage_weapons()
     /*
         Grenades and equipment
     */
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "frag_grenade_zombies_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "frag_grenade_throw_zombies_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "contact_grenade_zombies_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "contact_grenade_throw_zombies_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "explosive_drone_zombie_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "explosive_drone_throw_zombie_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "distraction_drone_zombie_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "distraction_drone_throw_zombie_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "dna_aoe_grenade_zombie_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "dna_aoe_grenade_throw_zombie_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "teleport_zombies_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "teleport_throw_zombies_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "repulsor_zombie_mp"
     );
 
     /*
         Killstreaks and killstreak projectiles
     */
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "killstreakmahem_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "remote_energy_turret_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "drone_assault_remote_turret_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "ugv_missile_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "sentry_minigun_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "turretheadmg_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "turretheadrocket_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "turretheadenergy_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "playermech_rocket_zm_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "iw5_juggernautrocketszm_mp"
     );
 
-    awd_add_max_damage_weapon(
+    awd_add_one_hit_weapon(
         "playermech_rocket_swarm_zm_mp"
+    );
+
+    /*
+        Goliath suit minigun (killstreak reward).
+
+        The native modifydamagekillstreak() flattens its damage to
+        2000 AFTER level.modifyweapondamage runs, so it must be in the
+        one-hit set, which is re-enforced by the per-agent hook.
+    */
+    awd_add_one_hit_weapon(
+        "iw5_exominigunzm_mp"
     );
 
     /*
@@ -381,8 +405,56 @@ awd_init_max_damage_weapons()
     awd_add_max_damage_weapon(
         "iw5_microwavezm_mp"
     );
-    awd_add_max_damage_weapon(
+
+    /*
+        Exo slam.
+
+        "exo_slam" is the terminal/perk item name; the actual damage
+        events arrive with the weapon "boost_slam_mp"
+        (exo suit perk weapon: "exo_suit_perk_slamzm_mp").
+    */
+    awd_add_one_hit_weapon(
         "exo_slam"
+    );
+
+    awd_add_one_hit_weapon(
+        "boost_slam_mp"
+    );
+
+    awd_add_one_hit_weapon(
+        "exo_suit_perk_slamzm_mp"
+    );
+
+    /*
+        Map trap weapons (native maps\mp\zombies\_util::istrapweapon list,
+        plus the airstrike trap's orbital support missile).
+    */
+    awd_add_one_hit_weapon(
+        "trap_zm_mp"
+    );
+
+    awd_add_one_hit_weapon(
+        "trap_sniper_zm_mp"
+    );
+
+    awd_add_one_hit_weapon(
+        "trap_missile_zm_mp"
+    );
+
+    awd_add_one_hit_weapon(
+        "zombie_trap_turret_mp"
+    );
+
+    awd_add_one_hit_weapon(
+        "zombie_water_trap_mp"
+    );
+
+    awd_add_one_hit_weapon(
+        "zombie_vaporize_mp"
+    );
+
+    awd_add_one_hit_weapon(
+        "orbitalsupport_missile_mp"
     );
 }
 
@@ -410,6 +482,47 @@ awd_add_max_damage_weapon( weaponName )
     }
 
     level.awd_max_damage_weapons[weaponName] = 1;
+}
+
+
+/*
+    One-hit weapons are also max-damage weapons: the Mk25 damage is
+    still used against bosses, which are never 1-hit killed.
+*/
+awd_add_one_hit_weapon( weaponName )
+{
+    if ( !isdefined( weaponName ) ||
+         weaponName == "" )
+    {
+        return;
+    }
+
+    level.awd_one_hit_weapons[weaponName] = 1;
+
+    awd_add_max_damage_weapon( weaponName );
+}
+
+
+awd_is_one_hit_weapon( weaponName )
+{
+    return isdefined( weaponName ) &&
+           isdefined( level.awd_one_hit_weapons ) &&
+           isdefined(
+               level.awd_one_hit_weapons[weaponName]
+           );
+}
+
+
+/*
+    The native trapmodifydamage() overwrites sniper-trap and
+    trap-turret damage AFTER every script damage callback has run,
+    so these weapons need a delayed finisher to guarantee the kill.
+*/
+awd_needs_trap_finisher( weaponName )
+{
+    return isdefined( weaponName ) &&
+           ( weaponName == "trap_sniper_zm_mp" ||
+             weaponName == "zombie_trap_turret_mp" );
 }
 
 
@@ -465,11 +578,12 @@ awd_is_one_hit_melee( weaponName, weapon, meansOfDeath )
 
 
 /*
-    Melee damage:
+    1-hit damage (melee, exo slam, grenades, equipment, rockets,
+    turrets, killstreaks, and map traps):
         Standard zombies = guaranteed 1-hit kill.
         Bosses           = configured Mk25 damage with hit-location multiplier.
 */
-awd_get_melee_damage(
+awd_get_one_hit_damage(
     victim,
     weaponName,
     hitLocation
@@ -598,7 +712,7 @@ awd_agent_modify_damage(
         }
 
         finalDamage =
-            awd_get_melee_damage(
+            awd_get_one_hit_damage(
                 victim,
                 weaponName,
                 hitLocation
@@ -614,6 +728,69 @@ awd_agent_modify_damage(
         );
 
         damage = finalDamage;
+    }
+
+    /*
+        One-hit weapons (exo slam, grenades, equipment, rockets,
+        turrets, killstreaks, and map traps).
+
+        This hook runs AFTER the native callback's weapon-level and
+        equipment damage rescaling, so enforcing the 1-hit damage here
+        guarantees it survives those adjustments.
+    */
+    if ( isdefined( attacker ) &&
+         isplayer( attacker ) &&
+         ( !isdefined( meansOfDeath ) ||
+           meansOfDeath != "MOD_MELEE" ) &&
+         isdefined( weapon ) &&
+         weapon != "" )
+    {
+        weaponName =
+            getweaponbasename( weapon );
+
+        if ( !isdefined( weaponName ) ||
+             weaponName == "" )
+        {
+            weaponName = weapon;
+        }
+
+        weaponName =
+            awd_get_damage_weapon_name(
+                weaponName
+            );
+
+        if ( awd_is_one_hit_weapon( weaponName ) )
+        {
+            finalDamage =
+                awd_get_one_hit_damage(
+                    victim,
+                    weaponName,
+                    hitLocation
+                );
+
+            awd_debug_damage(
+                "onehit:" + weaponName,
+                AWD_MAX_CUSTOM_MARK,
+                hitLocation,
+                damage,
+                finalDamage,
+                finalDamage
+            );
+
+            damage = finalDamage;
+
+            /*
+                The native trapmodifydamage() can still overwrite this
+                damage for sniper/turret traps, so finish the kill on
+                the next frame if the zombie survived.
+            */
+            if ( awd_needs_trap_finisher( weaponName ) &&
+                 isdefined( victim ) &&
+                 !awd_is_boss( victim ) )
+            {
+                victim thread awd_trap_finisher( attacker );
+            }
+        }
     }
 
     if ( isdefined( victim ) &&
@@ -637,6 +814,56 @@ awd_agent_modify_damage(
     }
 
     return damage;
+}
+
+
+/*
+    Runs on the zombie. If the native trapmodifydamage() reduced a
+    sniper/turret trap hit below a kill, finish the zombie with a
+    plain trap hit, which no native post-callback rescaling touches.
+*/
+awd_trap_finisher( attacker )
+{
+    if ( isdefined( self.awd_trap_finisher_pending ) )
+    {
+        return;
+    }
+
+    self.awd_trap_finisher_pending = 1;
+
+    self endon( "death" );
+
+    wait 0.05;
+
+    self.awd_trap_finisher_pending = undefined;
+
+    if ( !isalive( self ) ||
+         awd_is_boss( self ) )
+    {
+        return;
+    }
+
+    if ( !isdefined( attacker ) ||
+         !isplayer( attacker ) )
+    {
+        return;
+    }
+
+    finisherDamage = AWD_ONE_HIT_MELEE_DAMAGE;
+
+    if ( isdefined( self.health ) && self.health > 0 )
+    {
+        finisherDamage = self.health + 10000;
+    }
+
+    self dodamage(
+        int( finisherDamage ),
+        self.origin,
+        attacker,
+        attacker,
+        "MOD_TRIGGER_HURT",
+        "trap_zm_mp"
+    );
 }
 
 
@@ -954,7 +1181,7 @@ awd_modify_damage(
         );
 
         finalDamage =
-            awd_get_melee_damage(
+            awd_get_one_hit_damage(
                 victim,
                 weaponName,
                 hitLocation
@@ -973,8 +1200,37 @@ awd_modify_damage(
     }
 
     /*
-        Killstreaks, grenades, equipment, and listed special
-        weapons always receive Mk25 damage.
+        Exo slam, grenades, equipment, rockets, turrets, killstreaks,
+        and map traps are guaranteed 1-hit kills on standard zombies.
+    */
+    if ( awd_is_one_hit_weapon( weaponName ) )
+    {
+        awd_disable_stock_multiplier(
+            attacker,
+            weaponName
+        );
+
+        finalDamage =
+            awd_get_one_hit_damage(
+                victim,
+                weaponName,
+                hitLocation
+            );
+
+        awd_debug_damage(
+            "onehit:" + weaponName,
+            AWD_MAX_CUSTOM_MARK,
+            hitLocation,
+            damage,
+            finalDamage,
+            finalDamage
+        );
+
+        return int( finalDamage );
+    }
+
+    /*
+        Listed special weapons always receive Mk25 damage.
     */
     if ( awd_is_max_damage_weapon( weaponName ) )
     {
