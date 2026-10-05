@@ -238,12 +238,22 @@ esp_open_shop()
 
     self esp_render_hud();
 
+    var_1 = gettime();
+
     for (;;)
     {
         wait 0.05;
 
         if ( !isalive( self ) || isdefined( self.laststand ) && self.laststand )
         {
+            break;
+        }
+
+        // Safety net: never let the shop (and the frozen controls that
+        // come with it) get stuck open indefinitely.
+        if ( ( gettime() - var_1 ) >= 60000 )
+        {
+            self iprintlnbold( "^1Gun Shop closed (idle timeout)" );
             break;
         }
 
@@ -254,6 +264,7 @@ esp_open_shop()
 
         if ( self attackbuttonpressed() )
         {
+            var_1 = gettime();
             self.esp_index = ( self.esp_index + 1 ) % level.esp_weapons.size;
             self esp_render_hud();
             self esp_wait_buttons_released();
@@ -262,6 +273,7 @@ esp_open_shop()
 
         if ( self adsbuttonpressed() )
         {
+            var_1 = gettime();
             self.esp_index = ( self.esp_index - 1 + level.esp_weapons.size ) % level.esp_weapons.size;
             self esp_render_hud();
             self esp_wait_buttons_released();
@@ -270,6 +282,7 @@ esp_open_shop()
 
         if ( self usebuttonpressed() )
         {
+            var_1 = gettime();
             var_0 = self esp_try_buy();
             self esp_wait_buttons_released();
 
@@ -424,21 +437,25 @@ esp_destroy_hud()
     if ( isdefined( self.esp_hud_title ) )
     {
         self.esp_hud_title destroy();
+        self.esp_hud_title = undefined;
     }
 
     if ( isdefined( self.esp_hud_item ) )
     {
         self.esp_hud_item destroy();
+        self.esp_hud_item = undefined;
     }
 
     if ( isdefined( self.esp_hud_info ) )
     {
         self.esp_hud_info destroy();
+        self.esp_hud_info = undefined;
     }
 
     if ( isdefined( self.esp_hud_help ) )
     {
         self.esp_hud_help destroy();
+        self.esp_hud_help = undefined;
     }
 }
 
