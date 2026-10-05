@@ -22,8 +22,29 @@
         [MELEE]                     -> close the shop
 
     Dvars:
-        ezs_weapon_cost   points cost per shop weapon   (default 1000)
-        ezs_shop_enabled  enable the wonder shop          (default 1)
+        ezs_weapon_cost        points cost per shop weapon   (default 1000)
+        ezs_shop_enabled       enable the wonder shop          (default 1)
+        ezs_include_mp_only    also sell MP-exclusive DLC weapons
+                                that have no native zombies ("zm")
+                                asset variant                   (default 0)
+
+    MP-exclusive DLC weapons (ezs_include_mp_only):
+    Every multiplayer DLC weapon that already has a native zombies
+    ("zm") variant is sold above through the normal weapon-state
+    pipeline. A handful of classic MP-only DLC weapons (STG-44, SVO,
+    AK-47, M16, 1911, MP40, M1 Garand, Sten, Lever Action, Repulsor,
+    and the MP-variant CEL-3 Cauterizer) were never ported to Exo
+    Zombies at all -- there is no "zm" weapon asset or zombies
+    weaponstate for them anywhere in the game data. Because of that
+    they are kept in a separate, opt-in list and are handed out with a
+    plain giveweapon() (see ezs_give_weapon() below) instead of
+    givezombieweapon(), since calling the zombies weaponstate pipeline
+    on a weapon class it doesn't know about is unsafe. They will NOT be
+    Pack-a-Punch/upgrade-station compatible, and because their assets
+    are not part of any Exo Zombies map's precache, they carry a real
+    risk of client-side errors on some maps -- hence disabled by
+    default. Enable with  setdvar ezs_include_mp_only 1  only after
+    confirming it is stable on your map(s).
 
     NOTE: scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc opens on
     the same Hold [AIM] + press [MELEE] gesture. If that file is also
@@ -108,6 +129,11 @@ ezs_init()
         setdvar( "ezs_shop_enabled", "1" );
     }
 
+    if ( getdvar( "ezs_include_mp_only" ) == "" )
+    {
+        setdvar( "ezs_include_mp_only", "0" );
+    }
+
     ezs_build_weapon_list();
 
     println( "[EZS] Exo Zombies Wonder Shop initialized on " + getdvar( "mapname" ) );
@@ -177,6 +203,23 @@ ezs_build_weapon_list()
 
     ezs_add_weapon( "iw5_exominigunzm_mp", "Exo Minigun" );
     ezs_add_weapon( "iw5_blunderbusszm_mp", "Blunderbuss" );
+
+    // ---- MP-only DLC weapons (no native zombies asset) ----
+    // Opt-in only: see the file header NOTE above before enabling.
+    if ( getdvarint( "ezs_include_mp_only" ) )
+    {
+        ezs_add_weapon_mp_only( "iw5_dlcgun6_mp", "STG-44 (MP)" );
+        ezs_add_weapon_mp_only( "iw5_dlcgun6loot5_mp", "SVO (MP)" );
+        ezs_add_weapon_mp_only( "iw5_dlcgun7loot0_mp", "AK-47 (MP)" );
+        ezs_add_weapon_mp_only( "iw5_dlcgun7loot6_mp", "M16 (MP)" );
+        ezs_add_weapon_mp_only( "iw5_dlcgun8loot1_mp", "CEL-3 Cauterizer (MP)" );
+        ezs_add_weapon_mp_only( "iw5_dlcgun13_mp", "1911 (MP)" );
+        ezs_add_weapon_mp_only( "iw5_dlcgun18_mp", "MP40 (MP)" );
+        ezs_add_weapon_mp_only( "iw5_dlcgun23_mp", "M1 Garand (MP)" );
+        ezs_add_weapon_mp_only( "iw5_dlcgun28_mp", "Sten (MP)" );
+        ezs_add_weapon_mp_only( "iw5_dlcgun33_mp", "Lever Action (MP)" );
+        ezs_add_weapon_mp_only( "iw5_dlcgun38_mp", "Repulsor (MP)" );
+    }
 }
 
 
@@ -185,6 +228,17 @@ ezs_add_weapon( var_0, var_1 )
     var_2 = spawnstruct();
     var_2.weapon = var_0;
     var_2.display = var_1;
+    var_2.mponly = 0;
+    level.ezs_weapons[level.ezs_weapons.size] = var_2;
+}
+
+
+ezs_add_weapon_mp_only( var_0, var_1 )
+{
+    var_2 = spawnstruct();
+    var_2.weapon = var_0;
+    var_2.display = var_1;
+    var_2.mponly = 1;
     level.ezs_weapons[level.ezs_weapons.size] = var_2;
 }
 
@@ -361,11 +415,34 @@ ezs_try_buy()
 
     self ezs_destroy_hud();
     self freezecontrols( 0 );
-    maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 1, 1 );
+    self ezs_give_weapon( var_0 );
     self freezecontrols( 1 );
 
     self iprintlnbold( "^2Bought " + var_0.display );
     return 1;
+}
+
+
+/*
+    Gives the purchased weapon. Weapons with a native zombies ("zm")
+    asset go through the standard zombies weapon-state pipeline so they
+    get a proper level-1 weaponstate (Pack-a-Punch/upgrade-station
+    compatible). MP-only weapons (no zm asset, see the file header) are
+    handed out with a plain giveweapon() instead -- they are not routed
+    through givezombieweapon() since that pipeline does not know about
+    their weapon class.
+*/
+ezs_give_weapon( var_0 )
+{
+    if ( isdefined( var_0.mponly ) && var_0.mponly )
+    {
+        self giveweapon( var_0.weapon );
+        self givemaxammo( var_0.weapon );
+        self switchtoweapon( var_0.weapon );
+        return;
+    }
+
+    maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 1, 1 );
 }
 
 
