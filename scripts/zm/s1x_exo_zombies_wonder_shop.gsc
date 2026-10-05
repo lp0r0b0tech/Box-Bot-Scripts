@@ -1,5 +1,5 @@
 /*
-    Exo Zombies Wonder Shop — S1x (Call of Duty: Advanced Warfare)
+    Exo Zombies Wonder Shop - S1x (Call of Duty: Advanced Warfare)
     Gametype: Exo Zombies ("zclassic" / "zteam" etc.)
 
     A self-contained points shop that sells the full base Exo Zombies
@@ -31,23 +31,21 @@
     shops trying to open at once.
 
     Install (s1x):
-        Place this file in  %localappdata%\Plutonium-style s1x scripts dir:
-        s1x > data > scripts  (loaded as a loose GSC by s1x)
+        Place this file at:
+            s1x > data > scripts > zm > s1x_exo_zombies_wonder_shop.gsc
+        (next to s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc). The gametype
+        guard below also disables the shop automatically if it is ever
+        loaded outside Exo Zombies.
 */
 
 main()
 {
-    ezs_init();
+    println( "[EZS] main loaded." );
+    init();
 }
 
 
 init()
-{
-    ezs_init();
-}
-
-
-ezs_init()
 {
     if ( isdefined( level.ezs_started ) )
     {
@@ -55,6 +53,50 @@ ezs_init()
     }
 
     level.ezs_started = 1;
+    level thread ezs_init();
+}
+
+
+/*
+    Zombies gametype scripts (level.playerteam, level.modifyweapondamage,
+    etc.) are not guaranteed to exist yet the instant a loose mod script's
+    main()/init() runs. Doing anything substantial synchronously here --
+    especially referencing zombies-only code paths like
+    maps\mp\zombies\_wall_buys::givezombieweapon -- before that
+    initialization finishes can hard-crash the client at map load with no
+    console output. Defer and guard exactly like exo_zombies_teambot_max.gsc
+    does: wait a tick, bail outside Exo Zombies, then poll for the gametype
+    to finish setting up before doing anything else.
+*/
+ezs_init()
+{
+    level endon( "game_ended" );
+
+    wait 0.05;
+
+    if ( getdvar( "g_gametype" ) != "zombies" )
+    {
+        println( "[EZS] Disabled outside Exo Zombies." );
+        return;
+    }
+
+    for ( var_0 = 0; var_0 < 600; var_0++ )
+    {
+        if ( isdefined( level.playerteam ) && isdefined( level.enemyteam ) &&
+             isdefined( level.modifyweapondamage ) )
+        {
+            break;
+        }
+
+        wait 0.05;
+    }
+
+    if ( !isdefined( level.playerteam ) || !isdefined( level.enemyteam ) ||
+         !isdefined( level.modifyweapondamage ) )
+    {
+        println( "[EZS] ERROR: Zombies initialization timed out." );
+        return;
+    }
 
     if ( getdvar( "ezs_weapon_cost" ) == "" )
     {
@@ -149,7 +191,7 @@ ezs_add_weapon( var_0, var_1 )
 
 /*
     ============================================================
-    Wonder shop — per player
+    Wonder shop - per player
     ============================================================
 */
 ezs_on_player_connect()
