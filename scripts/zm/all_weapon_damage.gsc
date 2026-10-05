@@ -377,6 +377,17 @@ awd_init_max_damage_weapons()
     );
 
     /*
+        Goliath suit minigun (killstreak reward).
+
+        The native modifydamagekillstreak() flattens its damage to
+        2000 AFTER level.modifyweapondamage runs, so it must be in the
+        one-hit set, which is re-enforced by the per-agent hook.
+    */
+    awd_add_one_hit_weapon(
+        "iw5_exominigunzm_mp"
+    );
+
+    /*
         Special weapons forced to direct Mk25 behavior.
     */
     awd_add_max_damage_weapon(
