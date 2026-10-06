@@ -166,11 +166,12 @@ ezdlc_registered_mp_weapons()
     }
 
     weapons = [];
-    foreach ( family in get_mp_roster() )
+    foreach ( candidate in get_mp_roster() )
     {
-        if ( isdefined( registered[family] ) )
+        family = maps\mp\_utility::getbaseweaponname( candidate, 1 );
+        if ( isdefined( registered[candidate] ) )
         {
-            weapons[weapons.size] = family;
+            weapons[weapons.size] = candidate;
         }
         else if ( isdefined( representatives[family] ) )
         {
