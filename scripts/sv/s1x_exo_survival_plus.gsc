@@ -22,6 +22,17 @@
             [USE]                       -> buy the selected weapon
             [MELEE]                     -> close the shop
 
+    1b) Alt-fire mode toggle
+        Natively, weapons with a secondary firing mode (e.g. the Ohm's
+        shotgun mode) are swapped with Action Slot 3 ("altMode"), which
+        the base game binds at spawn. That bind isn't reachable on every
+        client/control scheme, so as a reliable fallback this script also
+        lets players double-tap [MELEE] to swap the current weapon for
+        its alt-mode pair (maps\mp\gametypes\_weapons::weaponaltweaponname),
+        e.g. toggling the Ohm between LMG and shotgun mode. The gun shop
+        still closes on a single melee press; double-tapping only swaps
+        weapon mode while the shop is closed.
+
     2) DLC map support
         Makes all 16 DLC multiplayer maps (Havoc, Ascendance, Supremacy,
         Reckoning) playable in Exo Survival. On maps that are missing the
@@ -41,6 +52,9 @@
         esp_dlc_maps_enabled  enable the DLC map support         (default 1)
         esp_dlc_rotation      1 = write a map rotation with all base + DLC
                               maps in gametype horde             (default 0)
+        esp_altmode_toggle_enabled
+                              enable the double-tap [MELEE] alt-mode
+                              toggle fallback (Ohm, etc.)        (default 1)
 
     Install (s1x):
         Place this file in  %localappdata%\Plutonium-style s1x scripts dir:
@@ -93,6 +107,11 @@ esp_init()
         setdvar( "esp_dlc_rotation", "0" );
     }
 
+    if ( getdvar( "esp_altmode_toggle_enabled" ) == "" )
+    {
+        setdvar( "esp_altmode_toggle_enabled", "1" );
+    }
+
     esp_build_weapon_list();
 
     println( "[ESP] Exo Survival Plus initialized on " + getdvar( "mapname" ) );
@@ -107,7 +126,7 @@ esp_init()
         esp_set_dlc_rotation();
     }
 
-    if ( getdvarint( "esp_shop_enabled" ) )
+    if ( getdvarint( "esp_shop_enabled" ) || getdvarint( "esp_altmode_toggle_enabled" ) )
     {
         level thread esp_on_player_connect();
     }
@@ -173,7 +192,16 @@ esp_on_player_connect()
     for (;;)
     {
         level waittill( "connected", var_0 );
-        var_0 thread esp_player_shop_watcher();
+
+        if ( getdvarint( "esp_shop_enabled" ) )
+        {
+            var_0 thread esp_player_shop_watcher();
+        }
+
+        if ( getdvarint( "esp_altmode_toggle_enabled" ) )
+        {
+            var_0 thread esp_altmode_watcher();
+        }
     }
 }
 
@@ -217,6 +245,91 @@ esp_player_shop_watcher()
             }
         }
     }
+}
+
+
+/*
+    Fallback alt-fire mode toggle.
+
+    Action Slot 3 ("altMode", set natively by maps\mp\gametypes\_class
+    and maps\mp\gametypes\horde) is supposed to swap weapons like the
+    Ohm between their primary and alt-fire (shotgun) modes, but that
+    bind isn't reachable/working for every client. Double-tapping
+    [MELEE] (two presses within 0.4s) while the gun shop is closed
+    swaps the current weapon for its alt-mode pair instead, using the
+    same native weaponaltweaponname() lookup the engine itself uses.
+*/
+esp_altmode_watcher()
+{
+    self endon( "disconnect" );
+    level endon( "game_ended" );
+
+    var_0 = 0;
+
+    for (;;)
+    {
+        wait 0.05;
+
+        if ( !isalive( self ) )
+        {
+            continue;
+        }
+
+        if ( isdefined( self.esp_menu_open ) && self.esp_menu_open )
+        {
+            continue;
+        }
+
+        if ( isdefined( self.usingarmory ) && self.usingarmory )
+        {
+            continue;
+        }
+
+        if ( isdefined( self.laststand ) && self.laststand )
+        {
+            continue;
+        }
+
+        if ( self meleebuttonpressed() )
+        {
+            var_1 = gettime();
+
+            if ( var_0 != 0 && ( var_1 - var_0 ) <= 400 )
+            {
+                self esp_try_toggle_altmode();
+                var_0 = 0;
+            }
+            else
+            {
+                var_0 = var_1;
+            }
+
+            while ( self meleebuttonpressed() )
+            {
+                wait 0.05;
+            }
+        }
+    }
+}
+
+
+esp_try_toggle_altmode()
+{
+    var_0 = self getcurrentweapon();
+
+    if ( !isdefined( var_0 ) || var_0 == "none" )
+    {
+        return;
+    }
+
+    var_1 = weaponaltweaponname( var_0 );
+
+    if ( !isdefined( var_1 ) || var_1 == "none" || var_1 == var_0 )
+    {
+        return;
+    }
+
+    self switchtoweapon( var_1 );
 }
 
 
