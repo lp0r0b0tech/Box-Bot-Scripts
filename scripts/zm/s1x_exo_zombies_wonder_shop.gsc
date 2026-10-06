@@ -11,33 +11,23 @@
     same cursor-based menu, but weapons are purchased with zombies score
     (self.score) and handed out through the native zombies weapon-state
     pipeline (maps\mp\zombies\_wall_buys::givezombieweapon) so purchased
-    weapons get a proper level-1 weaponstate and can be upgraded at the
-    Pack-a-Punch / upgrade station like any wall-buy weapon.
+    weapons get a proper level-1 weaponstate and can still be upgraded at
+    the physical Pack-a-Punch / upgrade station like any wall-buy weapon.
 
     Controls (anywhere on the map, while alive):
         Hold [AIM] + press [MELEE]  -> open / toggle the wonder shop
         [FIRE]                      -> next weapon
         [AIM]                       -> previous weapon
         [USE]                       -> buy the selected weapon
-        [JUMP]                      -> upgrade the selected weapon
         [MELEE]                     -> close the shop
 
     Dvars:
         ezs_weapon_cost        points cost per shop weapon   (default 1000)
         ezs_shop_enabled       enable the wonder shop          (default 1)
-        ezs_upgrade_cost       points cost per upgrade level   (default 2500)
-        ezs_upgrade_max_level  max weaponstate level reachable
-                                through the in-shop upgrade      (default 25)
 
-    In-shop upgrade (ezs_upgrade_weapon(), [JUMP]):
-    Pressing [JUMP] on an owned weapon spends ezs_upgrade_cost points and
-    raises that weapon's weaponstate["level"] by one, using the same
-    Mk2-Mk25 damage curve as the native Pack-a-Punch / upgrade station
-    (see all_weapon_damage.gsc). The weapon is then re-given through the
-    exact same native getupgradeweaponname()/givezombieweapon() path the
-    physical kiosk uses, so it gets the correct Mk2-25 camo + attachment
-    combo for its new level: a full visual + functional upgrade without
-    needing to find the in-map kiosk.
+    NOTE: The in-shop upgrade feature (ezs_upgrade_weapon(), [JUMP]) has
+    been removed. Weapons purchased here can still be upgraded the normal
+    way, at a physical Pack-a-Punch / upgrade station in the map.
 
     NOTE: This shop only sells the base Exo Zombies DLC weapon roster --
     every weapon here has a native zombies ("zm") asset variant. MP-only
@@ -136,16 +126,6 @@ ezs_init()
     if ( getdvar( "ezs_shop_enabled" ) == "" )
     {
         setdvar( "ezs_shop_enabled", "1" );
-    }
-
-    if ( getdvar( "ezs_upgrade_cost" ) == "" )
-    {
-        setdvar( "ezs_upgrade_cost", "2500" );
-    }
-
-    if ( getdvar( "ezs_upgrade_max_level" ) == "" )
-    {
-        setdvar( "ezs_upgrade_max_level", "25" );
     }
 
     ezs_build_weapon_list();
@@ -294,7 +274,7 @@ ezs_open_shop()
     self freezecontrols( 1 );
     self ezs_create_hud();
 
-    while ( self meleebuttonpressed() || self adsbuttonpressed() || self usebuttonpressed() || self attackbuttonpressed() || self jumpbuttonpressed() )
+    while ( self meleebuttonpressed() || self adsbuttonpressed() || self usebuttonpressed() || self attackbuttonpressed() )
     {
         wait 0.05;
     }
@@ -356,14 +336,6 @@ ezs_open_shop()
 
             self ezs_render_hud();
         }
-
-        if ( self jumpbuttonpressed() )
-        {
-            var_1 = gettime();
-            self ezs_upgrade_weapon();
-            self ezs_wait_buttons_released();
-            self ezs_render_hud();
-        }
     }
 
     self ezs_destroy_hud();
@@ -376,7 +348,7 @@ ezs_wait_buttons_released()
 {
     self endon( "disconnect" );
 
-    while ( self attackbuttonpressed() || self adsbuttonpressed() || self usebuttonpressed() || self jumpbuttonpressed() )
+    while ( self attackbuttonpressed() || self adsbuttonpressed() || self usebuttonpressed() )
     {
         wait 0.05;
     }
@@ -434,121 +406,6 @@ ezs_try_buy()
 ezs_give_weapon( var_0 )
 {
     maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 1, 1 );
-}
-
-
-/*
-    Weapon upgrade: spends points to raise the weaponstate level of the
-    currently selected (and owned) shop weapon by one, up to
-    ezs_upgrade_max_level (25), using the same Mk2-Mk25 damage curve
-    all_weapon_damage.gsc already applies.
-
-    The weapon is re-given through the exact same native
-    getupgradeweaponname()/givezombieweapon() path the physical
-    Pack-a-Punch kiosk itself uses, so it gets the correct Mk2-25 camo +
-    attachment combo for its new level: a full visual + functional
-    upgrade without needing to find the in-map kiosk.
-
-    NOTE: the "upgraded" toast deliberately does NOT include the new
-    level number. iprintlnbold()/iprintln() share the exact same
-    engine configstring table settext() does (confirmed via the
-    G_FindConfigstringIndex: overflow error, which is raised by both);
-    baking var_5 (the new level, 1-25) into that toast text means up
-    to 25 distinct strings PER weapon -- up to 1250 across the full
-    50-weapon roster -- which was by far the single largest remaining
-    contributor to that table filling up over a long play session
-    (confirmed by a user screenshot showing the overflow triggered by
-    "< HMR9 >", i.e. a plain weapon-name string, meaning the table was
-    already saturated by something else before that bounded, ~70-string
-    total from every weapon's shop-menu display name was even fully
-    used). The live level is already shown continuously on the HUD via
-    ezs_hud_level setvalue() (see ezs_render_hud()), so dropping it from
-    the one-shot toast loses no information the player can't already see.
-*/
-ezs_upgrade_weapon()
-{
-    var_0 = level.ezs_weapons[self.ezs_index];
-
-    if ( !self ezs_owns_weapon( var_0 ) )
-    {
-        self iprintlnbold( "^1Buy the " + var_0.display + " first" );
-        return 0;
-    }
-
-    var_1 = getweaponbasename( var_0.weapon );
-    var_2 = getdvarint( "ezs_upgrade_cost" );
-    var_3 = getdvarint( "ezs_upgrade_max_level" );
-
-    if ( !isdefined( self.weaponstate[var_1] ) ||
-         !isdefined( self.weaponstate[var_1]["level"] ) )
-    {
-        self.weaponstate[var_1]["level"] = 1;
-    }
-
-    var_4 = self.weaponstate[var_1]["level"];
-
-    if ( var_4 >= var_3 )
-    {
-        self iprintlnbold( "^1" + var_0.display + " is already max level (" + var_3 + ")" );
-        return 0;
-    }
-
-    if ( !isdefined( self.score ) )
-    {
-        self.score = 0;
-    }
-
-    if ( self.score < var_2 )
-    {
-        self iprintlnbold( "^1Not enough points (" + var_2 + " needed to upgrade)" );
-        return 0;
-    }
-
-    self.score = self.score - var_2;
-    var_5 = var_4 + 1;
-
-    var_6 = self ezs_find_owned_weapon( var_1 );
-
-    if ( isdefined( var_6 ) )
-    {
-        self takeweapon( var_6 );
-    }
-
-    self.weaponstate[var_1]["level"] = var_5;
-
-    if ( isdefined( level.camolevel ) )
-    {
-        var_7 = maps\mp\zombies\_wall_buys::getupgradeweaponname( self, var_1 );
-        maps\mp\zombies\_wall_buys::givezombieweapon( self, var_7, 0, 1 );
-    }
-    else
-    {
-        maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 0, 1 );
-    }
-
-    self iprintlnbold( "^2" + var_0.display + " upgraded!" );
-    return 1;
-}
-
-
-/*
-    Returns the exact weapon name currently owned by the player whose
-    base name matches weaponBaseName (e.g. a scoped/akimbo variant such
-    as "iw5_gm6zm_mp_gm6scope"), or undefined if not owned.
-*/
-ezs_find_owned_weapon( var_0 )
-{
-    var_1 = self getweaponslistprimaries();
-
-    foreach ( var_3 in var_1 )
-    {
-        if ( getweaponbasename( var_3 ) == var_0 )
-        {
-            return var_3;
-        }
-    }
-
-    return undefined;
 }
 
 
@@ -656,32 +513,6 @@ ezs_create_hud()
     self.ezs_hud_slot_total.sort = 20;
     self.ezs_hud_slot_total settext( " / " + level.ezs_weapons.size );
 
-    self.ezs_hud_level = newclienthudelem( self );
-    self.ezs_hud_level.alignx = "right";
-    self.ezs_hud_level.aligny = "middle";
-    self.ezs_hud_level.horzalign = "center";
-    self.ezs_hud_level.vertalign = "middle";
-    self.ezs_hud_level.x = -5;
-    self.ezs_hud_level.y = 19;
-    self.ezs_hud_level.fontscale = 1.0;
-    self.ezs_hud_level.alpha = 0;
-    self.ezs_hud_level.sort = 20;
-    self.ezs_hud_level settext( "Level: " );
-
-    // Static suffix: the max upgrade level never changes once the shop
-    // is built, so a single settext() call here is safe.
-    self.ezs_hud_level_max = newclienthudelem( self );
-    self.ezs_hud_level_max.alignx = "left";
-    self.ezs_hud_level_max.aligny = "middle";
-    self.ezs_hud_level_max.horzalign = "center";
-    self.ezs_hud_level_max.vertalign = "middle";
-    self.ezs_hud_level_max.x = 5;
-    self.ezs_hud_level_max.y = 19;
-    self.ezs_hud_level_max.fontscale = 1.0;
-    self.ezs_hud_level_max.alpha = 0;
-    self.ezs_hud_level_max.sort = 20;
-    self.ezs_hud_level_max settext( " / " + getdvarint( "ezs_upgrade_max_level" ) );
-
     self.ezs_hud_points = newclienthudelem( self );
     self.ezs_hud_points.alignx = "center";
     self.ezs_hud_points.aligny = "middle";
@@ -702,7 +533,7 @@ ezs_create_hud()
     self.ezs_hud_help.fontscale = 0.9;
     self.ezs_hud_help.alpha = 0.8;
     self.ezs_hud_help.sort = 20;
-    self.ezs_hud_help settext( "[FIRE] next  [AIM] prev  [USE] buy  [JUMP] upgrade  [MELEE] close" );
+    self.ezs_hud_help settext( "[FIRE] next  [AIM] prev  [USE] buy  [MELEE] close" );
 }
 
 
@@ -724,26 +555,8 @@ ezs_render_hud()
 
     self.ezs_hud_item settext( "< " + var_0.display + " >" );
 
-    var_5 = 0;
-    var_6 = 0;
-
-    if ( self ezs_owns_weapon( var_0 ) )
-    {
-        var_4 = getweaponbasename( var_0.weapon );
-
-        if ( isdefined( self.weaponstate[var_4] ) &&
-             isdefined( self.weaponstate[var_4]["level"] ) )
-        {
-            var_5 = 1;
-            var_6 = self.weaponstate[var_4]["level"];
-        }
-    }
-
     self.ezs_hud_cost setvalue( var_1 );
     self.ezs_hud_slot setvalue( self.ezs_index + 1 );
-    self.ezs_hud_level.alpha = var_5;
-    self.ezs_hud_level_max.alpha = var_5;
-    self.ezs_hud_level setvalue( var_6 );
     self.ezs_hud_points setvalue( var_2 );
 }
 
@@ -778,18 +591,6 @@ ezs_destroy_hud()
     {
         self.ezs_hud_slot_total destroy();
         self.ezs_hud_slot_total = undefined;
-    }
-
-    if ( isdefined( self.ezs_hud_level ) )
-    {
-        self.ezs_hud_level destroy();
-        self.ezs_hud_level = undefined;
-    }
-
-    if ( isdefined( self.ezs_hud_level_max ) )
-    {
-        self.ezs_hud_level_max destroy();
-        self.ezs_hud_level_max = undefined;
     }
 
     if ( isdefined( self.ezs_hud_points ) )
