@@ -158,7 +158,6 @@ ezs_build_weapon_list()
     ezs_add_weapon( "iw5_microwavezm_mp", "Magnetron" );
     ezs_add_weapon( "iw5_linegunzm_mp", "LZ-52 Limbo" );
 
-    // ---- Base DLC armory ----
     ezs_add_weapon( "iw5_rw1zm_mp", "RW1" );
     ezs_add_weapon( "iw5_vbrzm_mp", "VBR" );
     ezs_add_weapon( "iw5_gm6zm_mp", "GM6" );
