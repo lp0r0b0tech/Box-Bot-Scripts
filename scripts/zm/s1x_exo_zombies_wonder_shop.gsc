@@ -147,16 +147,15 @@ ezs_init()
     ============================================================
     Wonder shop weapon list
     ============================================================
-    The full base Exo Zombies DLC weapon roster (same roster used
-    by the Mk2-Mk25 damage system), with the four true DLC wonder
-    weapons (Trident, CEL-3 Cauterizer, Magnetron, Limbo) called
-    out up front.
+    The 4 true DLC wonder weapons (KL03-Trident, CEL-3 Cauterizer,
+    Magnetron, LZ-52 Limbo). See the file header NOTE for why the
+    rest of the base Exo Zombies DLC armory and the MP-only weapon
+    catalog are not sold here.
 */
 ezs_build_weapon_list()
 {
     level.ezs_weapons = [];
 
-    // ---- Wonder weapons ----
     ezs_add_weapon( "iw5_tridentzm_mp", "KL03-Trident" );
     ezs_add_weapon( "iw5_fusionzm_mp", "CEL-3 Cauterizer" );
     ezs_add_weapon( "iw5_microwavezm_mp", "Magnetron" );
