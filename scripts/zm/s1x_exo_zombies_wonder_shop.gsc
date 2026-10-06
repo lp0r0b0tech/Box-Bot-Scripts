@@ -501,8 +501,14 @@ ezs_try_buy()
     Native givezombieweapon() caps the player at 2 distinct primaries,
     taking the current primary away first once that cap is hit (see
     getweaponslistprimariesminusalts()/getcurrentprimaryweapon() in
-    maps\mp\zombies\_wall_buys.gsc). The plain giveweapon() path used
-    for MP-only weapons bypassed that cap entirely, so buying several
+    maps\mp\zombies\_wall_buys.gsc). Note getweaponslistprimariesminusalts()
+    is a private helper defined inside that file, not an engine built-in,
+    so it must be called through its namespace
+    (self maps\mp\zombies\_wall_buys::getweaponslistprimariesminusalts())
+    -- calling it as a bare self method, as an earlier version of this
+    fix did, is an unresolved function reference that fails to compile
+    and stops the whole mod from loading. The plain giveweapon() path
+    used for MP-only weapons bypassed the cap entirely, so buying several
     different MP-only weapons back-to-back just kept stacking new
     primaries onto the player's weapon list with nothing ever taken
     away -- eventually overflowing the engine's weapon list and kicking
@@ -513,7 +519,7 @@ ezs_give_weapon( var_0 )
 {
     if ( isdefined( var_0.mponly ) && var_0.mponly )
     {
-        var_2 = self getweaponslistprimariesminusalts();
+        var_2 = self maps\mp\zombies\_wall_buys::getweaponslistprimariesminusalts();
 
         if ( var_2.size > 1 )
         {
