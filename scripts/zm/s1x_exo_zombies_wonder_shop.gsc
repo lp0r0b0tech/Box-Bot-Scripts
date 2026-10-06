@@ -62,11 +62,14 @@
     upgrade kiosk (see the upgrade note above), while still making them
     upgradeable, damage-scaled, and camo-skinned (via the native MP camo
     builder) through all_weapon_damage.gsc and the [JUMP] upgrade here.
-    Because their assets are not part of any Exo Zombies map's precache,
-    they still carry a real risk of client-side errors on some maps --
-    hence disabled by default. Enable with
-    setdvar ezs_include_mp_only 1  only after confirming it is stable
-    on your map(s).
+    Their assets are not part of any Exo Zombies map's native precache
+    (the gametype skips precaching MP weapons entirely in zombies), so
+    this file precaches all of them itself in main() (see
+    ezs_precache_mp_only_weapons()) before anything else runs -- without
+    that they would silently fail to give/switch to at all. They still
+    carry more risk of client-side issues than the normal roster, hence
+    disabled by default. Enable with  setdvar ezs_include_mp_only 1  only
+    after confirming it is stable on your map(s).
 
     Ownership of MP-only weapons is tracked explicitly per catalog
     weapon ID (self.ezs_mp_owned) rather than by scanning held weapons'
@@ -97,7 +100,51 @@
 main()
 {
     println( "[EZS] main loaded." );
+    ezs_precache_mp_only_weapons();
     init();
+}
+
+
+/*
+    maps\mp\gametypes\_weapons::init() -- which runs for every Exo Zombies
+    map just like any other gametype -- only calls precacheitem() on the
+    native weapon list when  !level.iszombiegame , i.e. it deliberately
+    skips precaching ALL multiplayer weapons in zombies games (relying on
+    each zombies map/DLC to separately precache its own "zm" variants
+    elsewhere). The 17 MP-only weapons sold below have no "zm" variant and
+    are therefore never precached by anything on an Exo Zombies map. A
+    giveweapon()/switchtoweapon() call for an unprecached weapon asset
+    silently does nothing client-side -- which is exactly what was
+    reported ("bought the weapon but got no weapon" / "not giving any of
+    the mp weapons").
+
+    Precache must happen before the match's precache window closes, which
+    is effectively immediately at map load -- ezs_init() below can't do
+    this itself since it deliberately waits/polls for the zombies gametype
+    to finish setting up before touching anything, by which point the
+    window is long gone. Call this synchronously, unconditionally (so it
+    still works even if ezs_include_mp_only is set after this file's
+    main() already ran), directly from main() before anything else.
+*/
+ezs_precache_mp_only_weapons()
+{
+    precacheitem( "iw5_dlcgun6_mp" );
+    precacheitem( "iw5_dlcgun6loot5_mp" );
+    precacheitem( "iw5_dlcgun7loot0_mp" );
+    precacheitem( "iw5_dlcgun7loot6_mp" );
+    precacheitem( "iw5_dlcgun8loot1_mp" );
+    precacheitem( "iw5_dlcgun13_mp" );
+    precacheitem( "iw5_dlcgun18_mp" );
+    precacheitem( "iw5_dlcgun23_mp" );
+    precacheitem( "iw5_dlcgun28_mp" );
+    precacheitem( "iw5_dlcgun33_mp" );
+    precacheitem( "iw5_dlcgun38_mp" );
+    precacheitem( "iw5_kf5_mp" );
+    precacheitem( "iw5_epm3_mp" );
+    precacheitem( "iw5_exoxmg_mp" );
+    precacheitem( "iw5_mors_mp" );
+    precacheitem( "iw5_pbw_mp" );
+    precacheitem( "iw5_thor_mp" );
 }
 
 
