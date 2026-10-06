@@ -501,33 +501,68 @@ esp_create_hud()
     self.esp_hud_item.alpha = 1;
     self.esp_hud_item.sort = 20;
 
-    self.esp_hud_info = newclienthudelem( self );
-    self.esp_hud_info.alignx = "center";
-    self.esp_hud_info.aligny = "middle";
-    self.esp_hud_info.horzalign = "center";
-    self.esp_hud_info.vertalign = "middle";
-    self.esp_hud_info.y = -15;
-    self.esp_hud_info.fontscale = 1.0;
-    self.esp_hud_info.alpha = 1;
-    self.esp_hud_info.sort = 20;
+    // Both the slot index (changes on every scroll) and the points
+    // (change on every armory point earned) must never be baked into a
+    // settext() string: settext() interns each unique string into the
+    // engine's shared configstring table (shared across every
+    // hud/script in the session, hard-capped around 650 entries), and
+    // an always-changing number means an always-new string, which
+    // eventually overflows that table and kicks the player with a
+    // "G_FindConfigstringIndex: overflow" error -- this previously
+    // happened to the points field, and (because that fix only
+    // addressed the points number) it also happened again from the
+    // weapon slot index baked into this same line. setvalue() updates a
+    // numeric field on the hud elem directly with no configstring cost,
+    // same as native score/ammo/kill-counter huds, and (per the native
+    // _zombies_sidequests.gsc live-counter pattern) can be combined
+    // with a settext() label set once up front, so every label below is
+    // set once here and only the matching number is refreshed with
+    // setvalue() in esp_render_hud().
+    self.esp_hud_cost = newclienthudelem( self );
+    self.esp_hud_cost.alignx = "center";
+    self.esp_hud_cost.aligny = "middle";
+    self.esp_hud_cost.horzalign = "center";
+    self.esp_hud_cost.vertalign = "middle";
+    self.esp_hud_cost.y = -15;
+    self.esp_hud_cost.fontscale = 1.0;
+    self.esp_hud_cost.alpha = 1;
+    self.esp_hud_cost.sort = 20;
+    self.esp_hud_cost settext( "Cost: " );
 
-    // Points change constantly (every armory point earned), so they must
-    // never be baked into a settext() string: settext() interns each
-    // unique string into the engine's shared configstring table (shared
-    // across every hud/script in the session, hard-capped around 650
-    // entries), and an always-changing number means an always-new
-    // string, which eventually overflows that table and kicks the
-    // player with a "G_FindConfigstringIndex: overflow" error.
-    // setvalue() updates a numeric field on the hud elem directly with
-    // no configstring cost, same as native score/ammo/kill-counter
-    // huds, so the label is set once here and only the number is
-    // refreshed in esp_render_hud().
+    self.esp_hud_slot = newclienthudelem( self );
+    self.esp_hud_slot.alignx = "right";
+    self.esp_hud_slot.aligny = "middle";
+    self.esp_hud_slot.horzalign = "center";
+    self.esp_hud_slot.vertalign = "middle";
+    self.esp_hud_slot.x = -5;
+    self.esp_hud_slot.y = 2;
+    self.esp_hud_slot.fontscale = 1.0;
+    self.esp_hud_slot.alpha = 1;
+    self.esp_hud_slot.sort = 20;
+    self.esp_hud_slot settext( "Weapon " );
+
+    // Static suffix: the weapon count never changes once the shop is
+    // built, so a single settext() call here is safe (same string every
+    // time, no configstring growth) -- it is only the current index
+    // (esp_hud_slot, above) that changes per render.
+    self.esp_hud_slot_total = newclienthudelem( self );
+    self.esp_hud_slot_total.alignx = "left";
+    self.esp_hud_slot_total.aligny = "middle";
+    self.esp_hud_slot_total.horzalign = "center";
+    self.esp_hud_slot_total.vertalign = "middle";
+    self.esp_hud_slot_total.x = 5;
+    self.esp_hud_slot_total.y = 2;
+    self.esp_hud_slot_total.fontscale = 1.0;
+    self.esp_hud_slot_total.alpha = 1;
+    self.esp_hud_slot_total.sort = 20;
+    self.esp_hud_slot_total settext( " / " + level.esp_weapons.size );
+
     self.esp_hud_points = newclienthudelem( self );
     self.esp_hud_points.alignx = "center";
     self.esp_hud_points.aligny = "middle";
     self.esp_hud_points.horzalign = "center";
     self.esp_hud_points.vertalign = "middle";
-    self.esp_hud_points.y = 0;
+    self.esp_hud_points.y = 19;
     self.esp_hud_points.fontscale = 1.0;
     self.esp_hud_points.alpha = 1;
     self.esp_hud_points.sort = 20;
@@ -538,7 +573,7 @@ esp_create_hud()
     self.esp_hud_help.aligny = "middle";
     self.esp_hud_help.horzalign = "center";
     self.esp_hud_help.vertalign = "middle";
-    self.esp_hud_help.y = 20;
+    self.esp_hud_help.y = 39;
     self.esp_hud_help.fontscale = 0.9;
     self.esp_hud_help.alpha = 0.8;
     self.esp_hud_help.sort = 20;
@@ -563,7 +598,8 @@ esp_render_hud()
     }
 
     self.esp_hud_item settext( "< " + var_0.display + " >" );
-    self.esp_hud_info settext( "Cost: " + var_1 + "   (" + ( self.esp_index + 1 ) + "/" + level.esp_weapons.size + ")" );
+    self.esp_hud_cost setvalue( var_1 );
+    self.esp_hud_slot setvalue( self.esp_index + 1 );
     self.esp_hud_points setvalue( var_2 );
 }
 
@@ -582,10 +618,22 @@ esp_destroy_hud()
         self.esp_hud_item = undefined;
     }
 
-    if ( isdefined( self.esp_hud_info ) )
+    if ( isdefined( self.esp_hud_cost ) )
     {
-        self.esp_hud_info destroy();
-        self.esp_hud_info = undefined;
+        self.esp_hud_cost destroy();
+        self.esp_hud_cost = undefined;
+    }
+
+    if ( isdefined( self.esp_hud_slot ) )
+    {
+        self.esp_hud_slot destroy();
+        self.esp_hud_slot = undefined;
+    }
+
+    if ( isdefined( self.esp_hud_slot_total ) )
+    {
+        self.esp_hud_slot_total destroy();
+        self.esp_hud_slot_total = undefined;
     }
 
     if ( isdefined( self.esp_hud_points ) )

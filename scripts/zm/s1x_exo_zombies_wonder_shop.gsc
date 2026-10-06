@@ -813,32 +813,96 @@ ezs_create_hud()
     self.ezs_hud_item.alpha = 1;
     self.ezs_hud_item.sort = 20;
 
-    self.ezs_hud_info = newclienthudelem( self );
-    self.ezs_hud_info.alignx = "center";
-    self.ezs_hud_info.aligny = "middle";
-    self.ezs_hud_info.horzalign = "center";
-    self.ezs_hud_info.vertalign = "middle";
-    self.ezs_hud_info.y = -15;
-    self.ezs_hud_info.fontscale = 1.0;
-    self.ezs_hud_info.alpha = 1;
-    self.ezs_hud_info.sort = 20;
-
-    // Score changes constantly (every zombie kill), so it must never be
-    // baked into a settext() string: settext() interns each unique string
-    // into the engine's shared configstring table (shared across every
-    // hud/script in the session, hard-capped around 650 entries), and an
-    // always-changing number means an always-new string, which eventually
-    // overflows that table and kicks the player with a
-    // "G_FindConfigstringIndex: overflow" error. setvalue() updates a
+    // Every number on this HUD changes constantly (score every zombie
+    // kill, the weapon slot index on every scroll, the weapon level on
+    // every upgrade), so NONE of them may ever be baked into a settext()
+    // string: settext() interns each unique string into the engine's
+    // shared configstring table (shared across every hud/script in the
+    // session, hard-capped around 650 entries), and an always-changing
+    // number means an always-new string, which eventually overflows
+    // that table and kicks the player with a
+    // "G_FindConfigstringIndex: overflow" error -- this previously
+    // happened to the score/points field, and (because the fix for that
+    // only addressed the points number) it also happened again from the
+    // weapon slot index ("Cost: 1000   (34/50)" in the error) and would
+    // eventually happen from the weapon level too. setvalue() updates a
     // numeric field on the hud elem directly with no configstring cost,
-    // same as native score/ammo/kill-counter huds, so the label is set
-    // once here and only the number is refreshed in ezs_render_hud().
+    // same as native score/ammo/kill-counter huds, and (per the native
+    // _zombies_sidequests.gsc live-counter pattern) can be combined with
+    // a settext() label set once up front, so every label below is set
+    // once here and only the matching number is refreshed with
+    // setvalue() in ezs_render_hud().
+    self.ezs_hud_cost = newclienthudelem( self );
+    self.ezs_hud_cost.alignx = "center";
+    self.ezs_hud_cost.aligny = "middle";
+    self.ezs_hud_cost.horzalign = "center";
+    self.ezs_hud_cost.vertalign = "middle";
+    self.ezs_hud_cost.y = -15;
+    self.ezs_hud_cost.fontscale = 1.0;
+    self.ezs_hud_cost.alpha = 1;
+    self.ezs_hud_cost.sort = 20;
+    self.ezs_hud_cost settext( "Cost: " );
+
+    self.ezs_hud_slot = newclienthudelem( self );
+    self.ezs_hud_slot.alignx = "right";
+    self.ezs_hud_slot.aligny = "middle";
+    self.ezs_hud_slot.horzalign = "center";
+    self.ezs_hud_slot.vertalign = "middle";
+    self.ezs_hud_slot.x = -5;
+    self.ezs_hud_slot.y = 2;
+    self.ezs_hud_slot.fontscale = 1.0;
+    self.ezs_hud_slot.alpha = 1;
+    self.ezs_hud_slot.sort = 20;
+    self.ezs_hud_slot settext( "Weapon " );
+
+    // Static suffix: the weapon count never changes once the shop is
+    // built, so a single settext() call here is safe (same string every
+    // time, no configstring growth) -- it is only the current index
+    // (ezs_hud_slot, above) that changes per render.
+    self.ezs_hud_slot_total = newclienthudelem( self );
+    self.ezs_hud_slot_total.alignx = "left";
+    self.ezs_hud_slot_total.aligny = "middle";
+    self.ezs_hud_slot_total.horzalign = "center";
+    self.ezs_hud_slot_total.vertalign = "middle";
+    self.ezs_hud_slot_total.x = 5;
+    self.ezs_hud_slot_total.y = 2;
+    self.ezs_hud_slot_total.fontscale = 1.0;
+    self.ezs_hud_slot_total.alpha = 1;
+    self.ezs_hud_slot_total.sort = 20;
+    self.ezs_hud_slot_total settext( " / " + level.ezs_weapons.size );
+
+    self.ezs_hud_level = newclienthudelem( self );
+    self.ezs_hud_level.alignx = "right";
+    self.ezs_hud_level.aligny = "middle";
+    self.ezs_hud_level.horzalign = "center";
+    self.ezs_hud_level.vertalign = "middle";
+    self.ezs_hud_level.x = -5;
+    self.ezs_hud_level.y = 19;
+    self.ezs_hud_level.fontscale = 1.0;
+    self.ezs_hud_level.alpha = 0;
+    self.ezs_hud_level.sort = 20;
+    self.ezs_hud_level settext( "Level: " );
+
+    // Static suffix: the max upgrade level never changes once the shop
+    // is built, so a single settext() call here is safe.
+    self.ezs_hud_level_max = newclienthudelem( self );
+    self.ezs_hud_level_max.alignx = "left";
+    self.ezs_hud_level_max.aligny = "middle";
+    self.ezs_hud_level_max.horzalign = "center";
+    self.ezs_hud_level_max.vertalign = "middle";
+    self.ezs_hud_level_max.x = 5;
+    self.ezs_hud_level_max.y = 19;
+    self.ezs_hud_level_max.fontscale = 1.0;
+    self.ezs_hud_level_max.alpha = 0;
+    self.ezs_hud_level_max.sort = 20;
+    self.ezs_hud_level_max settext( " / " + getdvarint( "ezs_upgrade_max_level" ) );
+
     self.ezs_hud_points = newclienthudelem( self );
     self.ezs_hud_points.alignx = "center";
     self.ezs_hud_points.aligny = "middle";
     self.ezs_hud_points.horzalign = "center";
     self.ezs_hud_points.vertalign = "middle";
-    self.ezs_hud_points.y = 0;
+    self.ezs_hud_points.y = 36;
     self.ezs_hud_points.fontscale = 1.0;
     self.ezs_hud_points.alpha = 1;
     self.ezs_hud_points.sort = 20;
@@ -849,7 +913,7 @@ ezs_create_hud()
     self.ezs_hud_help.aligny = "middle";
     self.ezs_hud_help.horzalign = "center";
     self.ezs_hud_help.vertalign = "middle";
-    self.ezs_hud_help.y = 20;
+    self.ezs_hud_help.y = 56;
     self.ezs_hud_help.fontscale = 0.9;
     self.ezs_hud_help.alpha = 0.8;
     self.ezs_hud_help.sort = 20;
@@ -875,7 +939,8 @@ ezs_render_hud()
 
     self.ezs_hud_item settext( "< " + var_0.display + " >" );
 
-    var_3 = "";
+    var_5 = 0;
+    var_6 = 0;
 
     if ( self ezs_owns_weapon( var_0 ) )
     {
@@ -884,11 +949,16 @@ ezs_render_hud()
         if ( isdefined( self.weaponstate[var_4] ) &&
              isdefined( self.weaponstate[var_4]["level"] ) )
         {
-            var_3 = "   Level: " + self.weaponstate[var_4]["level"] + "/" + getdvarint( "ezs_upgrade_max_level" );
+            var_5 = 1;
+            var_6 = self.weaponstate[var_4]["level"];
         }
     }
 
-    self.ezs_hud_info settext( "Cost: " + var_1 + "   (" + ( self.ezs_index + 1 ) + "/" + level.ezs_weapons.size + ")" + var_3 );
+    self.ezs_hud_cost setvalue( var_1 );
+    self.ezs_hud_slot setvalue( self.ezs_index + 1 );
+    self.ezs_hud_level.alpha = var_5;
+    self.ezs_hud_level_max.alpha = var_5;
+    self.ezs_hud_level setvalue( var_6 );
     self.ezs_hud_points setvalue( var_2 );
 }
 
@@ -907,10 +977,34 @@ ezs_destroy_hud()
         self.ezs_hud_item = undefined;
     }
 
-    if ( isdefined( self.ezs_hud_info ) )
+    if ( isdefined( self.ezs_hud_cost ) )
     {
-        self.ezs_hud_info destroy();
-        self.ezs_hud_info = undefined;
+        self.ezs_hud_cost destroy();
+        self.ezs_hud_cost = undefined;
+    }
+
+    if ( isdefined( self.ezs_hud_slot ) )
+    {
+        self.ezs_hud_slot destroy();
+        self.ezs_hud_slot = undefined;
+    }
+
+    if ( isdefined( self.ezs_hud_slot_total ) )
+    {
+        self.ezs_hud_slot_total destroy();
+        self.ezs_hud_slot_total = undefined;
+    }
+
+    if ( isdefined( self.ezs_hud_level ) )
+    {
+        self.ezs_hud_level destroy();
+        self.ezs_hud_level = undefined;
+    }
+
+    if ( isdefined( self.ezs_hud_level_max ) )
+    {
+        self.ezs_hud_level_max destroy();
+        self.ezs_hud_level_max = undefined;
     }
 
     if ( isdefined( self.ezs_hud_points ) )
