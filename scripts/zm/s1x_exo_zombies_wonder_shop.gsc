@@ -25,9 +25,6 @@
     Dvars:
         ezs_weapon_cost        points cost per shop weapon   (default 1000)
         ezs_shop_enabled       enable the wonder shop          (default 1)
-        ezs_include_mp_only    also sell MP-exclusive DLC weapons
-                                that have no native zombies ("zm")
-                                asset variant                   (default 0)
         ezs_upgrade_cost       points cost per upgrade level   (default 2500)
         ezs_upgrade_max_level  max weaponstate level reachable
                                 through the in-shop upgrade      (default 25)
@@ -36,66 +33,27 @@
     Pressing [JUMP] on an owned weapon spends ezs_upgrade_cost points and
     raises that weapon's weaponstate["level"] by one, using the same
     Mk2-Mk25 damage curve as the native Pack-a-Punch / upgrade station
-    (see all_weapon_damage.gsc). Every weapon in the shop -- normal
-    roster or MP-only alike -- is then re-given through the exact same
-    native getupgradeweaponname()/givezombieweapon() path the physical
-    kiosk uses, so it gets the correct Mk2-25 camo + attachment combo for
-    its new level: a full visual + functional upgrade without needing to
-    find the in-map kiosk. getupgradeweaponname()'s attachment tables are
-    only populated for native "zm" weapon bases, but for any other base
-    (every MP-only weapon) it transparently falls back to no attachment
-    and still builds a valid camo'd name through the same weapon-class-
-    agnostic buildweaponname() the multiplayer camo/create-a-class system
-    itself uses -- so MP-only weapons get full camo progression too, with
-    no separate code path required.
+    (see all_weapon_damage.gsc). The weapon is then re-given through the
+    exact same native getupgradeweaponname()/givezombieweapon() path the
+    physical kiosk uses, so it gets the correct Mk2-25 camo + attachment
+    combo for its new level: a full visual + functional upgrade without
+    needing to find the in-map kiosk.
 
-    MP-exclusive weapons (ezs_include_mp_only):
-    Every multiplayer weapon that already has a native zombies ("zm")
-    variant is sold above through the normal weapon-state pipeline. A
-    handful of weapons -- both DLC (STG-44, SVO, AK-47, M16, 1911,
-    MP40, M1 Garand, Sten, Lever Action, Repulsor, and the MP-variant
-    CEL-3 Cauterizer) and base-game (KF5, EPM3, Exo XMG, MORS, PBW,
-    THOR) -- were never ported to Exo Zombies at all: there is no "zm"
-    weapon asset anywhere in the game data. Despite that, they are given
-    and upgraded through the exact same maps\mp\zombies\_wall_buys::
-    givezombieweapon()/getupgradeweaponname() calls used for every other
-    weapon in this shop (see ezs_give_weapon()/ezs_upgrade_weapon()
-    below) -- that whole pipeline is pure weapon-ID bookkeeping with no
-    "zm"-specific asset lookup anywhere in it, so it works identically
-    for any weapon string, zm or not. They are still kept in a separate,
-    opt-in list because their assets are not part of any Exo Zombies
-    map's native precache/preload set (the gametype skips precaching MP
-    weapons entirely in zombies): this file registers them with
-    precacheitem() itself in main() (see ezs_precache_mp_only_weapons())
-    before anything else runs, and additionally streams each one in with
-    the built-in loadweapons() (polled, see ezs_wait_load_weapon()) right
-    before giving/re-giving it -- the same two-step
-    precacheitem()-then-loadweapons() sequence the native horde/gun
-    gametypes use for weapons outside their normal preload set. Without
-    both steps they can silently fail to give/switch to at all. They
-    still carry more risk of client-side issues than the normal roster,
-    hence disabled by default. Enable with
-    setdvar ezs_include_mp_only 1  only after confirming it is stable
-    on your map(s).
-
-    Even with both precache and loadweapons() applied, loadweapons() can
-    still legitimately time out for a specific MP-only weapon on a
-    specific map if that weapon's model/viewmodel/sound assets simply
-    were never built into that map's zone at all (this is an asset-
-    availability limitation of the map data, not something a script can
-    force past). ezs_try_buy()/ezs_upgrade_weapon() detect this with a
-    post-give hasweapon() check: if the weapon still was not actually
-    given, the purchase/upgrade is refunded and the player is told
-    clearly instead of the shop appearing to silently do nothing; a
-    matching println() is logged server-side (search "EZS: failed to
-    give") to help identify which weapon/map combination is affected.
-
-    Ownership of MP-only weapons is tracked explicitly per catalog
-    weapon ID (self.ezs_mp_owned) rather than by scanning held weapons'
-    getweaponbasename() -- several MP-only IDs (the "loot" ones, see
-    ezs_build_weapon_list() below) are variant slots of the same base
-    DLC weapon and can share a base name, which previously caused false
-    "You already have the ..." messages.
+    NOTE: This shop only sells the base Exo Zombies DLC weapon roster --
+    every weapon here has a native zombies ("zm") asset variant. MP-only
+    weapons (multiplayer weapons with no "zm" variant, e.g. PBW, THOR,
+    the MP-exclusive DLC guns) were previously offered behind an opt-in
+    ezs_include_mp_only dvar, but their assets are not reliably part of
+    every Exo Zombies map's loaded zone -- on maps where they are
+    missing, loadweapons() times out and the purchase/upgrade has to be
+    refunded (see the "EZS: failed to give" server log pattern from
+    earlier revisions of this file). That entire MP-only weapon catalog,
+    its precache step, and its give/upgrade/ownership special-casing
+    have been removed from this file: this shop now only ever sells
+    weapons guaranteed to work on any Exo Zombies map. Adding any of
+    those weapons back requires getting their assets linked into the
+    target map's zone file (a map-build/linker step outside this
+    script), not a script change here.
 
     NOTE: scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc opens on
     the same Hold [AIM] + press [MELEE] gesture. If that file is also
@@ -113,51 +71,7 @@
 main()
 {
     println( "[EZS] main loaded." );
-    ezs_precache_mp_only_weapons();
     init();
-}
-
-
-/*
-    maps\mp\gametypes\_weapons::init() -- which runs for every Exo Zombies
-    map just like any other gametype -- only calls precacheitem() on the
-    native weapon list when  !level.iszombiegame , i.e. it deliberately
-    skips precaching ALL multiplayer weapons in zombies games (relying on
-    each zombies map/DLC to separately precache its own "zm" variants
-    elsewhere). The 17 MP-only weapons sold below have no "zm" variant and
-    are therefore never precached by anything on an Exo Zombies map. A
-    giveweapon()/switchtoweapon() call for an unprecached weapon asset
-    silently does nothing client-side -- which is exactly what was
-    reported ("bought the weapon but got no weapon" / "not giving any of
-    the mp weapons").
-
-    Precache must happen before the match's precache window closes, which
-    is effectively immediately at map load -- ezs_init() below can't do
-    this itself since it deliberately waits/polls for the zombies gametype
-    to finish setting up before touching anything, by which point the
-    window is long gone. Call this synchronously, unconditionally (so it
-    still works even if ezs_include_mp_only is set after this file's
-    main() already ran), directly from main() before anything else.
-*/
-ezs_precache_mp_only_weapons()
-{
-    precacheitem( "iw5_dlcgun6_mp" );
-    precacheitem( "iw5_dlcgun6loot5_mp" );
-    precacheitem( "iw5_dlcgun7loot0_mp" );
-    precacheitem( "iw5_dlcgun7loot6_mp" );
-    precacheitem( "iw5_dlcgun8loot1_mp" );
-    precacheitem( "iw5_dlcgun13_mp" );
-    precacheitem( "iw5_dlcgun18_mp" );
-    precacheitem( "iw5_dlcgun23_mp" );
-    precacheitem( "iw5_dlcgun28_mp" );
-    precacheitem( "iw5_dlcgun33_mp" );
-    precacheitem( "iw5_dlcgun38_mp" );
-    precacheitem( "iw5_kf5_mp" );
-    precacheitem( "iw5_epm3_mp" );
-    precacheitem( "iw5_exoxmg_mp" );
-    precacheitem( "iw5_mors_mp" );
-    precacheitem( "iw5_pbw_mp" );
-    precacheitem( "iw5_thor_mp" );
 }
 
 
@@ -222,11 +136,6 @@ ezs_init()
     if ( getdvar( "ezs_shop_enabled" ) == "" )
     {
         setdvar( "ezs_shop_enabled", "1" );
-    }
-
-    if ( getdvar( "ezs_include_mp_only" ) == "" )
-    {
-        setdvar( "ezs_include_mp_only", "0" );
     }
 
     if ( getdvar( "ezs_upgrade_cost" ) == "" )
@@ -308,31 +217,6 @@ ezs_build_weapon_list()
 
     ezs_add_weapon( "iw5_exominigunzm_mp", "Exo Minigun" );
     ezs_add_weapon( "iw5_blunderbusszm_mp", "Blunderbuss" );
-
-    // ---- MP-only DLC weapons (no native zombies asset) ----
-    // Opt-in only: see the file header NOTE above before enabling.
-    if ( getdvarint( "ezs_include_mp_only" ) )
-    {
-        ezs_add_weapon_mp_only( "iw5_dlcgun6_mp", "STG-44 (MP)" );
-        ezs_add_weapon_mp_only( "iw5_dlcgun6loot5_mp", "SVO (MP)" );
-        ezs_add_weapon_mp_only( "iw5_dlcgun7loot0_mp", "AK-47 (MP)" );
-        ezs_add_weapon_mp_only( "iw5_dlcgun7loot6_mp", "M16 (MP)" );
-        ezs_add_weapon_mp_only( "iw5_dlcgun8loot1_mp", "CEL-3 Cauterizer (MP)" );
-        ezs_add_weapon_mp_only( "iw5_dlcgun13_mp", "1911 (MP)" );
-        ezs_add_weapon_mp_only( "iw5_dlcgun18_mp", "MP40 (MP)" );
-        ezs_add_weapon_mp_only( "iw5_dlcgun23_mp", "M1 Garand (MP)" );
-        ezs_add_weapon_mp_only( "iw5_dlcgun28_mp", "Sten (MP)" );
-        ezs_add_weapon_mp_only( "iw5_dlcgun33_mp", "Lever Action (MP)" );
-        ezs_add_weapon_mp_only( "iw5_dlcgun38_mp", "Repulsor (MP)" );
-
-        // ---- MP-only base-game weapons (no native zombies asset) ----
-        ezs_add_weapon_mp_only( "iw5_kf5_mp", "KF5 (MP)" );
-        ezs_add_weapon_mp_only( "iw5_epm3_mp", "EPM3 (MP)" );
-        ezs_add_weapon_mp_only( "iw5_exoxmg_mp", "Exo XMG (MP)" );
-        ezs_add_weapon_mp_only( "iw5_mors_mp", "MORS (MP)" );
-        ezs_add_weapon_mp_only( "iw5_pbw_mp", "PBW (MP)" );
-        ezs_add_weapon_mp_only( "iw5_thor_mp", "THOR (MP)" );
-    }
 }
 
 
@@ -341,17 +225,6 @@ ezs_add_weapon( var_0, var_1 )
     var_2 = spawnstruct();
     var_2.weapon = var_0;
     var_2.display = var_1;
-    var_2.mponly = 0;
-    level.ezs_weapons[level.ezs_weapons.size] = var_2;
-}
-
-
-ezs_add_weapon_mp_only( var_0, var_1 )
-{
-    var_2 = spawnstruct();
-    var_2.weapon = var_0;
-    var_2.display = var_1;
-    var_2.mponly = 1;
     level.ezs_weapons[level.ezs_weapons.size] = var_2;
 }
 
@@ -539,23 +412,6 @@ ezs_try_buy()
     self ezs_give_weapon( var_0 );
     self freezecontrols( 1 );
 
-    if ( isdefined( var_0.mponly ) && var_0.mponly && !self hasweapon( var_0.weapon ) )
-    {
-        /*
-            The weapon's file data genuinely failed to stream in (loadweapons()
-            timed out -- see ezs_wait_load_weapon()), most likely because this
-            particular MP-only weapon's model/viewmodel/sound assets are not
-            part of this map's loaded zone at all, rather than a script bug.
-            Refund the purchase instead of silently charging the player for a
-            weapon they never received, and say so clearly so this doesn't
-            look like "the shop just did nothing".
-        */
-        self.score = self.score + var_1;
-        self iprintlnbold( "^1" + var_0.display + " unavailable on this map (refunded)" );
-        println( "EZS: failed to give MP-only weapon '" + var_0.weapon + "' to " + self.name + " -- asset likely not loaded for this map/gametype." );
-        return 0;
-    }
-
     self iprintlnbold( "^2Bought " + var_0.display );
     return 1;
 }
@@ -570,69 +426,14 @@ ezs_try_buy()
     asset lookup anywhere -- verified against the decompiled source: none
     of those functions do anything but call the generic engine
     giveweapon()/takeweapon()/weaponstate[] on whatever weapon string is
-    passed in. There is nothing "zm"-specific about this pipeline, so
-    MP-only weapons (no zm asset, see the file header) are given through
-    the exact same call as every other weapon in this shop -- no separate
-    giveweapon()/takeweapon()/cap logic needed for them anymore.
-
-    precacheitem() in main() (see ezs_precache_mp_only_weapons()) only
-    registers the weapon names as known/valid network configstrings --
-    confirmed by decompiled usage, it does NOT stream the actual weapon
-    model/viewmodel/sound file data into memory. The real, engine-
-    supported way to force-load a weapon's file data at runtime -- used
-    throughout the native code (maps\mp\gametypes\horde.gsc,
-    maps\mp\gametypes\_horde_util::trygivehordeweapon(),
-    maps\mp\gametypes\gun.gsc, maps\mp\gametypes\_playerlogic.gsc) for
-    exactly this situation, a weapon that is valid but was not part of
-    the player's/gametype's normal preloaded set -- is the built-in
-    loadweapons() function, polled in a while loop until it returns true.
-    Notably horde.gsc itself calls  self loadweapons( [ ..., "iw5_kf5_mp",
-    ..., "iw5_pbw_mp" ] )  for two of this shop's own MP-only weapons,
-    confirming those exact assets are loadable this way mid-match outside
-    their "home" gametype. Without this step giveweapon()/switchtoweapon()
-    can silently do nothing even though the weapon name itself is valid
-    and precached -- which matches the continued "still not giving the mp
-    weapons" report after precacheitem() alone was added.
+    passed in. Every weapon sold by this shop has a native "zm" zombies
+    asset variant (see ezs_build_weapon_list()), so a plain
+    givezombieweapon() call is always sufficient here -- no precache or
+    loadweapons() streaming step is needed.
 */
 ezs_give_weapon( var_0 )
 {
-    if ( isdefined( var_0.mponly ) && var_0.mponly )
-    {
-        self ezs_wait_load_weapon( var_0.weapon );
-    }
-
     maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 1, 1 );
-
-    if ( isdefined( var_0.mponly ) && var_0.mponly )
-    {
-        if ( !isdefined( self.ezs_mp_owned ) )
-        {
-            self.ezs_mp_owned = [];
-        }
-
-        self.ezs_mp_owned[var_0.weapon] = 1;
-    }
-}
-
-
-/*
-    Polls the built-in loadweapons() until the given weapon's file data
-    (model/viewmodel/sounds) is actually streamed in, exactly like the
-    native callers above do -- bounded to ~5 seconds (100 frames at a
-    nominal 20fps lower bound) so a genuinely missing/invalid asset on a
-    particular map can't hang the buy/upgrade action forever.
-*/
-ezs_wait_load_weapon( var_0 )
-{
-    self endon( "disconnect" );
-
-    var_1 = 0;
-
-    while ( !self loadweapons( [ var_0 ] ) && var_1 < 100 )
-    {
-        waitframe();
-        var_1++;
-    }
 }
 
 
@@ -642,19 +443,11 @@ ezs_wait_load_weapon( var_0 )
     ezs_upgrade_max_level (25), using the same Mk2-Mk25 damage curve
     all_weapon_damage.gsc already applies.
 
-    Every weapon -- normal roster or MP-only -- is re-given through the
-    exact same native getupgradeweaponname()/givezombieweapon() path the
-    physical Pack-a-Punch kiosk itself uses. getupgradeweaponname() is
-    fully generic: its attachment-per-level switch tables only have
-    cases for native "zm" weapon bases, but for any base not listed
-    (every MP-only weapon) getmagicboxweapondefaultattachment() simply
-    falls back to "none" and buildweaponname() -- the same weapon-class-
-    agnostic builder the multiplayer camo/create-a-class system uses --
-    still builds and the resulting name is still given through
-    givezombieweapon(), which (see ezs_give_weapon() above) is itself
-    pure weapon-ID bookkeeping with no "zm"-specific logic. So MP-only
-    weapons get their Mk2-25 camo progression here exactly like every
-    other weapon, with no separate code path needed.
+    The weapon is re-given through the exact same native
+    getupgradeweaponname()/givezombieweapon() path the physical
+    Pack-a-Punch kiosk itself uses, so it gets the correct Mk2-25 camo +
+    attachment combo for its new level: a full visual + functional
+    upgrade without needing to find the in-map kiosk.
 
     NOTE: the "upgraded" toast deliberately does NOT include the new
     level number. iprintlnbold()/iprintln() share the exact same
@@ -726,38 +519,11 @@ ezs_upgrade_weapon()
     if ( isdefined( level.camolevel ) )
     {
         var_7 = maps\mp\zombies\_wall_buys::getupgradeweaponname( self, var_1 );
-
-        if ( isdefined( var_0.mponly ) && var_0.mponly )
-        {
-            self ezs_wait_load_weapon( var_7 );
-        }
-
         maps\mp\zombies\_wall_buys::givezombieweapon( self, var_7, 0, 1 );
     }
     else
     {
-        var_7 = var_0.weapon;
-
-        if ( isdefined( var_0.mponly ) && var_0.mponly )
-        {
-            self ezs_wait_load_weapon( var_7 );
-        }
-
-        maps\mp\zombies\_wall_buys::givezombieweapon( self, var_7, 0, 1 );
-    }
-
-    if ( isdefined( var_0.mponly ) && var_0.mponly && !self hasweapon( var_7 ) )
-    {
-        /*
-            Same asset-streaming failure guarded against in ezs_try_buy() --
-            refund the upgrade cost and say so instead of leaving the player
-            thinking the shop silently ignored their purchase.
-        */
-        self.score = self.score + var_2;
-        self.weaponstate[var_1]["level"] = var_4;
-        self iprintlnbold( "^1" + var_0.display + " upgrade unavailable on this map (refunded)" );
-        println( "EZS: failed to give upgraded MP-only weapon '" + var_7 + "' to " + self.name + " -- asset likely not loaded for this map/gametype." );
-        return 0;
+        maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 0, 1 );
     }
 
     self iprintlnbold( "^2" + var_0.display + " upgraded!" );
@@ -786,24 +552,8 @@ ezs_find_owned_weapon( var_0 )
 }
 
 
-/*
-    Takes the catalog entry (not just the weapon string) so it can branch
-    on var_0.mponly. MP-only weapon IDs are not guaranteed to have unique
-    getweaponbasename() results -- several of them (see the "loot" naming
-    note on ezs_build_weapon_list() above) are variant slots of the same
-    base DLC weapon, so scanning getweaponslistprimaries() by base name
-    can match the wrong catalog entry and falsely report "already own".
-    Ownership of MP-only weapons is instead tracked explicitly per
-    catalog weapon ID in self.ezs_mp_owned, set the moment the shop hands
-    one out (see ezs_give_weapon()), which has no such ambiguity.
-*/
 ezs_owns_weapon( var_0 )
 {
-    if ( isdefined( var_0.mponly ) && var_0.mponly )
-    {
-        return isdefined( self.ezs_mp_owned ) && isdefined( self.ezs_mp_owned[var_0.weapon] );
-    }
-
     var_1 = getweaponbasename( var_0.weapon );
     var_2 = self getweaponslistprimaries();
 

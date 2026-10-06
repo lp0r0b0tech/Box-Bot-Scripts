@@ -246,37 +246,6 @@ awd_init_weapon_list()
 
     awd_add_weapon( "iw5_combatknifegoliath_mp" );
     awd_add_weapon( "LastStand" );
-
-    /*
-        MP-only weapons sold by scripts/zm/s1x_exo_zombies_wonder_shop.gsc
-        under its opt-in "ezs_include_mp_only" dvar. These have no native
-        zombies ("zm") asset variant, so the wonder shop gives them a
-        plain, script-only level-1 weaponstate entry instead of routing
-        them through the native Pack-a-Punch/upgrade-station pipeline
-        (which would try to look up a "zm" camo/attachment combo that
-        does not exist for these weapon bases). Registering them here
-        lets their damage scale with that script-tracked level using the
-        same Mk2-Mk25 curve as every other weapon in this list; they are
-        completely inert unless a player actually owns one.
-    */
-    awd_add_weapon( "iw5_dlcgun6_mp" );
-    awd_add_weapon( "iw5_dlcgun6loot5_mp" );
-    awd_add_weapon( "iw5_dlcgun7loot0_mp" );
-    awd_add_weapon( "iw5_dlcgun7loot6_mp" );
-    awd_add_weapon( "iw5_dlcgun8loot1_mp" );
-    awd_add_weapon( "iw5_dlcgun13_mp" );
-    awd_add_weapon( "iw5_dlcgun18_mp" );
-    awd_add_weapon( "iw5_dlcgun23_mp" );
-    awd_add_weapon( "iw5_dlcgun28_mp" );
-    awd_add_weapon( "iw5_dlcgun33_mp" );
-    awd_add_weapon( "iw5_dlcgun38_mp" );
-
-    awd_add_weapon( "iw5_kf5_mp" );
-    awd_add_weapon( "iw5_epm3_mp" );
-    awd_add_weapon( "iw5_exoxmg_mp" );
-    awd_add_weapon( "iw5_mors_mp" );
-    awd_add_weapon( "iw5_pbw_mp" );
-    awd_add_weapon( "iw5_thor_mp" );
 }
 
 
