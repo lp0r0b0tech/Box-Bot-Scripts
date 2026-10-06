@@ -28,23 +28,24 @@
                                 that have no native zombies ("zm")
                                 asset variant                   (default 0)
 
-    MP-exclusive DLC weapons (ezs_include_mp_only):
-    Every multiplayer DLC weapon that already has a native zombies
-    ("zm") variant is sold above through the normal weapon-state
-    pipeline. A handful of classic MP-only DLC weapons (STG-44, SVO,
-    AK-47, M16, 1911, MP40, M1 Garand, Sten, Lever Action, Repulsor,
-    and the MP-variant CEL-3 Cauterizer) were never ported to Exo
-    Zombies at all -- there is no "zm" weapon asset or zombies
-    weaponstate for them anywhere in the game data. Because of that
-    they are kept in a separate, opt-in list and are handed out with a
-    plain giveweapon() (see ezs_give_weapon() below) instead of
-    givezombieweapon(), since calling the zombies weaponstate pipeline
-    on a weapon class it doesn't know about is unsafe. They will NOT be
-    Pack-a-Punch/upgrade-station compatible, and because their assets
-    are not part of any Exo Zombies map's precache, they carry a real
-    risk of client-side errors on some maps -- hence disabled by
-    default. Enable with  setdvar ezs_include_mp_only 1  only after
-    confirming it is stable on your map(s).
+    MP-exclusive weapons (ezs_include_mp_only):
+    Every multiplayer weapon that already has a native zombies ("zm")
+    variant is sold above through the normal weapon-state pipeline. A
+    handful of weapons -- both DLC (STG-44, SVO, AK-47, M16, 1911,
+    MP40, M1 Garand, Sten, Lever Action, Repulsor, and the MP-variant
+    CEL-3 Cauterizer) and base-game (KF5, EPM3, Exo XMG, MORS, PBW,
+    THOR) -- were never ported to Exo Zombies at all: there is no "zm"
+    weapon asset or zombies weaponstate for them anywhere in the game
+    data. Because of that they are kept in a separate, opt-in list and
+    are handed out with a plain giveweapon() (see ezs_give_weapon()
+    below) instead of givezombieweapon(), since calling the zombies
+    weaponstate pipeline on a weapon class it doesn't know about is
+    unsafe. They will NOT be Pack-a-Punch/upgrade-station compatible,
+    and because their assets are not part of any Exo Zombies map's
+    precache, they carry a real risk of client-side errors on some
+    maps -- hence disabled by default. Enable with
+    setdvar ezs_include_mp_only 1  only after confirming it is stable
+    on your map(s).
 
     NOTE: scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc opens on
     the same Hold [AIM] + press [MELEE] gesture. If that file is also
@@ -219,6 +220,14 @@ ezs_build_weapon_list()
         ezs_add_weapon_mp_only( "iw5_dlcgun28_mp", "Sten (MP)" );
         ezs_add_weapon_mp_only( "iw5_dlcgun33_mp", "Lever Action (MP)" );
         ezs_add_weapon_mp_only( "iw5_dlcgun38_mp", "Repulsor (MP)" );
+
+        // ---- MP-only base-game weapons (no native zombies asset) ----
+        ezs_add_weapon_mp_only( "iw5_kf5_mp", "KF5 (MP)" );
+        ezs_add_weapon_mp_only( "iw5_epm3_mp", "EPM3 (MP)" );
+        ezs_add_weapon_mp_only( "iw5_exoxmg_mp", "Exo XMG (MP)" );
+        ezs_add_weapon_mp_only( "iw5_mors_mp", "MORS (MP)" );
+        ezs_add_weapon_mp_only( "iw5_pbw_mp", "PBW (MP)" );
+        ezs_add_weapon_mp_only( "iw5_thor_mp", "THOR (MP)" );
     }
 }
 
