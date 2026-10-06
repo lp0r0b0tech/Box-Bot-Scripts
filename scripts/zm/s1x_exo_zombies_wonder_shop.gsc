@@ -41,9 +41,11 @@
     getupgradeweaponname()/givezombieweapon() path the physical kiosk
     uses, so it gets the correct Mk2-25 camo + attachment combo for its
     new level -- a full visual + functional upgrade without needing to
-    find the in-map kiosk. MP-only weapons (see below) have no "zm" camo
-    table entries, so their level/damage still increases but their
-    appearance does not change.
+    find the in-map kiosk. MP-only weapons (see below) are re-skinned
+    too, through ezs_build_mp_camo_weapon_name() -- the same
+    level.camolevel table plus the native, weapon-class-agnostic
+    buildweaponname() used by the multiplayer camo/create-a-class
+    system -- so their level/damage AND appearance both progress.
 
     MP-exclusive weapons (ezs_include_mp_only):
     Every multiplayer weapon that already has a native zombies ("zm")
@@ -58,10 +60,11 @@
     level-1 weaponstate entry, instead of the full givezombieweapon()
     pipeline -- that keeps them out of reach of the native physical
     upgrade kiosk (see the upgrade note above), while still making them
-    upgradeable and damage-scaled through all_weapon_damage.gsc and the
-    [JUMP] upgrade here. Because their assets are not part of any Exo
-    Zombies map's precache, they still carry a real risk of client-side
-    errors on some maps -- hence disabled by default. Enable with
+    upgradeable, damage-scaled, and camo-skinned (via the native MP camo
+    builder) through all_weapon_damage.gsc and the [JUMP] upgrade here.
+    Because their assets are not part of any Exo Zombies map's precache,
+    they still carry a real risk of client-side errors on some maps --
+    hence disabled by default. Enable with
     setdvar ezs_include_mp_only 1  only after confirming it is stable
     on your map(s).
 
@@ -521,12 +524,16 @@ ezs_give_weapon( var_0 )
     builds them for every Exo Zombies map, regardless of whether that
     map has a physical kiosk).
 
-    MP-only weapons (no zm asset, see the file header) are NOT re-skinned:
-    getupgradeweaponname()'s camo/attachment switch statements have no
-    cases for them, so calling it would just fall back to the base
-    weapon name with no attachments -- there is no "unsafe" asset lookup
-    risk either way, but there is also no camo to apply, so they stay
-    script-only (level/damage tracked, visual unchanged).
+    MP-only weapons (no zm asset, see the file header) get their own
+    camo at each level too, built with ezs_build_mp_camo_weapon_name()
+    below: it reuses the same level.camolevel table plus the native,
+    fully generic maps\mp\gametypes\_class::buildweaponname() weapon-
+    name builder (the function the native multiplayer camo/create-a-
+    class system itself uses for every ordinary MP weapon) instead of
+    the "zm"-only getupgradeweaponname()/attachment switch tables, and
+    validates the resulting asset name with isvalidweapon() before
+    using it, falling back to the current (unchanged) weapon if that
+    exact camo variant does not exist.
 */
 ezs_upgrade_weapon()
 {
@@ -573,6 +580,23 @@ ezs_upgrade_weapon()
     if ( isdefined( var_0.mponly ) && var_0.mponly )
     {
         self.weaponstate[var_1]["level"] = var_5;
+
+        var_8 = ezs_build_mp_camo_weapon_name( var_1, var_5 );
+
+        if ( isdefined( var_8 ) && var_8 != var_1 )
+        {
+            var_9 = self ezs_find_owned_weapon( var_1 );
+
+            if ( isdefined( var_9 ) )
+            {
+                self takeweapon( var_9 );
+            }
+
+            self giveweapon( var_8 );
+            self givemaxammo( var_8 );
+            self switchtoweapon( var_8 );
+        }
+
         self iprintlnbold( "^2" + var_0.display + " upgraded to level " + var_5 );
         return 1;
     }
@@ -598,6 +622,60 @@ ezs_upgrade_weapon()
 
     self iprintlnbold( "^2" + var_0.display + " upgraded to level " + var_5 );
     return 1;
+}
+
+
+/*
+    Reuses the native Pack-a-Punch camo-level table (level.camolevel,
+    built once per map by
+    maps\mp\zombies\_wall_buys::initcamolevels() from
+    mp/zmWeaponLevels.csv -- the exact same table getupgradeweaponname()
+    reads for normal roster weapons) to pick the Mk2-Mk25 camo index for
+    a given weapon level, then builds the camo'd weapon asset name with
+    maps\mp\gametypes\_class::buildweaponname() -- the same generic
+    weapon-name builder the native multiplayer create-a-class/camo
+    system uses for every ordinary MP weapon (including every MP-only
+    weapon sold here, since they are ordinary MP weapons with their own
+    normal camo progression).
+
+    Unlike getupgradeweaponname(), no attachments are requested here:
+    the native per-level attachment switch tables (getattachment1-3for-
+    weaponlevel) only have cases for native "zm" weapon bases. The
+    resulting name is validated with
+    maps\mp\gametypes\_class::isvalidweapon() before use; if that exact
+    camo variant does not exist for this weapon base, the original
+    weapon name is returned unchanged instead of risking an invalid
+    asset name.
+*/
+ezs_build_mp_camo_weapon_name( var_0, var_1 )
+{
+    if ( !isdefined( level.camolevel ) )
+    {
+        return var_0;
+    }
+
+    var_2 = int( min( var_1, level.camolevel.size - 1 ) );
+    var_3 = level.camolevel[var_2];
+
+    if ( var_3 <= 0 )
+    {
+        return var_0;
+    }
+
+    var_4 = maps\mp\_utility::strip_suffix( var_0, "_mp" );
+    var_5 = maps\mp\gametypes\_class::buildweaponname( var_4, "none", "none", "none", var_3, 0 );
+
+    if ( !isdefined( var_5 ) || var_5 == var_0 )
+    {
+        return var_0;
+    }
+
+    if ( !maps\mp\gametypes\_class::isvalidweapon( var_5 ) )
+    {
+        return var_0;
+    }
+
+    return var_5;
 }
 
 
