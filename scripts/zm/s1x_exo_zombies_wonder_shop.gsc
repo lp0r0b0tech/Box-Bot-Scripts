@@ -68,6 +68,19 @@
     setdvar ezs_include_mp_only 1  only after confirming it is stable
     on your map(s).
 
+    Ownership of MP-only weapons is tracked explicitly per catalog
+    weapon ID (self.ezs_mp_owned) rather than by scanning held weapons'
+    getweaponbasename() -- several MP-only IDs (the "loot" ones, see
+    ezs_build_weapon_list() below) are variant slots of the same base
+    DLC weapon and can share a base name, which previously caused false
+    "You already have the ..." messages. Giving a new MP-only weapon
+    also now enforces the same 2-distinct-primaries cap native
+    givezombieweapon() enforces for normal roster weapons (taking the
+    current primary first once at the cap), which previously let buying
+    several different MP-only weapons back-to-back stack up unbounded
+    primaries and overflow the engine's weapon list, kicking the player
+    with a "weapon overflow" error.
+
     NOTE: scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc opens on
     the same Hold [AIM] + press [MELEE] gesture. If that file is also
     loaded, set  scr_zm_dlc_shop_enabled 0  (or remove it) to avoid both
@@ -442,7 +455,7 @@ ezs_try_buy()
     var_0 = level.ezs_weapons[self.ezs_index];
     var_1 = getdvarint( "ezs_weapon_cost" );
 
-    if ( self ezs_owns_weapon( var_0.weapon ) )
+    if ( self ezs_owns_weapon( var_0 ) )
     {
         self iprintlnbold( "^1You already have the " + var_0.display );
         return 0;
@@ -484,11 +497,36 @@ ezs_try_buy()
     (see ezs_upgrade_weapon() below) without ever calling the native
     kiosk's getupgradeweaponname()/buildweaponname() camo/attachment
     combo lookup, which does not have entries for these weapon bases.
+
+    Native givezombieweapon() caps the player at 2 distinct primaries,
+    taking the current primary away first once that cap is hit (see
+    getweaponslistprimariesminusalts()/getcurrentprimaryweapon() in
+    maps\mp\zombies\_wall_buys.gsc). The plain giveweapon() path used
+    for MP-only weapons bypassed that cap entirely, so buying several
+    different MP-only weapons back-to-back just kept stacking new
+    primaries onto the player's weapon list with nothing ever taken
+    away -- eventually overflowing the engine's weapon list and kicking
+    the player with a "weapon overflow" error. Enforce the same cap
+    here before giving a new MP-only weapon.
 */
 ezs_give_weapon( var_0 )
 {
     if ( isdefined( var_0.mponly ) && var_0.mponly )
     {
+        var_2 = self getweaponslistprimariesminusalts();
+
+        if ( var_2.size > 1 )
+        {
+            var_3 = self getcurrentprimaryweapon();
+
+            if ( !isdefined( var_3 ) || var_3 == "none" || !self hasweapon( var_3 ) )
+            {
+                var_3 = var_2[0];
+            }
+
+            self takeweapon( var_3 );
+        }
+
         self giveweapon( var_0.weapon );
         self givemaxammo( var_0.weapon );
         self switchtoweapon( var_0.weapon );
@@ -500,6 +538,13 @@ ezs_give_weapon( var_0 )
         {
             self.weaponstate[var_1]["level"] = 1;
         }
+
+        if ( !isdefined( self.ezs_mp_owned ) )
+        {
+            self.ezs_mp_owned = [];
+        }
+
+        self.ezs_mp_owned[var_0.weapon] = 1;
 
         return;
     }
@@ -539,7 +584,7 @@ ezs_upgrade_weapon()
 {
     var_0 = level.ezs_weapons[self.ezs_index];
 
-    if ( !self ezs_owns_weapon( var_0.weapon ) )
+    if ( !self ezs_owns_weapon( var_0 ) )
     {
         self iprintlnbold( "^1Buy the " + var_0.display + " first" );
         return 0;
@@ -700,9 +745,25 @@ ezs_find_owned_weapon( var_0 )
 }
 
 
+/*
+    Takes the catalog entry (not just the weapon string) so it can branch
+    on var_0.mponly. MP-only weapon IDs are not guaranteed to have unique
+    getweaponbasename() results -- several of them (see the "loot" naming
+    note on ezs_build_weapon_list() above) are variant slots of the same
+    base DLC weapon, so scanning getweaponslistprimaries() by base name
+    can match the wrong catalog entry and falsely report "already own".
+    Ownership of MP-only weapons is instead tracked explicitly per
+    catalog weapon ID in self.ezs_mp_owned, set the moment the shop hands
+    one out (see ezs_give_weapon()), which has no such ambiguity.
+*/
 ezs_owns_weapon( var_0 )
 {
-    var_1 = getweaponbasename( var_0 );
+    if ( isdefined( var_0.mponly ) && var_0.mponly )
+    {
+        return isdefined( self.ezs_mp_owned ) && isdefined( self.ezs_mp_owned[var_0.weapon] );
+    }
+
+    var_1 = getweaponbasename( var_0.weapon );
     var_2 = self getweaponslistprimaries();
 
     foreach ( var_4 in var_2 )
@@ -789,7 +850,7 @@ ezs_render_hud()
 
     var_3 = "";
 
-    if ( self ezs_owns_weapon( var_0.weapon ) )
+    if ( self ezs_owns_weapon( var_0 ) )
     {
         var_4 = getweaponbasename( var_0.weapon );
 
