@@ -128,6 +128,19 @@ eztb_monitor_bots()
     }
 }
 
+/*
+    Shows the live teammate-bot count on a persistent HUD element instead
+    of an iprintlnbold() toast. iprintlnbold()/settext() both intern every
+    unique string argument as a network configstring (a shared, limited
+    ~650-slot table); baking the ever-changing bot count into a toast that
+    re-fires on every count change burns a new slot each time a new count
+    value is seen (and does so forever, for the whole match, for every
+    connected human) instead of just updating a number on an existing HUD
+    element with setvalue(), which does not touch the configstring table
+    at all. This is the same "G_FindConfigstringIndex: overflow" class of
+    bug already fixed in s1x_exo_zombies_wonder_shop.gsc/
+    s1x_exo_survival_plus.gsc.
+*/
 eztb_status()
 {
     level endon( "game_ended" );
@@ -146,7 +159,21 @@ eztb_status()
             if ( !isbot( player ) && isalive( player ) &&
                  ( !isdefined( player.eztb_status_count ) || player.eztb_status_count != count ) )
             {
-                player iprintlnbold( "^2EZTB active - teammate bots: " + count );
+                if ( !isdefined( player.eztb_status_hud ) )
+                {
+                    player.eztb_status_hud = newclienthudelem( player );
+                    player.eztb_status_hud.horzalign = "user_left";
+                    player.eztb_status_hud.vertalign = "user_top";
+                    player.eztb_status_hud.x = 20;
+                    player.eztb_status_hud.y = 20;
+                    player.eztb_status_hud.alpha = 1;
+                    player.eztb_status_hud.font = "default";
+                    player.eztb_status_hud.fontscale = 1.2;
+                    player.eztb_status_hud.color = ( 0, 1, 0 );
+                    player.eztb_status_hud settext( "EZTB active - teammate bots: " );
+                }
+
+                player.eztb_status_hud setvalue( count );
                 player.eztb_status_count = count;
             }
         }

@@ -78,6 +78,18 @@
     setdvar ezs_include_mp_only 1  only after confirming it is stable
     on your map(s).
 
+    Even with both precache and loadweapons() applied, loadweapons() can
+    still legitimately time out for a specific MP-only weapon on a
+    specific map if that weapon's model/viewmodel/sound assets simply
+    were never built into that map's zone at all (this is an asset-
+    availability limitation of the map data, not something a script can
+    force past). ezs_try_buy()/ezs_upgrade_weapon() detect this with a
+    post-give hasweapon() check: if the weapon still was not actually
+    given, the purchase/upgrade is refunded and the player is told
+    clearly instead of the shop appearing to silently do nothing; a
+    matching println() is logged server-side (search "EZS: failed to
+    give") to help identify which weapon/map combination is affected.
+
     Ownership of MP-only weapons is tracked explicitly per catalog
     weapon ID (self.ezs_mp_owned) rather than by scanning held weapons'
     getweaponbasename() -- several MP-only IDs (the "loot" ones, see
@@ -527,6 +539,23 @@ ezs_try_buy()
     self ezs_give_weapon( var_0 );
     self freezecontrols( 1 );
 
+    if ( isdefined( var_0.mponly ) && var_0.mponly && !self hasweapon( var_0.weapon ) )
+    {
+        /*
+            The weapon's file data genuinely failed to stream in (loadweapons()
+            timed out -- see ezs_wait_load_weapon()), most likely because this
+            particular MP-only weapon's model/viewmodel/sound assets are not
+            part of this map's loaded zone at all, rather than a script bug.
+            Refund the purchase instead of silently charging the player for a
+            weapon they never received, and say so clearly so this doesn't
+            look like "the shop just did nothing".
+        */
+        self.score = self.score + var_1;
+        self iprintlnbold( "^1" + var_0.display + " unavailable on this map (refunded)" );
+        println( "EZS: failed to give MP-only weapon '" + var_0.weapon + "' to " + self.name + " -- asset likely not loaded for this map/gametype." );
+        return 0;
+    }
+
     self iprintlnbold( "^2Bought " + var_0.display );
     return 1;
 }
@@ -707,12 +736,28 @@ ezs_upgrade_weapon()
     }
     else
     {
+        var_7 = var_0.weapon;
+
         if ( isdefined( var_0.mponly ) && var_0.mponly )
         {
-            self ezs_wait_load_weapon( var_0.weapon );
+            self ezs_wait_load_weapon( var_7 );
         }
 
-        maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 0, 1 );
+        maps\mp\zombies\_wall_buys::givezombieweapon( self, var_7, 0, 1 );
+    }
+
+    if ( isdefined( var_0.mponly ) && var_0.mponly && !self hasweapon( var_7 ) )
+    {
+        /*
+            Same asset-streaming failure guarded against in ezs_try_buy() --
+            refund the upgrade cost and say so instead of leaving the player
+            thinking the shop silently ignored their purchase.
+        */
+        self.score = self.score + var_2;
+        self.weaponstate[var_1]["level"] = var_4;
+        self iprintlnbold( "^1" + var_0.display + " upgrade unavailable on this map (refunded)" );
+        println( "EZS: failed to give upgraded MP-only weapon '" + var_7 + "' to " + self.name + " -- asset likely not loaded for this map/gametype." );
+        return 0;
     }
 
     self iprintlnbold( "^2" + var_0.display + " upgraded!" );
