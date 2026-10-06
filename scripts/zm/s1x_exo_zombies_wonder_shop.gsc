@@ -823,12 +823,33 @@ ezs_create_hud()
     self.ezs_hud_info.alpha = 1;
     self.ezs_hud_info.sort = 20;
 
+    // Score changes constantly (every zombie kill), so it must never be
+    // baked into a settext() string: settext() interns each unique string
+    // into the engine's shared configstring table (shared across every
+    // hud/script in the session, hard-capped around 650 entries), and an
+    // always-changing number means an always-new string, which eventually
+    // overflows that table and kicks the player with a
+    // "G_FindConfigstringIndex: overflow" error. setvalue() updates a
+    // numeric field on the hud elem directly with no configstring cost,
+    // same as native score/ammo/kill-counter huds, so the label is set
+    // once here and only the number is refreshed in ezs_render_hud().
+    self.ezs_hud_points = newclienthudelem( self );
+    self.ezs_hud_points.alignx = "center";
+    self.ezs_hud_points.aligny = "middle";
+    self.ezs_hud_points.horzalign = "center";
+    self.ezs_hud_points.vertalign = "middle";
+    self.ezs_hud_points.y = 0;
+    self.ezs_hud_points.fontscale = 1.0;
+    self.ezs_hud_points.alpha = 1;
+    self.ezs_hud_points.sort = 20;
+    self.ezs_hud_points settext( "Your points: " );
+
     self.ezs_hud_help = newclienthudelem( self );
     self.ezs_hud_help.alignx = "center";
     self.ezs_hud_help.aligny = "middle";
     self.ezs_hud_help.horzalign = "center";
     self.ezs_hud_help.vertalign = "middle";
-    self.ezs_hud_help.y = 5;
+    self.ezs_hud_help.y = 20;
     self.ezs_hud_help.fontscale = 0.9;
     self.ezs_hud_help.alpha = 0.8;
     self.ezs_hud_help.sort = 20;
@@ -867,7 +888,8 @@ ezs_render_hud()
         }
     }
 
-    self.ezs_hud_info settext( "Cost: " + var_1 + "   Your points: " + var_2 + "   (" + ( self.ezs_index + 1 ) + "/" + level.ezs_weapons.size + ")" + var_3 );
+    self.ezs_hud_info settext( "Cost: " + var_1 + "   (" + ( self.ezs_index + 1 ) + "/" + level.ezs_weapons.size + ")" + var_3 );
+    self.ezs_hud_points setvalue( var_2 );
 }
 
 
@@ -889,6 +911,12 @@ ezs_destroy_hud()
     {
         self.ezs_hud_info destroy();
         self.ezs_hud_info = undefined;
+    }
+
+    if ( isdefined( self.ezs_hud_points ) )
+    {
+        self.ezs_hud_points destroy();
+        self.ezs_hud_points = undefined;
     }
 
     if ( isdefined( self.ezs_hud_help ) )

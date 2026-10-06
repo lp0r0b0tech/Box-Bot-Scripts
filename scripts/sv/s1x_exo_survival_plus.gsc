@@ -511,12 +511,34 @@ esp_create_hud()
     self.esp_hud_info.alpha = 1;
     self.esp_hud_info.sort = 20;
 
+    // Points change constantly (every armory point earned), so they must
+    // never be baked into a settext() string: settext() interns each
+    // unique string into the engine's shared configstring table (shared
+    // across every hud/script in the session, hard-capped around 650
+    // entries), and an always-changing number means an always-new
+    // string, which eventually overflows that table and kicks the
+    // player with a "G_FindConfigstringIndex: overflow" error.
+    // setvalue() updates a numeric field on the hud elem directly with
+    // no configstring cost, same as native score/ammo/kill-counter
+    // huds, so the label is set once here and only the number is
+    // refreshed in esp_render_hud().
+    self.esp_hud_points = newclienthudelem( self );
+    self.esp_hud_points.alignx = "center";
+    self.esp_hud_points.aligny = "middle";
+    self.esp_hud_points.horzalign = "center";
+    self.esp_hud_points.vertalign = "middle";
+    self.esp_hud_points.y = 0;
+    self.esp_hud_points.fontscale = 1.0;
+    self.esp_hud_points.alpha = 1;
+    self.esp_hud_points.sort = 20;
+    self.esp_hud_points settext( "Your points: " );
+
     self.esp_hud_help = newclienthudelem( self );
     self.esp_hud_help.alignx = "center";
     self.esp_hud_help.aligny = "middle";
     self.esp_hud_help.horzalign = "center";
     self.esp_hud_help.vertalign = "middle";
-    self.esp_hud_help.y = 5;
+    self.esp_hud_help.y = 20;
     self.esp_hud_help.fontscale = 0.9;
     self.esp_hud_help.alpha = 0.8;
     self.esp_hud_help.sort = 20;
@@ -541,7 +563,8 @@ esp_render_hud()
     }
 
     self.esp_hud_item settext( "< " + var_0.display + " >" );
-    self.esp_hud_info settext( "Cost: " + var_1 + "   Your points: " + var_2 + "   (" + ( self.esp_index + 1 ) + "/" + level.esp_weapons.size + ")" );
+    self.esp_hud_info settext( "Cost: " + var_1 + "   (" + ( self.esp_index + 1 ) + "/" + level.esp_weapons.size + ")" );
+    self.esp_hud_points setvalue( var_2 );
 }
 
 
@@ -563,6 +586,12 @@ esp_destroy_hud()
     {
         self.esp_hud_info destroy();
         self.esp_hud_info = undefined;
+    }
+
+    if ( isdefined( self.esp_hud_points ) )
+    {
+        self.esp_hud_points destroy();
+        self.esp_hud_points = undefined;
     }
 
     if ( isdefined( self.esp_hud_help ) )
