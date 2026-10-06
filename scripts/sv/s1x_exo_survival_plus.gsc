@@ -390,26 +390,48 @@ esp_create_hud()
     self.esp_hud_item.alpha = 1;
     self.esp_hud_item.sort = 20;
 
-    self.esp_hud_info = newclienthudelem( self );
-    self.esp_hud_info.alignx = "center";
-    self.esp_hud_info.aligny = "middle";
-    self.esp_hud_info.horzalign = "center";
-    self.esp_hud_info.vertalign = "middle";
-    self.esp_hud_info.y = -15;
-    self.esp_hud_info.fontscale = 1.0;
-    self.esp_hud_info.alpha = 1;
-    self.esp_hud_info.sort = 20;
+    // Changing numbers must use setvalue(), not new configstring text.
+    self.esp_hud_labels = [];
+    self.esp_hud_labels[0] = self esp_create_hud_field( -8, -15, "right" );
+    self.esp_hud_labels[0] settext( "Cost:" );
+    self.esp_hud_cost = self esp_create_hud_field( 8, -15, "left" );
+
+    self.esp_hud_labels[1] = self esp_create_hud_field( -8, 2, "right" );
+    self.esp_hud_labels[1] settext( "Weapon:" );
+    self.esp_hud_slot = self esp_create_hud_field( 8, 2, "left" );
+    self.esp_hud_labels[2] = self esp_create_hud_field( 48, 2, "left" );
+    self.esp_hud_labels[2] settext( "/ " + level.esp_weapons.size );
+
+    self.esp_hud_labels[3] = self esp_create_hud_field( -8, 19, "right" );
+    self.esp_hud_labels[3] settext( "Your points:" );
+    self.esp_hud_points = self esp_create_hud_field( 8, 19, "left" );
 
     self.esp_hud_help = newclienthudelem( self );
     self.esp_hud_help.alignx = "center";
     self.esp_hud_help.aligny = "middle";
     self.esp_hud_help.horzalign = "center";
     self.esp_hud_help.vertalign = "middle";
-    self.esp_hud_help.y = 5;
+    self.esp_hud_help.y = 39;
     self.esp_hud_help.fontscale = 0.9;
     self.esp_hud_help.alpha = 0.8;
     self.esp_hud_help.sort = 20;
     self.esp_hud_help settext( "[FIRE] next  [AIM] prev  [USE] buy  [MELEE] close" );
+}
+
+
+esp_create_hud_field( var_0, var_1, var_2 )
+{
+    var_3 = newclienthudelem( self );
+    var_3.alignx = var_2;
+    var_3.aligny = "middle";
+    var_3.horzalign = "center";
+    var_3.vertalign = "middle";
+    var_3.x = var_0;
+    var_3.y = var_1;
+    var_3.fontscale = 1.0;
+    var_3.alpha = 1;
+    var_3.sort = 20;
+    return var_3;
 }
 
 
@@ -430,7 +452,9 @@ esp_render_hud()
     }
 
     self.esp_hud_item settext( "< " + var_0.display + " >" );
-    self.esp_hud_info settext( "Cost: " + var_1 + "   Your points: " + var_2 + "   (" + ( self.esp_index + 1 ) + "/" + level.esp_weapons.size + ")" );
+    self.esp_hud_cost setvalue( var_1 );
+    self.esp_hud_slot setvalue( self.esp_index + 1 );
+    self.esp_hud_points setvalue( var_2 );
 }
 
 
@@ -439,21 +463,50 @@ esp_destroy_hud()
     if ( isdefined( self.esp_hud_title ) )
     {
         self.esp_hud_title destroy();
+        self.esp_hud_title = undefined;
     }
 
     if ( isdefined( self.esp_hud_item ) )
     {
         self.esp_hud_item destroy();
+        self.esp_hud_item = undefined;
     }
 
-    if ( isdefined( self.esp_hud_info ) )
+    if ( isdefined( self.esp_hud_cost ) )
     {
-        self.esp_hud_info destroy();
+        self.esp_hud_cost destroy();
+        self.esp_hud_cost = undefined;
+    }
+
+    if ( isdefined( self.esp_hud_slot ) )
+    {
+        self.esp_hud_slot destroy();
+        self.esp_hud_slot = undefined;
+    }
+
+    if ( isdefined( self.esp_hud_points ) )
+    {
+        self.esp_hud_points destroy();
+        self.esp_hud_points = undefined;
+    }
+
+    if ( isdefined( self.esp_hud_labels ) )
+    {
+        foreach ( var_0 in self.esp_hud_labels )
+        {
+            if ( isdefined( var_0 ) )
+            {
+                var_0 destroy();
+            }
+        }
+
+        self.esp_hud_labels = undefined;
     }
 
     if ( isdefined( self.esp_hud_help ) )
     {
         self.esp_hud_help destroy();
+        self.esp_hud_help = undefined;
     }
 }
 
