@@ -19,6 +19,7 @@
         [FIRE]                      -> next weapon
         [AIM]                       -> previous weapon
         [USE]                       -> buy the selected weapon
+        [JUMP]                      -> upgrade the selected weapon
         [MELEE]                     -> close the shop
 
     Dvars:
@@ -27,6 +28,20 @@
         ezs_include_mp_only    also sell MP-exclusive DLC weapons
                                 that have no native zombies ("zm")
                                 asset variant                   (default 0)
+        ezs_upgrade_cost       points cost per upgrade level   (default 2500)
+        ezs_upgrade_max_level  max weaponstate level reachable
+                                through the in-shop upgrade      (default 25)
+
+    In-shop upgrade (ezs_upgrade_weapon(), [JUMP]):
+    Pressing [JUMP] on an owned weapon spends ezs_upgrade_cost points and
+    raises that weapon's weaponstate["level"] by one (script-only data,
+    see all_weapon_damage.gsc), using the same Mk2-Mk25 damage curve as
+    the native Pack-a-Punch / upgrade station. Unlike the native kiosk,
+    this never calls getupgradeweaponname()/buildweaponname() to re-skin
+    the weapon with a camo/attachment combo, so there is no weapon-model
+    swap and -- crucially -- no asset lookup that could fail for a
+    weapon base the "zm" camo/attachment tables don't know about. This
+    is what makes the MP-only weapons below safely upgradeable.
 
     MP-exclusive weapons (ezs_include_mp_only):
     Every multiplayer weapon that already has a native zombies ("zm")
@@ -35,15 +50,16 @@
     MP40, M1 Garand, Sten, Lever Action, Repulsor, and the MP-variant
     CEL-3 Cauterizer) and base-game (KF5, EPM3, Exo XMG, MORS, PBW,
     THOR) -- were never ported to Exo Zombies at all: there is no "zm"
-    weapon asset or zombies weaponstate for them anywhere in the game
-    data. Because of that they are kept in a separate, opt-in list and
-    are handed out with a plain giveweapon() (see ezs_give_weapon()
-    below) instead of givezombieweapon(), since calling the zombies
-    weaponstate pipeline on a weapon class it doesn't know about is
-    unsafe. They will NOT be Pack-a-Punch/upgrade-station compatible,
-    and because their assets are not part of any Exo Zombies map's
-    precache, they carry a real risk of client-side errors on some
-    maps -- hence disabled by default. Enable with
+    weapon asset anywhere in the game data. Because of that they are
+    kept in a separate, opt-in list and are handed out with a plain
+    giveweapon() (see ezs_give_weapon() below) plus a plain script-only
+    level-1 weaponstate entry, instead of the full givezombieweapon()
+    pipeline -- that keeps them out of reach of the native physical
+    upgrade kiosk (see the upgrade note above), while still making them
+    upgradeable and damage-scaled through all_weapon_damage.gsc and the
+    [JUMP] upgrade here. Because their assets are not part of any Exo
+    Zombies map's precache, they still carry a real risk of client-side
+    errors on some maps -- hence disabled by default. Enable with
     setdvar ezs_include_mp_only 1  only after confirming it is stable
     on your map(s).
 
@@ -133,6 +149,16 @@ ezs_init()
     if ( getdvar( "ezs_include_mp_only" ) == "" )
     {
         setdvar( "ezs_include_mp_only", "0" );
+    }
+
+    if ( getdvar( "ezs_upgrade_cost" ) == "" )
+    {
+        setdvar( "ezs_upgrade_cost", "2500" );
+    }
+
+    if ( getdvar( "ezs_upgrade_max_level" ) == "" )
+    {
+        setdvar( "ezs_upgrade_max_level", "25" );
     }
 
     ezs_build_weapon_list();
@@ -317,7 +343,7 @@ ezs_open_shop()
     self freezecontrols( 1 );
     self ezs_create_hud();
 
-    while ( self meleebuttonpressed() || self adsbuttonpressed() || self usebuttonpressed() || self attackbuttonpressed() )
+    while ( self meleebuttonpressed() || self adsbuttonpressed() || self usebuttonpressed() || self attackbuttonpressed() || self jumpbuttonpressed() )
     {
         wait 0.05;
     }
@@ -379,6 +405,14 @@ ezs_open_shop()
 
             self ezs_render_hud();
         }
+
+        if ( self jumpbuttonpressed() )
+        {
+            var_1 = gettime();
+            self ezs_upgrade_weapon();
+            self ezs_wait_buttons_released();
+            self ezs_render_hud();
+        }
     }
 
     self ezs_destroy_hud();
@@ -391,7 +425,7 @@ ezs_wait_buttons_released()
 {
     self endon( "disconnect" );
 
-    while ( self attackbuttonpressed() || self adsbuttonpressed() || self usebuttonpressed() )
+    while ( self attackbuttonpressed() || self adsbuttonpressed() || self usebuttonpressed() || self jumpbuttonpressed() )
     {
         wait 0.05;
     }
@@ -437,9 +471,14 @@ ezs_try_buy()
     asset go through the standard zombies weapon-state pipeline so they
     get a proper level-1 weaponstate (Pack-a-Punch/upgrade-station
     compatible). MP-only weapons (no zm asset, see the file header) are
-    handed out with a plain giveweapon() instead -- they are not routed
-    through givezombieweapon() since that pipeline does not know about
-    their weapon class.
+    handed out with a plain giveweapon() instead of givezombieweapon(),
+    then given a plain script-only level-1 weaponstate entry: this is
+    pure data bookkeeping (identical to what createzombieweaponstate()
+    itself does) with no asset lookups, so it is safe for any weapon
+    class. It lets all_weapon_damage.gsc scale their damage with level
+    (see ezs_upgrade_weapon() below) without ever calling the native
+    kiosk's getupgradeweaponname()/buildweaponname() camo/attachment
+    combo lookup, which does not have entries for these weapon bases.
 */
 ezs_give_weapon( var_0 )
 {
@@ -448,10 +487,77 @@ ezs_give_weapon( var_0 )
         self giveweapon( var_0.weapon );
         self givemaxammo( var_0.weapon );
         self switchtoweapon( var_0.weapon );
+
+        var_1 = getweaponbasename( var_0.weapon );
+
+        if ( !isdefined( self.weaponstate[var_1] ) ||
+             !isdefined( self.weaponstate[var_1]["level"] ) )
+        {
+            self.weaponstate[var_1]["level"] = 1;
+        }
+
         return;
     }
 
     maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 1, 1 );
+}
+
+
+/*
+    Script-only weapon upgrade: spends points to raise the weaponstate
+    level of the currently selected (and owned) shop weapon by one, up
+    to AWD_MAX_CUSTOM_MARK (25) so it keeps climbing the exact damage
+    curve all_weapon_damage.gsc already uses for Mk2-Mk25. Unlike the
+    native physical Pack-a-Punch kiosk, this never calls
+    getupgradeweaponname()/buildweaponname() or re-gives a camo/
+    attachment combo weapon name, so there is no re-skin and no asset
+    lookup -- it is safe for every weapon sold here, including the
+    MP-only ones. It works for normal zm weapons too, as a convenience
+    alternate to walking to the in-map kiosk.
+*/
+ezs_upgrade_weapon()
+{
+    var_0 = level.ezs_weapons[self.ezs_index];
+
+    if ( !self ezs_owns_weapon( var_0.weapon ) )
+    {
+        self iprintlnbold( "^1Buy the " + var_0.display + " first" );
+        return 0;
+    }
+
+    var_1 = getweaponbasename( var_0.weapon );
+    var_2 = getdvarint( "ezs_upgrade_cost" );
+    var_3 = getdvarint( "ezs_upgrade_max_level" );
+
+    if ( !isdefined( self.weaponstate[var_1] ) ||
+         !isdefined( self.weaponstate[var_1]["level"] ) )
+    {
+        self.weaponstate[var_1]["level"] = 1;
+    }
+
+    var_4 = self.weaponstate[var_1]["level"];
+
+    if ( var_4 >= var_3 )
+    {
+        self iprintlnbold( "^1" + var_0.display + " is already max level (" + var_3 + ")" );
+        return 0;
+    }
+
+    if ( !isdefined( self.score ) )
+    {
+        self.score = 0;
+    }
+
+    if ( self.score < var_2 )
+    {
+        self iprintlnbold( "^1Not enough points (" + var_2 + " needed to upgrade)" );
+        return 0;
+    }
+
+    self.score = self.score - var_2;
+    self.weaponstate[var_1]["level"] = var_4 + 1;
+    self iprintlnbold( "^2" + var_0.display + " upgraded to level " + ( var_4 + 1 ) );
+    return 1;
 }
 
 
@@ -520,7 +626,7 @@ ezs_create_hud()
     self.ezs_hud_help.fontscale = 0.9;
     self.ezs_hud_help.alpha = 0.8;
     self.ezs_hud_help.sort = 20;
-    self.ezs_hud_help settext( "[FIRE] next  [AIM] prev  [USE] buy  [MELEE] close" );
+    self.ezs_hud_help settext( "[FIRE] next  [AIM] prev  [USE] buy  [JUMP] upgrade  [MELEE] close" );
 }
 
 
@@ -541,7 +647,21 @@ ezs_render_hud()
     }
 
     self.ezs_hud_item settext( "< " + var_0.display + " >" );
-    self.ezs_hud_info settext( "Cost: " + var_1 + "   Your points: " + var_2 + "   (" + ( self.ezs_index + 1 ) + "/" + level.ezs_weapons.size + ")" );
+
+    var_3 = "";
+
+    if ( self ezs_owns_weapon( var_0.weapon ) )
+    {
+        var_4 = getweaponbasename( var_0.weapon );
+
+        if ( isdefined( self.weaponstate[var_4] ) &&
+             isdefined( self.weaponstate[var_4]["level"] ) )
+        {
+            var_3 = "   Level: " + self.weaponstate[var_4]["level"] + "/" + getdvarint( "ezs_upgrade_max_level" );
+        }
+    }
+
+    self.ezs_hud_info settext( "Cost: " + var_1 + "   Your points: " + var_2 + "   (" + ( self.ezs_index + 1 ) + "/" + level.ezs_weapons.size + ")" + var_3 );
 }
 
 
