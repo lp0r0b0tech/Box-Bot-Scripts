@@ -34,14 +34,16 @@
 
     In-shop upgrade (ezs_upgrade_weapon(), [JUMP]):
     Pressing [JUMP] on an owned weapon spends ezs_upgrade_cost points and
-    raises that weapon's weaponstate["level"] by one (script-only data,
-    see all_weapon_damage.gsc), using the same Mk2-Mk25 damage curve as
-    the native Pack-a-Punch / upgrade station. Unlike the native kiosk,
-    this never calls getupgradeweaponname()/buildweaponname() to re-skin
-    the weapon with a camo/attachment combo, so there is no weapon-model
-    swap and -- crucially -- no asset lookup that could fail for a
-    weapon base the "zm" camo/attachment tables don't know about. This
-    is what makes the MP-only weapons below safely upgradeable.
+    raises that weapon's weaponstate["level"] by one, using the same
+    Mk2-Mk25 damage curve as the native Pack-a-Punch / upgrade station
+    (see all_weapon_damage.gsc). For normal roster weapons (native "zm"
+    asset) this also re-gives the weapon through the same
+    getupgradeweaponname()/givezombieweapon() path the physical kiosk
+    uses, so it gets the correct Mk2-25 camo + attachment combo for its
+    new level -- a full visual + functional upgrade without needing to
+    find the in-map kiosk. MP-only weapons (see below) have no "zm" camo
+    table entries, so their level/damage still increases but their
+    appearance does not change.
 
     MP-exclusive weapons (ezs_include_mp_only):
     Every multiplayer weapon that already has a native zombies ("zm")
@@ -504,16 +506,27 @@ ezs_give_weapon( var_0 )
 
 
 /*
-    Script-only weapon upgrade: spends points to raise the weaponstate
-    level of the currently selected (and owned) shop weapon by one, up
-    to AWD_MAX_CUSTOM_MARK (25) so it keeps climbing the exact damage
-    curve all_weapon_damage.gsc already uses for Mk2-Mk25. Unlike the
-    native physical Pack-a-Punch kiosk, this never calls
-    getupgradeweaponname()/buildweaponname() or re-gives a camo/
-    attachment combo weapon name, so there is no re-skin and no asset
-    lookup -- it is safe for every weapon sold here, including the
-    MP-only ones. It works for normal zm weapons too, as a convenience
-    alternate to walking to the in-map kiosk.
+    Weapon upgrade: spends points to raise the weaponstate level of the
+    currently selected (and owned) shop weapon by one, up to
+    ezs_upgrade_max_level (25), using the same Mk2-Mk25 damage curve
+    all_weapon_damage.gsc already applies.
+
+    Normal roster weapons (native "zm" asset) are additionally re-given
+    through the native getupgradeweaponname()/givezombieweapon() path,
+    the exact same camo + attachment combo the physical Pack-a-Punch
+    kiosk would apply for that level -- so they get their proper Mk2-25
+    camo skins here too. This is safe because level.camolevel and the
+    per-weapon camo/attachment lookup tables only have entries for
+    native "zm" weapon bases (maps\mp\zombies\_wall_buys::init() always
+    builds them for every Exo Zombies map, regardless of whether that
+    map has a physical kiosk).
+
+    MP-only weapons (no zm asset, see the file header) are NOT re-skinned:
+    getupgradeweaponname()'s camo/attachment switch statements have no
+    cases for them, so calling it would just fall back to the base
+    weapon name with no attachments -- there is no "unsafe" asset lookup
+    risk either way, but there is also no camo to apply, so they stay
+    script-only (level/damage tracked, visual unchanged).
 */
 ezs_upgrade_weapon()
 {
@@ -555,9 +568,57 @@ ezs_upgrade_weapon()
     }
 
     self.score = self.score - var_2;
-    self.weaponstate[var_1]["level"] = var_4 + 1;
-    self iprintlnbold( "^2" + var_0.display + " upgraded to level " + ( var_4 + 1 ) );
+    var_5 = var_4 + 1;
+
+    if ( isdefined( var_0.mponly ) && var_0.mponly )
+    {
+        self.weaponstate[var_1]["level"] = var_5;
+        self iprintlnbold( "^2" + var_0.display + " upgraded to level " + var_5 );
+        return 1;
+    }
+
+    var_6 = self ezs_find_owned_weapon( var_1 );
+
+    if ( isdefined( var_6 ) )
+    {
+        self takeweapon( var_6 );
+    }
+
+    self.weaponstate[var_1]["level"] = var_5;
+
+    if ( isdefined( level.camolevel ) )
+    {
+        var_7 = maps\mp\zombies\_wall_buys::getupgradeweaponname( self, var_1 );
+        maps\mp\zombies\_wall_buys::givezombieweapon( self, var_7, 0, 1 );
+    }
+    else
+    {
+        maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 0, 1 );
+    }
+
+    self iprintlnbold( "^2" + var_0.display + " upgraded to level " + var_5 );
     return 1;
+}
+
+
+/*
+    Returns the exact weapon name currently owned by the player whose
+    base name matches weaponBaseName (e.g. a scoped/akimbo variant such
+    as "iw5_gm6zm_mp_gm6scope"), or undefined if not owned.
+*/
+ezs_find_owned_weapon( var_0 )
+{
+    var_1 = self getweaponslistprimaries();
+
+    foreach ( var_3 in var_1 )
+    {
+        if ( getweaponbasename( var_3 ) == var_0 )
+        {
+            return var_3;
+        }
+    }
+
+    return undefined;
 }
 
 
