@@ -64,12 +64,17 @@
     "zm"-specific asset lookup anywhere in it, so it works identically
     for any weapon string, zm or not. They are still kept in a separate,
     opt-in list because their assets are not part of any Exo Zombies
-    map's native precache (the gametype skips precaching MP weapons
-    entirely in zombies), so this file precaches all of them itself in
-    main() (see ezs_precache_mp_only_weapons()) before anything else
-    runs -- without that they would silently fail to give/switch to at
-    all. They still carry more risk of client-side issues than the
-    normal roster, hence disabled by default. Enable with
+    map's native precache/preload set (the gametype skips precaching MP
+    weapons entirely in zombies): this file registers them with
+    precacheitem() itself in main() (see ezs_precache_mp_only_weapons())
+    before anything else runs, and additionally streams each one in with
+    the built-in loadweapons() (polled, see ezs_wait_load_weapon()) right
+    before giving/re-giving it -- the same two-step
+    precacheitem()-then-loadweapons() sequence the native horde/gun
+    gametypes use for weapons outside their normal preload set. Without
+    both steps they can silently fail to give/switch to at all. They
+    still carry more risk of client-side issues than the normal roster,
+    hence disabled by default. Enable with
     setdvar ezs_include_mp_only 1  only after confirming it is stable
     on your map(s).
 
@@ -541,15 +546,32 @@ ezs_try_buy()
     the exact same call as every other weapon in this shop -- no separate
     giveweapon()/takeweapon()/cap logic needed for them anymore.
 
-    (This also fixes an MP-only path that previously bypassed
-    givezombieweapon() entirely and just called giveweapon() directly:
-    on some clients the shop reported "bought" but the weapon never
-    actually showed up, because raw giveweapon() does not carry the
-    client-side bookkeeping (ammo/HUD/weaponstate sync) givezombieweapon()
-    performs.)
+    precacheitem() in main() (see ezs_precache_mp_only_weapons()) only
+    registers the weapon names as known/valid network configstrings --
+    confirmed by decompiled usage, it does NOT stream the actual weapon
+    model/viewmodel/sound file data into memory. The real, engine-
+    supported way to force-load a weapon's file data at runtime -- used
+    throughout the native code (maps\mp\gametypes\horde.gsc,
+    maps\mp\gametypes\_horde_util::trygivehordeweapon(),
+    maps\mp\gametypes\gun.gsc, maps\mp\gametypes\_playerlogic.gsc) for
+    exactly this situation, a weapon that is valid but was not part of
+    the player's/gametype's normal preloaded set -- is the built-in
+    loadweapons() function, polled in a while loop until it returns true.
+    Notably horde.gsc itself calls  self loadweapons( [ ..., "iw5_kf5_mp",
+    ..., "iw5_pbw_mp" ] )  for two of this shop's own MP-only weapons,
+    confirming those exact assets are loadable this way mid-match outside
+    their "home" gametype. Without this step giveweapon()/switchtoweapon()
+    can silently do nothing even though the weapon name itself is valid
+    and precached -- which matches the continued "still not giving the mp
+    weapons" report after precacheitem() alone was added.
 */
 ezs_give_weapon( var_0 )
 {
+    if ( isdefined( var_0.mponly ) && var_0.mponly )
+    {
+        self ezs_wait_load_weapon( var_0.weapon );
+    }
+
     maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 1, 1 );
 
     if ( isdefined( var_0.mponly ) && var_0.mponly )
@@ -560,6 +582,27 @@ ezs_give_weapon( var_0 )
         }
 
         self.ezs_mp_owned[var_0.weapon] = 1;
+    }
+}
+
+
+/*
+    Polls the built-in loadweapons() until the given weapon's file data
+    (model/viewmodel/sounds) is actually streamed in, exactly like the
+    native callers above do -- bounded to ~5 seconds (100 frames at a
+    nominal 20fps lower bound) so a genuinely missing/invalid asset on a
+    particular map can't hang the buy/upgrade action forever.
+*/
+ezs_wait_load_weapon( var_0 )
+{
+    self endon( "disconnect" );
+
+    var_1 = 0;
+
+    while ( !self loadweapons( [ var_0 ] ) && var_1 < 100 )
+    {
+        waitframe();
+        var_1++;
     }
 }
 
@@ -654,10 +697,21 @@ ezs_upgrade_weapon()
     if ( isdefined( level.camolevel ) )
     {
         var_7 = maps\mp\zombies\_wall_buys::getupgradeweaponname( self, var_1 );
+
+        if ( isdefined( var_0.mponly ) && var_0.mponly )
+        {
+            self ezs_wait_load_weapon( var_7 );
+        }
+
         maps\mp\zombies\_wall_buys::givezombieweapon( self, var_7, 0, 1 );
     }
     else
     {
+        if ( isdefined( var_0.mponly ) && var_0.mponly )
+        {
+            self ezs_wait_load_weapon( var_0.weapon );
+        }
+
         maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 0, 1 );
     }
 
