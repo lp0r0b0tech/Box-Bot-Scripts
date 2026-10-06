@@ -5,8 +5,8 @@
     Features:
 
     1) Gun Shop
-        Adds every base-game weapon that is missing from the native armory
-        plus every base DLC weapon (AE4, Ohm, M1 Irons, Blunderbuss, STG-44,
+        Adds the Crossbow and selected base DLC weapons
+        (Ohm, M1 Irons, Blunderbuss, STG-44,
         SVO, AK-47, M16, CEL-3 Cauterizer, 1911, MP40, M1 Garand, Sten,
         Lever Action, Repulsor) to a purchasable in-game shop.
 
@@ -21,6 +21,10 @@
             [AIM]                       -> previous weapon
             [USE]                       -> buy the selected weapon
             [MELEE]                     -> close the shop
+
+        The Ohm uses the native [Toggle Grenade Launcher] control to
+        switch between LMG and shotgun modes while the shop is closed.
+        Combat Knife, AE4, and Riot Shield are not sold in this shop.
 
     2) DLC map support
         Makes all 16 DLC multiplayer maps (Havoc, Ascendance, Supremacy,
@@ -118,8 +122,8 @@ esp_init()
     ============================================================
     Gun shop weapon list
     ============================================================
-    Base weapons missing from the native armory, then every
-    base DLC weapon by its GSC name. Base versions only — no
+    Crossbow, then selected base DLC weapons by their GSC names.
+    Base versions only — no
     loot / royalty variants. Note: the internal names of the
     SVO, AK-47, M16 and CEL-3 contain "loot" because Sledgehammer
     packed those base guns into leftover variant slots of
@@ -131,10 +135,7 @@ esp_build_weapon_list()
     level.esp_weapons = [];
 
     esp_add_weapon( "iw5_exocrossbow_mp", "Crossbow" );
-    esp_add_weapon( "iw5_combatknife_mp", "Combat Knife" );
-    esp_add_weapon( "iw5_riotshieldt6_mp", "Riot Shield" );
 
-    esp_add_weapon( "iw5_dlcgun1_mp", "AE4" );
     esp_add_weapon( "iw5_dlcgun2_mp", "Ohm" );
     esp_add_weapon( "iw5_dlcgun3_mp", "M1 Irons" );
     esp_add_weapon( "iw5_dlcgun4_mp", "Blunderbuss" );
@@ -316,12 +317,26 @@ esp_try_buy()
         return 0;
     }
 
+    var_2 = var_0.weapon;
+
+    if ( var_0.weapon == "iw5_dlcgun2_mp" )
+    {
+        // The native builder adds the Ohm's automatic alt-mode attachment.
+        var_2 = maps\mp\gametypes\_class::buildweaponname( "iw5_dlcgun2", "none", "none", "none", 0, 0 );
+    }
+
     self.armorypoints = self.armorypoints - var_1;
     self setclientomnvar( "ui_horde_player_points", self.armorypoints );
 
     self esp_destroy_hud();
     self freezecontrols( 0 );
-    maps\mp\gametypes\_horde_util::trygivehordeweapon( self, var_0.weapon, 1, 1 );
+    maps\mp\gametypes\_horde_util::trygivehordeweapon( self, var_2, 1, 1 );
+
+    if ( var_0.weapon == "iw5_dlcgun2_mp" )
+    {
+        self maps\mp\_utility::_setactionslot( 3, "altMode" );
+    }
+
     self freezecontrols( 1 );
 
     self iprintlnbold( "^2Bought " + var_0.display );
