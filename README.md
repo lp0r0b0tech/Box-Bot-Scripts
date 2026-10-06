@@ -23,9 +23,11 @@ from the shop's roster to `level.magicboxweapons`, preserving existing
 entries. Added weapons use their world models for the printer display.
 If initialization times out, it logs the failure without creating a fake
 pool. Other GSC scripts can call
-`scripts\zm\exo_zombies_dlc_weapons_all_maps::get_map_weapons(dlc)` or
+`scripts\zm\exo_zombies_dlc_weapons_all_maps::get_map_weapons(dlc)` for
+the per-map missing table, `scripts\zm\exo_zombies_dlc_weapons_all_maps::get_dlc_roster()`
+for the complete target roster, or
 `player scripts\zm\exo_zombies_dlc_weapons_all_maps::give_dlc_weapons_to_player(weaponName)`
-to retrieve the target roster or grant one selected, precached weapon.
+to grant one selected, precached weapon.
 
 **Asset prerequisite:** GSC registration and `precacheitem()` do not load
 missing fastfile assets. Your mod must supply every listed weapon, model,
@@ -36,6 +38,6 @@ killstreak weapon. These require compatible mod assets/handling.
 
 Linker declarations such as `weapon,<asset-name>` belong in your mod's
 zone/linker source, **not** in this GSC file. Use the exact `iw5_*zm_mp`
-IDs returned by `get_map_weapons()` rather than substituting MP IDs or
+IDs returned by `get_dlc_roster()` rather than substituting MP IDs or
 unverified names such as `iw5_cellfusion_zm`/`iw5_limbo_zm`.
 This repository contains no zone sources, so none are generated here.

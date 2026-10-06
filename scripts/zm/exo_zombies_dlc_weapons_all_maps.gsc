@@ -27,7 +27,7 @@
     callbacks supplied by the mod; pool registration alone cannot port them.
 
     If printer initialization times out, no guessed pool is created.
-    get_map_weapons(dlc) and player give_dlc_weapons_to_player(weaponName)
+    get_map_weapons(dlc), get_dlc_roster() and the player give helper
     remain available to other scripts. The give helper grants one selected
     roster weapon, not the entire inventory, using native Zombies state.
 */
@@ -65,7 +65,7 @@ init()
     }
 
     // Precache in the loading entrypoint, before the startup thread yields.
-    weapons = get_map_weapons( dlc );
+    weapons = get_dlc_roster();
     level.ezdlc_models = [];
     foreach ( weapon in weapons )
     {
@@ -74,7 +74,7 @@ init()
         precachemodel( level.ezdlc_models[weapon] );
     }
 
-    level thread ezdlc_add_to_printer( weapons );
+    level thread ezdlc_add_to_printer( dlc );
 }
 
 get_map_dlc()
@@ -102,8 +102,33 @@ get_map_weapons( dlc )
         return weapons;
     }
 
-    // Each map targets the same full roster. Its initialized native pool
-    // determines the missing subset, including entries removed by other mods.
+    // These three shop weapons are not native printer entries on any map.
+    weapons = [ "iw5_exominigunzm_mp", "iw5_blunderbusszm_mp", "iw5_titan45zm_mp" ];
+
+    switch ( dlc )
+    {
+        case 1:
+            missing = [ "iw5_dlcgun2zm_mp", "iw5_dlcgun3zm_mp", "iw5_dlcgun4zm_mp",
+                        "iw5_microwavezm_mp", "iw5_linegunzm_mp", "iw5_tridentzm_mp" ];
+            break;
+        case 2:
+            missing = [ "iw5_dlcgun2zm_mp", "iw5_dlcgun3zm_mp", "iw5_dlcgun4zm_mp",
+                        "iw5_linegunzm_mp", "iw5_tridentzm_mp" ];
+            break;
+        case 3:
+            missing = [ "iw5_dlcgun4zm_mp", "iw5_microwavezm_mp", "iw5_tridentzm_mp" ];
+            break;
+        case 4:
+            missing = [ "iw5_microwavezm_mp", "iw5_linegunzm_mp" ];
+            break;
+    }
+
+    return common_scripts\utility::array_combine( weapons, missing );
+}
+
+get_dlc_roster()
+{
+    weapons = [];
     weapons[weapons.size] = "iw5_dlcgun1zm_mp";
     weapons[weapons.size] = "iw5_dlcgun2zm_mp";
     weapons[weapons.size] = "iw5_dlcgun3zm_mp";
@@ -122,7 +147,7 @@ get_map_weapons( dlc )
     return weapons;
 }
 
-ezdlc_add_to_printer( weapons )
+ezdlc_add_to_printer( dlc )
 {
     level endon( "game_ended" );
 
@@ -144,6 +169,9 @@ ezdlc_add_to_printer( weapons )
         return;
     }
 
+    // Prioritize the per-map missing table, then reconcile the full target
+    // roster in case native entries were removed or DLC4 assets were gated.
+    weapons = common_scripts\utility::array_combine( get_map_weapons( dlc ), get_dlc_roster() );
     added = 0;
     foreach ( weapon in weapons )
     {
@@ -197,7 +225,7 @@ ezdlc_pool_contains( weapon )
 
 give_dlc_weapons_to_player( weaponName )
 {
-    if ( !isplayer( self ) || !isalive( self ) || get_map_dlc() == 0 ||
+    if ( !isdefined( weaponName ) || !isplayer( self ) || !isalive( self ) || get_map_dlc() == 0 ||
          getdvar( "g_gametype" ) != "zombies" ||
          getdvarint( "scr_zm_dlc_weapons_enabled" ) <= 0 ||
          !isdefined( level.ezdlc_models ) || !isdefined( level.ezdlc_models[weaponName] ) ||
