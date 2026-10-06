@@ -585,6 +585,22 @@ ezs_give_weapon( var_0 )
     validates the resulting asset name with isvalidweapon() before
     using it, falling back to the current (unchanged) weapon if that
     exact camo variant does not exist.
+
+    NOTE: the "upgraded" toast deliberately does NOT include the new
+    level number. iprintlnbold()/iprintln() share the exact same
+    engine configstring table settext() does (confirmed via the
+    G_FindConfigstringIndex: overflow error, which is raised by both);
+    baking var_5 (the new level, 1-25) into that toast text means up
+    to 25 distinct strings PER weapon -- up to 1250 across the full
+    50-weapon roster -- which was by far the single largest remaining
+    contributor to that table filling up over a long play session
+    (confirmed by a user screenshot showing the overflow triggered by
+    "< HMR9 >", i.e. a plain weapon-name string, meaning the table was
+    already saturated by something else before that bounded, ~70-string
+    total from every weapon's shop-menu display name was even fully
+    used). The live level is already shown continuously on the HUD via
+    ezs_hud_level setvalue() (see ezs_render_hud()), so dropping it from
+    the one-shot toast loses no information the player can't already see.
 */
 ezs_upgrade_weapon()
 {
@@ -648,7 +664,7 @@ ezs_upgrade_weapon()
             self switchtoweapon( var_8 );
         }
 
-        self iprintlnbold( "^2" + var_0.display + " upgraded to level " + var_5 );
+        self iprintlnbold( "^2" + var_0.display + " upgraded!" );
         return 1;
     }
 
@@ -671,7 +687,7 @@ ezs_upgrade_weapon()
         maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 0, 1 );
     }
 
-    self iprintlnbold( "^2" + var_0.display + " upgraded to level " + var_5 );
+    self iprintlnbold( "^2" + var_0.display + " upgraded!" );
     return 1;
 }
 
