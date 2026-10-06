@@ -1,5 +1,5 @@
 /*
-    Shared Exo Zombies DLC weapon pool for S1x / H1-Mod.
+    Missing regular and DLC multiplayer weapons for Exo Zombies.
 
     Place this file at:
         s1/scripts/zm/exo_zombies_dlc_weapons_all_maps.gsc
@@ -18,13 +18,17 @@
     Added entries use weapon world models instead of DLC-only holograms.
 
     IMPORTANT: This script does not link assets into a map's fastfile.
-    All roster weapons, models and upgrade variants must already be loaded
-    by the installed mod. precacheitem() cannot supply missing assets.
-    The shop's iw5_blunderbusszm_mp is retained as requested, but the
-    stock DLC4 Blunderbuss is iw5_dlcgun4zm_mp; the former needs a mod asset.
-    Exo Minigun normally belongs to the Goliath killstreak. Cross-map
-    Microwave, Line Gun and Trident also need their native behavior/FX
-    callbacks supplied by the mod; pool registration alone cannot port them.
+    All MP weapons, models and native Zombies upgrade camo combinations
+    must already be loaded by the installed mod. precacheitem() cannot
+    supply missing assets. MP upgrade support is mod-dependent, not a
+    claim that these weapons have stock Zombies Mk2-Mk25 variants.
+    Native Zombies pickups and upgrade bookkeeping remain in control.
+
+    Uses the regular/DLC MP catalog from the repository's Gun Game script,
+    not the Zombies shop roster. One registered representative per weapon
+    family is used, not every cosmetic loot variant. MP and zm versions
+    already in the printer count as the same family. Wonder weapons,
+    grenades and Goliath weapons are not added by this script.
 
     If printer initialization times out, no guessed pool is created.
     get_map_weapons(dlc), get_dlc_roster() and the player give helper
@@ -65,7 +69,8 @@ init()
     }
 
     // Precache in the loading entrypoint, before the startup thread yields.
-    weapons = get_dlc_roster();
+    weapons = ezdlc_registered_mp_weapons();
+    level.ezdlc_weapons = weapons;
     level.ezdlc_models = [];
     foreach ( weapon in weapons )
     {
@@ -102,47 +107,80 @@ get_map_weapons( dlc )
         return weapons;
     }
 
-    // These three shop weapons are not native printer entries on any map.
-    weapons = [ "iw5_exominigunzm_mp", "iw5_blunderbusszm_mp", "iw5_titan45zm_mp" ];
-
-    switch ( dlc )
-    {
-        case 1:
-            missing = [ "iw5_dlcgun2zm_mp", "iw5_dlcgun3zm_mp", "iw5_dlcgun4zm_mp",
-                        "iw5_microwavezm_mp", "iw5_linegunzm_mp", "iw5_tridentzm_mp" ];
-            break;
-        case 2:
-            missing = [ "iw5_dlcgun2zm_mp", "iw5_dlcgun3zm_mp", "iw5_dlcgun4zm_mp",
-                        "iw5_linegunzm_mp", "iw5_tridentzm_mp" ];
-            break;
-        case 3:
-            missing = [ "iw5_dlcgun4zm_mp", "iw5_microwavezm_mp", "iw5_tridentzm_mp" ];
-            break;
-        case 4:
-            missing = [ "iw5_microwavezm_mp", "iw5_linegunzm_mp" ];
-            break;
-    }
-
-    return common_scripts\utility::array_combine( weapons, missing );
+    // All four maps target the MP catalog; the runtime pool determines
+    // which families are missing, including differences introduced by mods.
+    return get_mp_roster();
 }
 
 get_dlc_roster()
 {
+    // Keep the original public helper name available to existing callers.
+    return get_mp_roster();
+}
+
+get_mp_roster()
+{
+    weapons = [
+        "iw5_ak12_mp", "iw5_arx160_mp", "iw5_bal27_mp", "iw5_hbra3_mp",
+        "iw5_himar_mp", "iw5_m182spr_mp", "iw5_asm1_mp", "iw5_hmr9_mp",
+        "iw5_kf5_mp", "iw5_mp11_mp", "iw5_sac3_mp", "iw5_sn6_mp",
+        "iw5_asaw_mp", "iw5_em1_mp", "iw5_epm3_mp", "iw5_exoxmg_mp",
+        "iw5_lsat_mp", "iw5_rhino_mp", "iw5_gm6_mp", "iw5_m990_mp",
+        "iw5_mors_mp", "iw5_maul_mp", "iw5_uts19_mp", "iw5_rw1_mp",
+        "iw5_titan45_mp", "iw5_vbr_mp", "iw5_pbw_mp", "iw5_maaws_mp",
+        "iw5_mahem_mp", "iw5_stingerm7_mp", "iw5_exocrossbow_mp",
+        "iw5_microdronelauncher_mp", "iw5_combatknife_mp", "iw5_riotshieldt6_mp",
+        "iw5_thor_mp",
+        "iw5_dlcgun1_mp", "iw5_dlcgun2_mp", "iw5_dlcgun3_mp", "iw5_dlcgun4_mp",
+        "iw5_dlcgun6_mp", "iw5_dlcgun7_mp", "iw5_dlcgun8_mp",
+        "iw5_dlcgun13_mp", "iw5_dlcgun18_mp", "iw5_dlcgun23_mp",
+        "iw5_dlcgun28_mp", "iw5_dlcgun33_mp", "iw5_dlcgun38_mp"
+    ];
+    return weapons;
+}
+
+ezdlc_registered_mp_weapons()
+{
+    registered = [];
+    representatives = [];
+    table = "mp/statstable.csv";
+    for ( row = 0; row < tablegetrowcount( table ); row++ )
+    {
+        name = tablelookupbyrow( table, row, 4 );
+        category = tablelookupbyrow( table, row, 2 );
+        if ( !isdefined( name ) || name == "" ||
+             getsubstr( name, 0, 4 ) != "iw5_" ||
+             !isdefined( category ) || !issubstr( category, "weapon_" ) ||
+             tablelookupbyrow( table, row, 51 ) != "" ||
+             issubstr( name, "zm_mp" ) )
+        {
+            continue;
+        }
+
+        family = maps\mp\_utility::getbaseweaponname( name, 1 );
+        registered[name] = true;
+        if ( !isdefined( representatives[family] ) )
+        {
+            representatives[family] = name;
+        }
+    }
+
     weapons = [];
-    weapons[weapons.size] = "iw5_dlcgun1zm_mp";
-    weapons[weapons.size] = "iw5_dlcgun2zm_mp";
-    weapons[weapons.size] = "iw5_dlcgun3zm_mp";
-    weapons[weapons.size] = "iw5_dlcgun4zm_mp";
-    weapons[weapons.size] = "iw5_exominigunzm_mp";
-    weapons[weapons.size] = "iw5_blunderbusszm_mp";
-    weapons[weapons.size] = "iw5_fusionzm_mp";
-    weapons[weapons.size] = "iw5_microwavezm_mp";
-    weapons[weapons.size] = "iw5_linegunzm_mp";
-    weapons[weapons.size] = "iw5_tridentzm_mp";
-    weapons[weapons.size] = "iw5_exocrossbowzm_mp";
-    weapons[weapons.size] = "iw5_mahemzm_mp";
-    weapons[weapons.size] = "iw5_titan45zm_mp";
-    weapons[weapons.size] = "iw5_em1zm_mp";
+    foreach ( family in get_mp_roster() )
+    {
+        if ( isdefined( registered[family] ) )
+        {
+            weapons[weapons.size] = family;
+        }
+        else if ( isdefined( representatives[family] ) )
+        {
+            weapons[weapons.size] = representatives[family];
+        }
+        else
+        {
+            println( "DLCWeapons: skipping unregistered MP family " + family );
+        }
+    }
 
     return weapons;
 }
@@ -169,9 +207,7 @@ ezdlc_add_to_printer( dlc )
         return;
     }
 
-    // Prioritize the per-map missing table, then reconcile the full target
-    // roster in case native entries were removed or DLC4 assets were gated.
-    weapons = common_scripts\utility::array_combine( get_map_weapons( dlc ), get_dlc_roster() );
+    weapons = level.ezdlc_weapons;
     added = 0;
     foreach ( weapon in weapons )
     {
@@ -180,22 +216,11 @@ ezdlc_add_to_printer( dlc )
             continue;
         }
 
-        limit = undefined;
-        if ( weapon == "iw5_microwavezm_mp" )
-        {
-            limit = 1;
-        }
-        else if ( weapon == "iw5_fusionzm_mp" || weapon == "iw5_linegunzm_mp" ||
-                  weapon == "iw5_tridentzm_mp" || weapon == "iw5_dlcgun4zm_mp" )
-        {
-            limit = 2;
-        }
-
         // Native registration appends "_mp" and builds attachment metadata.
         baseName = getsubstr( weapon, 0, weapon.size - 3 );
         maps\mp\zombies\_wall_buys::addmagicboxweapon(
             baseName, level.ezdlc_models[weapon], getweapondisplayname( weapon ),
-            "none", "none", "none", limit );
+            "none", "none", "none", undefined );
         added++;
 
         if ( getdvarint( "scr_zm_dlc_weapons_debug" ) > 0 )
@@ -210,17 +235,27 @@ ezdlc_add_to_printer( dlc )
 
 ezdlc_pool_contains( weapon )
 {
+    family = ezdlc_weapon_family( weapon );
     foreach ( entry in level.magicboxweapons )
     {
-        if ( ( isdefined( entry["baseName"] ) && entry["baseName"] == weapon ) ||
-             ( isdefined( entry["fullName"] ) && getweaponbasename( entry["fullName"] ) == weapon ) ||
-             ( isdefined( entry["baseNameNoMP"] ) && entry["baseNameNoMP"] + "_mp" == weapon ) )
+        if ( ( isdefined( entry["baseName"] ) && ezdlc_weapon_family( entry["baseName"] ) == family ) ||
+             ( isdefined( entry["fullName"] ) && ezdlc_weapon_family( getweaponbasename( entry["fullName"] ) ) == family ) ||
+             ( isdefined( entry["baseNameNoMP"] ) && ezdlc_weapon_family( entry["baseNameNoMP"] + "_mp" ) == family ) )
         {
             return true;
         }
     }
 
     return false;
+}
+
+ezdlc_weapon_family( weapon )
+{
+    if ( weapon.size > 5 && getsubstr( weapon, weapon.size - 5 ) == "zm_mp" )
+    {
+        weapon = getsubstr( weapon, 0, weapon.size - 5 ) + "_mp";
+    }
+    return maps\mp\_utility::getbaseweaponname( weapon, 1 );
 }
 
 give_dlc_weapons_to_player( weaponName )
