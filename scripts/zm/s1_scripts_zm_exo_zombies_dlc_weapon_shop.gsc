@@ -69,6 +69,27 @@ dlcws_init_dvars()
     Same base Exo Zombies weapon roster used by the Mk2-Mk25 damage
     system, minus melee / knife / last-stand entries which are not
     sold in the shop.
+
+    Two entries are deliberately NOT sold here:
+      - "iw5_blunderbusszm_mp" is not a real weapon id -- it does not
+        appear anywhere in the native level.weaponnamemap table (the
+        authoritative list of every valid zombies weapon/equipment
+        string, verified via github.com/mjkzy/s1-gsc-dump
+        decompiled/maps/mp/zombies/_wall_buys.gsc). The actual
+        Blunderbuss is "iw5_dlcgun4zm_mp" (confirmed via the native
+        per-kill dialog check for that exact id in _zombies_audio.gsc),
+        which is sold below, correctly labeled "Blunderbuss". Selling
+        the bogus id as well silently gives nothing playable when
+        purchased.
+      - "iw5_exominigunzm_mp" (Exo Minigun) is the Goliath killstreak
+        suit's weapon: per the native
+        decompiled/maps/mp/zombies/killstreaks/_zombie_goliath_suit.gsc,
+        it only works after the player's model is swapped to
+        "npc_exo_armor_mp_base" and the weapon is attached to that
+        model's arm/barrel tags -- dlcws_try_purchase()'s plain
+        giveweapon() call never does that swap, so giving this id
+        standalone leaves the player with a non-functional/visually
+        broken weapon.
 */
 dlcws_build_weapon_list()
 {
@@ -113,10 +134,7 @@ dlcws_build_weapon_list()
     dlcws_add_weapon( "iw5_dlcgun1zm_mp", "DLC Weapon I" );
     dlcws_add_weapon( "iw5_dlcgun2zm_mp", "DLC Weapon II" );
     dlcws_add_weapon( "iw5_dlcgun3zm_mp", "DLC Weapon III" );
-    dlcws_add_weapon( "iw5_dlcgun4zm_mp", "DLC Weapon IV" );
-
-    dlcws_add_weapon( "iw5_exominigunzm_mp", "Exo Minigun" );
-    dlcws_add_weapon( "iw5_blunderbusszm_mp", "Blunderbuss" );
+    dlcws_add_weapon( "iw5_dlcgun4zm_mp", "Blunderbuss" );
 }
 
 dlcws_add_weapon( weaponName, displayName )
