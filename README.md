@@ -1,6 +1,36 @@
 put scripts folder into s1 folder
 put bots.txt in s1 folder 2
 
+## Single-weapon diagnostic (multiplayer MORS)
+
+Use `scripts/zm/exo_zombies_single_weapon_test.gsc` in a **private test match**.
+Install it in the same auto-loaded directory as an already-working Zombies
+script on your client (the repository convention is `s1/scripts/zm/`;
+CB launcher layouts may differ). Restart the map after installation.
+Temporarily move other custom scripts, including the shared MP printer script,
+out of the loader directory so unrelated errors cannot interfere with the test.
+
+Set `scr_zm_single_weapon_test_enabled 1` before loading the map (default `1`);
+set it to `0` to disable. Supports Outbreak (`mp_zombie_lab`), Infection
+(`mp_zombie_brg`), Carrier (`mp_zombie_ark`) and Descent (`mp_zombie_h2o`).
+It automatically attempts to give **only `iw5_mors_mp`**, once per human
+connection after a live spawn; bots are skipped. The native Zombies giver
+may replace your equipped primary if your weapon slots are full.
+
+Look for console markers prefixed `[EZWT]`:
+`MAIN`, `INIT`, `READY`, `PLAYER`, `GIVE_BEGIN`, `GIVE_RETURNED`, `OWNED`,
+and `EQUIPPED`. `SKIP`, `DISABLED`, `TIMEOUT`, `NOT_OWNED` or `NOT_EQUIPPED`
+explain where the test stopped or what check failed.
+No `MAIN` marker means entrypoint execution was not observed: check the
+loader path and compilation logs. A missing `GIVE_RETURNED` means the native
+grant did not finish; it does **not** by itself prove missing assets.
+
+This test does not precache or load assets, change the printer, or add upgrade
+support. Missing assets can cause script errors or crashes. **Do not upgrade
+the test weapon.** Even `EQUIPPED` does not prove it can fire or animate.
+Send the full `[EZWT]` output and any script/engine errors, your map name,
+and whether the weapon appeared and fired. Remove the test after diagnosis.
+
 ## Missing multiplayer weapons in Exo Zombies
 
 Install `scripts/zm/exo_zombies_dlc_weapons_all_maps.gsc` at
