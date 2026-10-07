@@ -4,7 +4,10 @@
 
     A self-contained points shop that sells the 4 true wonder weapons from
     the Exo Zombies DLC maps (KL03-Trident, CEL-3 Cauterizer, Magnetron,
-    LZ-52 Limbo), for a flat 1000-point cost per weapon.
+    LZ-52 Limbo), plus the rest of the DLC-map-exclusive magic box weapons
+    added to every map by scripts/zm/exo_zombies_dlc_weapons_all_maps.gsc
+    (DLC Gun II, DLC Gun III, Blunderbuss/DLC Gun IV, Repulsor), and EM1,
+    for a flat 1000-point cost per weapon.
 
     Modeled on the Exo Survival Plus gun shop (s1x_exo_survival_plus.gsc):
     same cursor-based menu, but weapons are purchased with zombies score
@@ -28,13 +31,20 @@
     been removed. Weapons purchased here can still be upgraded the normal
     way, at a physical Pack-a-Punch / upgrade station in the map.
 
-    NOTE: This shop only sells the 4 wonder weapons -- every weapon here
-    has a native zombies ("zm") asset variant. The rest of the base Exo
-    Zombies DLC armory (RW1, VBR, GM6, Rhino, LSAT, ASAW, AK12, BAL-27,
-    Himar, ARX-160, HBRa3, M182 SPR, MP11, ASM1, SN6, SAC3, HMR9, Maul,
-    UTS-19, EM1, Titan 45, Exo Crossbow, MAHEM, the 4 DLC weapons, Exo
-    Minigun, Blunderbuss) has been removed from this shop's roster per
-    user request. MP-only weapons (multiplayer weapons with no "zm"
+    NOTE: This shop sells the 4 wonder weapons, every DLC-map-exclusive
+    magic box weapon (DLC Gun II, DLC Gun III, Blunderbuss/DLC Gun IV,
+    Repulsor), and EM1 -- every weapon here has a native zombies ("zm")
+    asset variant. The rest of the base Exo Zombies DLC armory (RW1, VBR,
+    GM6, Rhino, LSAT, ASAW, AK12, BAL-27, Himar, ARX-160, HBRa3, M182 SPR,
+    MP11, ASM1, SN6, SAC3, HMR9, Maul, UTS-19, Titan 45, Exo Crossbow,
+    MAHEM, Exo Minigun) has been removed from this shop's roster per
+    user request. Repulsor is zombies *tactical equipment*, not a primary
+    weapon (confirmed via the native maps\mp\zombies\_util::iszombietactical()
+    switch), so it is given/owned through the separate
+    givezombieequipment()/gettacticalweapon() path instead of the
+    primary-weapon givezombieweapon() path used for every other weapon
+    here -- see ezs_give_weapon()/ezs_owns_weapon(). MP-only weapons
+    (multiplayer weapons with no "zm"
     variant, e.g. PBW, THOR, the MP-exclusive DLC guns) were previously
     offered behind an opt-in
     ezs_include_mp_only dvar, but their assets are not reliably part of
@@ -148,9 +158,13 @@ ezs_init()
     Wonder shop weapon list
     ============================================================
     The 4 true DLC wonder weapons (KL03-Trident, CEL-3 Cauterizer,
-    Magnetron, LZ-52 Limbo). See the file header NOTE for why the
-    rest of the base Exo Zombies DLC armory and the MP-only weapon
-    catalog are not sold here.
+    Magnetron, LZ-52 Limbo), every DLC-map-exclusive magic box weapon
+    added to all maps by scripts/zm/exo_zombies_dlc_weapons_all_maps.gsc
+    (DLC Gun II, DLC Gun III, Blunderbuss, Repulsor), and EM1. See the
+    file header NOTE for why the rest of the base Exo Zombies DLC armory
+    and the MP-only weapon catalog are not sold here, and for why
+    Repulsor (tactical equipment, not a primary weapon) is flagged with
+    .equipment below.
 */
 ezs_build_weapon_list()
 {
@@ -160,6 +174,11 @@ ezs_build_weapon_list()
     ezs_add_weapon( "iw5_fusionzm_mp", "CEL-3 Cauterizer" );
     ezs_add_weapon( "iw5_microwavezm_mp", "Magnetron" );
     ezs_add_weapon( "iw5_linegunzm_mp", "LZ-52 Limbo" );
+    ezs_add_weapon( "iw5_dlcgun2zm_mp", "DLC Weapon II" );
+    ezs_add_weapon( "iw5_dlcgun3zm_mp", "DLC Weapon III" );
+    ezs_add_weapon( "iw5_dlcgun4zm_mp", "Blunderbuss" );
+    ezs_add_weapon( "iw5_em1zm_mp", "EM1" );
+    ezs_add_weapon( "repulsor_zombie_mp", "Repulsor" );
 }
 
 
@@ -168,6 +187,7 @@ ezs_add_weapon( var_0, var_1 )
     var_2 = spawnstruct();
     var_2.weapon = var_0;
     var_2.display = var_1;
+    var_2.equipment = maps\mp\zombies\_util::iszombieequipment( var_0 );
     level.ezs_weapons[level.ezs_weapons.size] = var_2;
 }
 
@@ -361,19 +381,35 @@ ezs_try_buy()
     asset lookup anywhere -- verified against the decompiled source: none
     of those functions do anything but call the generic engine
     giveweapon()/takeweapon()/weaponstate[] on whatever weapon string is
-    passed in. Every weapon sold by this shop has a native "zm" zombies
-    asset variant (see ezs_build_weapon_list()), so a plain
+    passed in. Every regular weapon sold by this shop has a native "zm"
+    zombies asset variant (see ezs_build_weapon_list()), so a plain
     givezombieweapon() call is always sufficient here -- no precache or
     loadweapons() streaming step is needed.
+
+    Repulsor is zombies tactical equipment, not a primary weapon (per
+    maps\mp\zombies\_util::iszombietactical()), so it is routed to the
+    native givezombieequipment() path instead, which swaps the player's
+    current tactical grenade for it.
 */
 ezs_give_weapon( var_0 )
 {
+    if ( var_0.equipment )
+    {
+        maps\mp\zombies\_wall_buys::givezombieequipment( self, var_0.weapon, 1 );
+        return;
+    }
+
     maps\mp\zombies\_wall_buys::givezombieweapon( self, var_0.weapon, 1, 1 );
 }
 
 
 ezs_owns_weapon( var_0 )
 {
+    if ( var_0.equipment )
+    {
+        return self gettacticalweapon() == var_0.weapon || self getlethalweapon() == var_0.weapon;
+    }
+
     var_1 = getweaponbasename( var_0.weapon );
     var_2 = self getweaponslistprimaries();
 
