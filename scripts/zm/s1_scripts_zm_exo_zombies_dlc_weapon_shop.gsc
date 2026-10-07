@@ -9,12 +9,13 @@
           Exo Zombies DLC weapon (the same roster used by the Mk2-Mk25
           damage system), without requiring any map-specific trigger or
           Radiant placement.
-        - Every purchase costs a flat 5000 points, deducted from
-          self.score, and the chosen weapon/attachment set is handed to
-          the player immediately.
-        - If the chosen weapon is not loaded on the current map (so the
-          player does not actually receive it), the 5000 points are
-          refunded automatically.
+        - Every purchase costs a flat 5000 points, spent through the
+          native Exo Zombies money system (self.moneycurrent), and the
+          chosen weapon is handed to the player immediately via the
+          native givezombieweapon().
+        - Weapons that are not available on the current map (not in the
+          map's magic box or wall buy lists, so not loaded) are never
+          given; the 5000 points are refunded automatically instead.
 
     Controls (per player, once connected and spawned):
         Hold  [Aim] + tap [Melee]  to open the shop.
@@ -116,10 +117,7 @@ dlcws_build_weapon_list()
     dlcws_add_weapon( "iw5_dlcgun1zm_mp", "DLC Weapon I" );
     dlcws_add_weapon( "iw5_dlcgun2zm_mp", "DLC Weapon II" );
     dlcws_add_weapon( "iw5_dlcgun3zm_mp", "DLC Weapon III" );
-    dlcws_add_weapon( "iw5_dlcgun4zm_mp", "DLC Weapon IV" );
-
-    dlcws_add_weapon( "iw5_exominigunzm_mp", "Exo Minigun" );
-    dlcws_add_weapon( "iw5_blunderbusszm_mp", "Blunderbuss" );
+    dlcws_add_weapon( "iw5_dlcgun4zm_mp", "Blunderbuss" );
 }
 
 dlcws_add_weapon( weaponName, displayName )
@@ -206,8 +204,6 @@ dlcws_open_shop()
 
     self.dlcws_shopOpen = true;
     self.dlcws_shopIndex = 0;
-
-    self freezecontrols( true );
 
     self.dlcws_hud = newclienthudelem( self );
     self.dlcws_hud.alignx = "center";
@@ -321,26 +317,22 @@ dlcws_try_purchase( player )
 {
     entry = level.dlcws_weapons[ player.dlcws_shopIndex ];
 
-    if ( !isdefined( player.score ) )
+    if ( !isdefined( player.moneycurrent ) )
     {
-        player.score = 0;
+        return;
     }
 
-    if ( player.score < DLCWS_WEAPON_COST )
+    if ( !player maps\mp\gametypes\zombies::attempttobuy( DLCWS_WEAPON_COST, 1 ) )
     {
         player iprintlnbold( "Not enough points for the " + entry.displayName + "." );
         return;
     }
 
-    player.score -= DLCWS_WEAPON_COST;
-
-    player giveweapon( entry.weaponName );
-
-    // Weapons that are not loaded on this map are silently not given;
+    // Weapons that are not loaded on this map cannot be given safely;
     // refund the points instead of charging for nothing.
-    if ( !player hasweapon( entry.weaponName ) )
+    if ( !dlcws_weapon_on_map( player, entry.weaponName ) )
     {
-        player.score += DLCWS_WEAPON_COST;
+        player maps\mp\gametypes\zombies::givemoney( DLCWS_WEAPON_COST );
         player iprintlnbold( "The " + entry.displayName + " is not available on this map. " + DLCWS_WEAPON_COST + " points refunded." );
 
         if ( getdvarint( "scr_zm_dlc_shop_debug" ) > 0 )
@@ -351,7 +343,7 @@ dlcws_try_purchase( player )
         return;
     }
 
-    player switchtoweapon( entry.weaponName );
+    maps\mp\zombies\_wall_buys::givezombieweapon( player, entry.weaponName );
 
     player iprintln( "Purchased " + entry.displayName + " for " + DLCWS_WEAPON_COST + " points." );
 
@@ -361,6 +353,46 @@ dlcws_try_purchase( player )
     }
 
     dlcws_close_shop( player );
+}
+
+/*
+    A weapon is considered available on the current map when the map
+    itself can hand it out (magic box / printer or wall buy), or the
+    player already holds it - those are the weapons the map has loaded.
+*/
+dlcws_weapon_on_map( player, weaponName )
+{
+    if ( isdefined( level.magicboxweapons ) )
+    {
+        foreach ( boxWeapon in level.magicboxweapons )
+        {
+            if ( isdefined( boxWeapon["baseName"] ) && boxWeapon["baseName"] == weaponName )
+            {
+                return true;
+            }
+        }
+    }
+
+    if ( isdefined( level.wallbuyweapons ) )
+    {
+        foreach ( wallWeapon in level.wallbuyweapons )
+        {
+            if ( isdefined( wallWeapon["baseName"] ) && wallWeapon["baseName"] == weaponName )
+            {
+                return true;
+            }
+        }
+    }
+
+    foreach ( ownedWeapon in player getweaponslistprimaries() )
+    {
+        if ( getweaponbasename( ownedWeapon ) == weaponName )
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 dlcws_close_shop( player )
@@ -383,6 +415,4 @@ dlcws_close_shop( player )
         player.dlcws_hint destroy();
         player.dlcws_hint = undefined;
     }
-
-    player freezecontrols( false );
 }
