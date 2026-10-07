@@ -7,9 +7,9 @@
     CEL-3 Cauterizer, Magnetron, LZ-52 Limbo), the entire base Exo
     Zombies DLC armory (RW1, VBR, GM6, Rhino, LSAT, ASAW, AK12, BAL-27,
     Himar, ARX-160, HBRa3, M182 SPR, MP11, ASM1, SN6, SAC3, HMR9, Maul,
-    UTS-19, EM1, Titan 45, Exo Crossbow, MAHEM, Exo Minigun), every DLC
-    weapon slot (DLC Weapon I-IV, Blunderbuss), and the DLC-map-exclusive
-    Repulsor, for a flat 1000-point cost per weapon.
+    UTS-19, EM1, Titan 45, Exo Crossbow, MAHEM), every DLC weapon slot
+    (DLC Weapon I-III, Blunderbuss), and the DLC-map-exclusive Repulsor,
+    for a flat 1000-point cost per weapon.
 
     Modeled on the Exo Survival Plus gun shop (s1x_exo_survival_plus.gsc):
     same cursor-based menu, but weapons are purchased with zombies score
@@ -160,13 +160,34 @@ ezs_init()
     ============================================================
     The full Exo Zombies weapon roster: the 4 true DLC wonder weapons
     (KL03-Trident, CEL-3 Cauterizer, Magnetron, LZ-52 Limbo), the entire
-    base Exo Zombies DLC armory, every DLC weapon slot (DLC Weapon I-IV,
-    Blunderbuss), and the DLC-map-exclusive Repulsor -- same roster as
-    scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc and
+    base Exo Zombies DLC armory, every DLC weapon slot (DLC Weapon I-III,
+    Blunderbuss/DLC Weapon IV), and the DLC-map-exclusive Repulsor -- same
+    roster as scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc and
     scripts/zm/all_weapon_damage.gsc's Mk2-Mk25 damage system. See the
     file header NOTE for why the MP-only weapon catalog is not sold
     here, and for why Repulsor (tactical equipment, not a primary
     weapon) is flagged with .equipment below.
+
+    Two weapons that s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc also
+    lists are deliberately NOT sold here:
+      - "iw5_blunderbusszm_mp" is not a real weapon id -- it does not
+        appear anywhere in the native level.weaponnamemap table (the
+        authoritative list of every valid zombies weapon/equipment
+        string, verified via github.com/mjkzy/s1-gsc-dump
+        decompiled/maps/mp/zombies/_wall_buys.gsc). The actual
+        Blunderbuss is "iw5_dlcgun4zm_mp" (confirmed via the native
+        per-kill dialog check for that exact id in _zombies_audio.gsc),
+        which is already sold here, now correctly labeled "Blunderbuss".
+        Selling the bogus id as well (as the DLC weapon shop file does)
+        silently gives nothing playable when purchased.
+      - "iw5_exominigunzm_mp" (Exo Minigun) is the Goliath killstreak
+        suit's weapon: per the native
+        decompiled/maps/mp/zombies/killstreaks/_zombie_goliath_suit.gsc,
+        it only works after the player's model is swapped to
+        "npc_exo_armor_mp_base" and the weapon is attached to that
+        model's arm/barrel tags -- givezombieweapon() never does that
+        swap, so giving this id standalone (as a normal shop item)
+        leaves the player with a non-functional/visually broken weapon.
 */
 ezs_build_weapon_list()
 {
@@ -211,10 +232,7 @@ ezs_build_weapon_list()
     ezs_add_weapon( "iw5_dlcgun1zm_mp", "DLC Weapon I" );
     ezs_add_weapon( "iw5_dlcgun2zm_mp", "DLC Weapon II" );
     ezs_add_weapon( "iw5_dlcgun3zm_mp", "DLC Weapon III" );
-    ezs_add_weapon( "iw5_dlcgun4zm_mp", "DLC Weapon IV" );
-
-    ezs_add_weapon( "iw5_exominigunzm_mp", "Exo Minigun" );
-    ezs_add_weapon( "iw5_blunderbusszm_mp", "Blunderbuss" );
+    ezs_add_weapon( "iw5_dlcgun4zm_mp", "Blunderbuss" );
 
     ezs_add_weapon( "repulsor_zombie_mp", "Repulsor" );
 }
