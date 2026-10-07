@@ -9,15 +9,18 @@
           Exo Zombies DLC weapon (the same roster used by the Mk2-Mk25
           damage system), without requiring any map-specific trigger or
           Radiant placement.
-        - Every purchase costs a flat 1000 points, deducted from
+        - Every purchase costs a flat 5000 points, deducted from
           self.score, and the chosen weapon/attachment set is handed to
           the player immediately.
+        - If the chosen weapon is not loaded on the current map (so the
+          player does not actually receive it), the 5000 points are
+          refunded automatically.
 
     Controls (per player, once connected and spawned):
         Hold  [Aim] + tap [Melee]  to open the shop.
         Tap   [Attack]  to move to the next weapon in the list.
         Tap   [Melee]   to move to the previous weapon in the list.
-        Tap   [Use]     to purchase the highlighted weapon for 1000 points.
+        Tap   [Use]     to purchase the highlighted weapon for 5000 points.
         Tap   [Frag]    to close the shop without buying.
 
     Toggles:
@@ -28,7 +31,7 @@
 #define DLCWS_DEFAULT_ENABLED        1
 #define DLCWS_DEFAULT_DEBUG          0
 
-#define DLCWS_WEAPON_COST            1000
+#define DLCWS_WEAPON_COST            5000
 #define DLCWS_POLL_INTERVAL          0.05
 #define DLCWS_IDLE_TIMEOUT_SECONDS   20
 
@@ -332,6 +335,22 @@ dlcws_try_purchase( player )
     player.score -= DLCWS_WEAPON_COST;
 
     player giveweapon( entry.weaponName );
+
+    // Weapons that are not loaded on this map are silently not given;
+    // refund the points instead of charging for nothing.
+    if ( !player hasweapon( entry.weaponName ) )
+    {
+        player.score += DLCWS_WEAPON_COST;
+        player iprintlnbold( "The " + entry.displayName + " is not available on this map. " + DLCWS_WEAPON_COST + " points refunded." );
+
+        if ( getdvarint( "scr_zm_dlc_shop_debug" ) > 0 )
+        {
+            println( "DLCWeaponShop: refunded " + player.name + " for unavailable " + entry.weaponName );
+        }
+
+        return;
+    }
+
     player switchtoweapon( entry.weaponName );
 
     player iprintln( "Purchased " + entry.displayName + " for " + DLCWS_WEAPON_COST + " points." );
