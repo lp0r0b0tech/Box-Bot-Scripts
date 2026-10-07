@@ -2,12 +2,14 @@
     Exo Zombies Wonder Shop - S1x (Call of Duty: Advanced Warfare)
     Gametype: Exo Zombies ("zclassic" / "zteam" etc.)
 
-    A self-contained points shop that sells the 4 true wonder weapons from
-    the Exo Zombies DLC maps (KL03-Trident, CEL-3 Cauterizer, Magnetron,
-    LZ-52 Limbo), plus the rest of the DLC-map-exclusive magic box weapons
-    added to every map by scripts/zm/exo_zombies_dlc_weapons_all_maps.gsc
-    (DLC Gun II, DLC Gun III, Blunderbuss/DLC Gun IV, Repulsor), and EM1,
-    for a flat 1000-point cost per weapon.
+    A self-contained points shop that sells the full Exo Zombies weapon
+    armory: the 4 true wonder weapons from the DLC maps (KL03-Trident,
+    CEL-3 Cauterizer, Magnetron, LZ-52 Limbo), the entire base Exo
+    Zombies DLC armory (RW1, VBR, GM6, Rhino, LSAT, ASAW, AK12, BAL-27,
+    Himar, ARX-160, HBRa3, M182 SPR, MP11, ASM1, SN6, SAC3, HMR9, Maul,
+    UTS-19, EM1, Titan 45, Exo Crossbow, MAHEM, Exo Minigun), every DLC
+    weapon slot (DLC Weapon I-IV, Blunderbuss), and the DLC-map-exclusive
+    Repulsor, for a flat 1000-point cost per weapon.
 
     Modeled on the Exo Survival Plus gun shop (s1x_exo_survival_plus.gsc):
     same cursor-based menu, but weapons are purchased with zombies score
@@ -31,14 +33,13 @@
     been removed. Weapons purchased here can still be upgraded the normal
     way, at a physical Pack-a-Punch / upgrade station in the map.
 
-    NOTE: This shop sells the 4 wonder weapons, every DLC-map-exclusive
-    magic box weapon (DLC Gun II, DLC Gun III, Blunderbuss/DLC Gun IV,
-    Repulsor), and EM1 -- every weapon here has a native zombies ("zm")
-    asset variant. The rest of the base Exo Zombies DLC armory (RW1, VBR,
-    GM6, Rhino, LSAT, ASAW, AK12, BAL-27, Himar, ARX-160, HBRa3, M182 SPR,
-    MP11, ASM1, SN6, SAC3, HMR9, Maul, UTS-19, Titan 45, Exo Crossbow,
-    MAHEM, Exo Minigun) has been removed from this shop's roster per
-    user request. Repulsor is zombies *tactical equipment*, not a primary
+    NOTE: This shop sells the full Exo Zombies weapon roster (see the
+    "Wonder shop weapon list" comment on ezs_build_weapon_list() for the
+    exact list) -- every weapon here has a native zombies ("zm") asset
+    variant, matching the same roster already sold by
+    scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc and used by
+    scripts/zm/all_weapon_damage.gsc's Mk2-Mk25 damage system. Repulsor
+    is zombies *tactical equipment*, not a primary
     weapon (confirmed via the native maps\mp\zombies\_util::iszombietactical()
     switch), so it is given/owned through the separate
     givezombieequipment()/gettacticalweapon() path instead of the
@@ -157,14 +158,15 @@ ezs_init()
     ============================================================
     Wonder shop weapon list
     ============================================================
-    The 4 true DLC wonder weapons (KL03-Trident, CEL-3 Cauterizer,
-    Magnetron, LZ-52 Limbo), every DLC-map-exclusive magic box weapon
-    added to all maps by scripts/zm/exo_zombies_dlc_weapons_all_maps.gsc
-    (DLC Gun II, DLC Gun III, Blunderbuss, Repulsor), and EM1. See the
-    file header NOTE for why the rest of the base Exo Zombies DLC armory
-    and the MP-only weapon catalog are not sold here, and for why
-    Repulsor (tactical equipment, not a primary weapon) is flagged with
-    .equipment below.
+    The full Exo Zombies weapon roster: the 4 true DLC wonder weapons
+    (KL03-Trident, CEL-3 Cauterizer, Magnetron, LZ-52 Limbo), the entire
+    base Exo Zombies DLC armory, every DLC weapon slot (DLC Weapon I-IV,
+    Blunderbuss), and the DLC-map-exclusive Repulsor -- same roster as
+    scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc and
+    scripts/zm/all_weapon_damage.gsc's Mk2-Mk25 damage system. See the
+    file header NOTE for why the MP-only weapon catalog is not sold
+    here, and for why Repulsor (tactical equipment, not a primary
+    weapon) is flagged with .equipment below.
 */
 ezs_build_weapon_list()
 {
@@ -174,10 +176,46 @@ ezs_build_weapon_list()
     ezs_add_weapon( "iw5_fusionzm_mp", "CEL-3 Cauterizer" );
     ezs_add_weapon( "iw5_microwavezm_mp", "Magnetron" );
     ezs_add_weapon( "iw5_linegunzm_mp", "LZ-52 Limbo" );
+
+    ezs_add_weapon( "iw5_rw1zm_mp", "RW1" );
+    ezs_add_weapon( "iw5_vbrzm_mp", "VBR" );
+    ezs_add_weapon( "iw5_gm6zm_mp", "GM6" );
+
+    ezs_add_weapon( "iw5_rhinozm_mp", "Rhino" );
+    ezs_add_weapon( "iw5_lsatzm_mp", "LSAT" );
+    ezs_add_weapon( "iw5_asawzm_mp", "ASAW" );
+
+    ezs_add_weapon( "iw5_ak12zm_mp", "AK12" );
+    ezs_add_weapon( "iw5_bal27zm_mp", "BAL-27" );
+    ezs_add_weapon( "iw5_himarzm_mp", "Himar" );
+    ezs_add_weapon( "iw5_arx160zm_mp", "ARX-160" );
+    ezs_add_weapon( "iw5_hbra3zm_mp", "HBRa3" );
+    ezs_add_weapon( "iw5_m182sprzm_mp", "M182 SPR" );
+
+    ezs_add_weapon( "iw5_mp11zm_mp", "MP11" );
+    ezs_add_weapon( "iw5_asm1zm_mp", "ASM1" );
+    ezs_add_weapon( "iw5_sn6zm_mp", "SN6" );
+    ezs_add_weapon( "iw5_sac3zm_mp", "SAC3" );
+    ezs_add_weapon( "iw5_hmr9zm_mp", "HMR9" );
+
+    ezs_add_weapon( "iw5_maulzm_mp", "Maul" );
+    ezs_add_weapon( "iw5_uts19zm_mp", "UTS-19" );
+
+    ezs_add_weapon( "iw5_em1zm_mp", "EM1" );
+
+    ezs_add_weapon( "iw5_titan45zm_mp", "Titan 45" );
+
+    ezs_add_weapon( "iw5_exocrossbowzm_mp", "Exo Crossbow" );
+    ezs_add_weapon( "iw5_mahemzm_mp", "MAHEM" );
+
+    ezs_add_weapon( "iw5_dlcgun1zm_mp", "DLC Weapon I" );
     ezs_add_weapon( "iw5_dlcgun2zm_mp", "DLC Weapon II" );
     ezs_add_weapon( "iw5_dlcgun3zm_mp", "DLC Weapon III" );
-    ezs_add_weapon( "iw5_dlcgun4zm_mp", "Blunderbuss" );
-    ezs_add_weapon( "iw5_em1zm_mp", "EM1" );
+    ezs_add_weapon( "iw5_dlcgun4zm_mp", "DLC Weapon IV" );
+
+    ezs_add_weapon( "iw5_exominigunzm_mp", "Exo Minigun" );
+    ezs_add_weapon( "iw5_blunderbusszm_mp", "Blunderbuss" );
+
     ezs_add_weapon( "repulsor_zombie_mp", "Repulsor" );
 }
 
