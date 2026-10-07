@@ -6,7 +6,8 @@
         The native Mystery Box (level.magicboxweapons) only ever contains the
         base Exo Zombies weapon roster plus whatever each specific DLC map's
         own script adds through level.initmagicboxweaponsfunc:
-            - the "H2O" map (mp_zombie_h2o) adds Repulsor, DLC Gun II, DLC Gun III
+            - the "H2O" map (mp_zombie_h2o) adds Repulsor, DLC Gun II, DLC Gun III,
+              Trident, and (on nextgen) DLC Gun IV / Blunderbuss
             - the "Ark" map (mp_zombie_ark) adds Line Gun, Repulsor, DLC Gun II, DLC Gun III
             - the "Burgertown" map (mp_zombie_brg) adds Microwave
             - the "Lab" map (mp_zombie_lab) adds nothing extra (base roster only)
@@ -23,10 +24,10 @@
         is pure data (no Radiant/world placement needed) and is already
         populated this same way by every DLC map's own script. It does NOT
         attempt to add the physical wall-buy-only DLC weapons (ARX-160, MP11,
-        HBRa3, HMR9, Maul, M182 SPR, UTS-19, Titan 45, Trident, Exo Minigun,
-        Blunderbuss, the 4 DLC Gun slots used as wall buys, etc.) -- those are
-        tied to a Radiant trigger + world model physically placed in each
-        map's geometry and cannot be added by a loose script.
+        HBRa3, HMR9, Maul, M182 SPR, UTS-19, Titan 45, Exo Minigun, the 4 DLC
+        Gun slots used as wall buys, etc.) -- those are tied to a Radiant
+        trigger + world model physically placed in each map's geometry and
+        cannot be added by a loose script.
 
     Install (s1x):
         Place this file at:
@@ -116,6 +117,8 @@ ezdw_add_missing_weapons()
     ezdw_add_if_missing( "iw5_dlcgun3zm", "npc_m1_irons_base_static_holo", &"ZOMBIE_WEAPONDLC3_GUN", "none", "none", "none" );
     ezdw_add_if_missing( "iw5_linegunzm", "npc_zom_line_gun_holo", &"ZOMBIE_WEAPON_LINEGUN_PICKUP", "none", "none", "none", 2 );
     ezdw_add_if_missing( "iw5_microwavezm", "dlc_npc_microwave_gun_holo", &"ZOMBIES_MWG", "none", "none", "none", 1 );
+    ezdw_add_if_missing( "iw5_tridentzm", "npc_zom_trident_base_holo", &"ZOMBIE_WEAPON_TRIDENT_PICKUP", "none", "none", "none", 2 );
+    ezdw_add_if_missing( "iw5_dlcgun4zm", "npc_blunderbuss_base_holo", &"ZOMBIE_WEAPONDLC4_GUN", "none", "none", "none", 2 );
 }
 
 
