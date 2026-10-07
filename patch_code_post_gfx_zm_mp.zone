@@ -1,0 +1,13 @@
+rawfile,mp/zmbasemaps.arena
+rawfile,start_up_zombies_mp.cfg
+rawfile,switch_to_zombies_mp.cfg
+leaderboarddef,LB_GM_ZOMBIES
+leaderboarddef,LB_GM_ZOMBIES_BESTS
+leaderboarddef,LB_GM_ZOMBIES_2
+leaderboarddef,LB_GM_ZOMBIES_2_BESTS
+leaderboarddef,LB_GM_ZOMBIES_3
+leaderboarddef,LB_GM_ZOMBIES_3_BESTS
+leaderboarddef,LB_GM_ZOMBIES_4
+leaderboarddef,LB_GM_ZOMBIES_4_BESTS
+leaderboarddef,LB_GM_ZOMBIES_4X
+leaderboarddef,LB_GM_ZOMBIES_4X_BESTS

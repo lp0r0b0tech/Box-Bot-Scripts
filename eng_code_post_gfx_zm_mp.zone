@@ -1,0 +1,12 @@
+techset,,2d_pd
+image,zombiefonts_pc
+material,fonts/zombiefonts_pc
+material,fonts/zombiefonts_pc_glow
+font,fonts/zmBodyFont
+font,fonts/zmHeaderFont
+font,fonts/zmHeaderFontLarge
+font,fonts/zmHeaderFontSmall
+font,fonts/zmTitleFont
+font,fonts/zmTitleFontLarge
+font,fonts/zmTitleFontSmall
+rawfile,eng_code_post_gfx_zm_mp

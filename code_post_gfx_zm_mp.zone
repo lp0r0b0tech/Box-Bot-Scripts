@@ -1,0 +1,14 @@
+netconststrings,ncs_snl_code_post_gfx_zm_mp
+techset,,2d_pd
+font,,fonts/zmBodyFont
+font,,fonts/zmHeaderFont
+font,,fonts/zmHeaderFontLarge
+font,,fonts/zmHeaderFontSmall
+font,,fonts/zmTitleFont
+font,,fonts/zmTitleFontLarge
+font,,fonts/zmTitleFontSmall
+sndcurve,,$default
+lpfcurve,,$default
+reverbsendcurve,,$default
+sound,zmb_mus_mainmenu
+rawfile,code_post_gfx_zm_mp
