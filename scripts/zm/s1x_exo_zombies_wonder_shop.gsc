@@ -28,6 +28,9 @@
     Dvars:
         ezs_weapon_cost        points cost per shop weapon   (default 1000)
         ezs_shop_enabled       enable the wonder shop          (default 1)
+        ezs_include_custom_mp_weapons  sell raw MP-only weapon ids that
+                               require a server-side custom ZoneTool zone
+                               (see the MP-only weapon NOTE below)  (default 0)
 
     NOTE: The in-shop upgrade feature (ezs_upgrade_weapon(), [JUMP]) has
     been removed. Weapons purchased here can still be upgraded the normal
@@ -59,6 +62,24 @@
     those weapons back requires getting their assets linked into the
     target map's zone file (a map-build/linker step outside this
     script), not a script change here.
+
+    NOTE: If you *have* done that zone-linking step yourself (e.g. via
+    ZoneTool dumpzone/buildzone/loadzone, pulling "weapon," entries from
+    a real MP zone such as dlc1_mp into a custom
+    custom_mp_weapons_zm.ff that your server loads alongside the Exo
+    Zombies map), you can sell the raw MP-only weapon IDs produced by
+    that zone through the opt-in section gated by the
+    ezs_include_custom_mp_weapons dvar in ezs_build_weapon_list() below.
+    This is OFF by default and should stay off on any server that has
+    not built/loaded that custom zone: if the asset is not actually
+    resident in memory, givezombieweapon() on a raw (non-"zm") id can
+    leave the player holding a non-functional/invisible weapon (the
+    same class of risk described above for the removed MP-only
+    catalog) or, per the user reports earlier in this project, kick
+    the player with a configstring/overflow-style error. Enable it only
+    after confirming in-game that your custom zone actually loaded
+    (e.g. the weapon shows up and fires correctly via a plain console
+    "give <weapon id>" test) before turning this dvar on for players.
 
     NOTE: scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc opens on
     the same Hold [AIM] + press [MELEE] gesture. If that file is also
@@ -141,6 +162,11 @@ ezs_init()
     if ( getdvar( "ezs_shop_enabled" ) == "" )
     {
         setdvar( "ezs_shop_enabled", "1" );
+    }
+
+    if ( getdvar( "ezs_include_custom_mp_weapons" ) == "" )
+    {
+        setdvar( "ezs_include_custom_mp_weapons", "0" );
     }
 
     ezs_build_weapon_list();
@@ -235,6 +261,30 @@ ezs_build_weapon_list()
     ezs_add_weapon( "iw5_dlcgun4zm_mp", "Blunderbuss" );
 
     ezs_add_weapon( "repulsor_zombie_mp", "Repulsor" );
+
+    /*
+        Opt-in custom MP weapon section -- OFF by default.
+
+        These are raw multiplayer weapon ids (no "zm" suffix), not the
+        normal Exo Zombies zombies-asset variants sold above. They only
+        work if this server has separately built and loaded a custom
+        zone (e.g. via ZoneTool dumpzone/buildzone/loadzone) that links
+        these exact weapon assets into memory for the Exo Zombies
+        gametype -- see the file header NOTE above
+        "ezs_include_custom_mp_weapons" for the full explanation and
+        the risk of selling an id whose asset isn't actually resident.
+
+        Labeled "(MP)" so they don't collide with the already-sold
+        "zm" versions of the same guns (AK12, BAL-27, ARX-160, HBRa3)
+        above.
+    */
+    if ( getdvarint( "ezs_include_custom_mp_weapons" ) )
+    {
+        ezs_add_weapon( "iw5_ak12_mp", "AK12 (MP)" );
+        ezs_add_weapon( "iw5_bal27_mp", "BAL-27 (MP)" );
+        ezs_add_weapon( "iw5_arx160_mp", "ARX-160 (MP)" );
+        ezs_add_weapon( "iw5_hbra3_mp", "HBRa3 (MP)" );
+    }
 }
 
 
