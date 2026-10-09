@@ -378,21 +378,13 @@ dlcws_try_purchase( player )
 {
     entry = level.dlcws_weapons[ player.dlcws_shopIndex ];
 
-    if ( !isdefined( player.score ) )
-    {
-        player.score = 0;
-    }
-
-    if ( player.score < DLCWS_WEAPON_COST )
+    if ( !player maps\mp\gametypes\zombies::attempttobuy( DLCWS_WEAPON_COST ) )
     {
         player iprintlnbold( "Not enough points for the " + entry.displayName + "." );
         return;
     }
 
-    player.score -= DLCWS_WEAPON_COST;
-
-    player giveweapon( entry.weaponName );
-    player switchtoweapon( entry.weaponName );
+    maps\mp\zombies\_wall_buys::givezombieweapon( player, entry.weaponName, 0, 1 );
 
     player iprintln( "Purchased " + entry.displayName + " for " + DLCWS_WEAPON_COST + " points." );
 
