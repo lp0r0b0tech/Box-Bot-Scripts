@@ -156,7 +156,7 @@ dlcws_build_weapon_list()
     dlcws_add_weapon( "iw5_lsat_mp", "LSAT" );
     dlcws_add_weapon( "iw5_dlcgun38_mp", "Repulsor" );
     dlcws_add_weapon( "iw5_rhino_mp", "Rhino" );
-    dlcws_add_weapon( "iw5_sac3_mp", "SAC3" );
+    dlcws_add_weapon( "iw5_dlcgun5loot0_mp", "SAC3 Single-Hand" );
     dlcws_add_weapon( "iw5_sn6_mp", "SN6" );
     dlcws_add_weapon( "iw5_dlcgun6_mp", "STG-44" );
     dlcws_add_weapon( "iw5_dlcgun7_mp", "DLC Weapon 7" );
