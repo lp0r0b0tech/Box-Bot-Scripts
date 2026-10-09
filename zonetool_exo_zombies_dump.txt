@@ -1,0 +1,4 @@
+dumpmap mp_zombie_ark
+dumpmap mp_zombie_lab
+dumpmap mp_zombie_h2o
+dumpmap mp_zombie_brg
