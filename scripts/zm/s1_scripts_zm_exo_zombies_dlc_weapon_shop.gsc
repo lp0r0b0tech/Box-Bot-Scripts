@@ -53,6 +53,7 @@ dlcws_init()
 
     dlcws_init_dvars();
     dlcws_build_weapon_list();
+    dlcws_precache_weapon_list();
 
     level thread dlcws_watch_players();
 
@@ -117,6 +118,65 @@ dlcws_build_weapon_list()
 
     dlcws_add_weapon( "iw5_exominigunzm_mp", "Exo Minigun" );
     dlcws_add_weapon( "iw5_blunderbusszm_mp", "Blunderbuss" );
+
+    dlcws_add_weapon( "iw5_dlcgun13_mp", "1911" );
+    dlcws_add_weapon( "iw5_dlcgun1_mp", "AE4" );
+    dlcws_add_weapon( "iw5_dlcgun7loot0_mp", "AK-47" );
+    dlcws_add_weapon( "iw5_ak12_mp", "AK-12" );
+    dlcws_add_weapon( "iw5_hmr9_mp", "HMR9" );
+    dlcws_add_weapon( "iw5_arx160_mp", "ARX-160" );
+    dlcws_add_weapon( "iw5_asaw_mp", "ASAW" );
+    dlcws_add_weapon( "iw5_titan45_mp", "Titan 45" );
+    dlcws_add_weapon( "iw5_dlcgun4_mp", "Blunderbuss" );
+    dlcws_add_weapon( "iw5_pbw_mp", "PBW" );
+    dlcws_add_weapon( "iw5_vbr_mp", "VBR" );
+    dlcws_add_weapon( "iw5_uts19_mp", "UTS-19" );
+    dlcws_add_weapon( "iw5_maul_mp", "Maul" );
+    dlcws_add_weapon( "iw5_dlcgun8loot0_mp", "CEL-3 Cauterizer" );
+    dlcws_add_weapon( "iw5_combatknife_mp", "Combat Knife" );
+    dlcws_add_weapon( "iw5_exocrossbow_mp", "Crossbow" );
+    dlcws_add_weapon( "iw5_em1_mp", "EM1" );
+    dlcws_add_weapon( "iw5_epm3_mp", "EPM3" );
+    dlcws_add_weapon( "iw5_hbra3_mp", "HBRa3" );
+    dlcws_add_weapon( "iw5_riotshieldt6_mp", "Riot Shield" );
+    dlcws_add_weapon( "iw5_himar_mp", "Himar" );
+    dlcws_add_weapon( "iw5_kf5_mp", "KF5" );
+    dlcws_add_weapon( "iw5_dlcgun33_mp", "Lever Action" );
+    dlcws_add_weapon( "iw5_gm6_mp", "GM6" );
+    dlcws_add_weapon( "iw5_dlcgun23_mp", "M1 Garand" );
+    dlcws_add_weapon( "iw5_dlcgun3_mp", "M1 Irons" );
+    dlcws_add_weapon( "iw5_dlcgun8_mp", "DLC Weapon 8" );
+    dlcws_add_weapon( "iw5_maaws_mp", "MAAWS" );
+    dlcws_add_weapon( "iw5_mahem_mp", "MAHEM" );
+    dlcws_add_weapon( "iw5_microdronelauncher_mp", "Micro Drone Launcher" );
+    dlcws_add_weapon( "iw5_m990_mp", "M990" );
+    dlcws_add_weapon( "iw5_mp11_mp", "MP11" );
+    dlcws_add_weapon( "iw5_dlcgun18_mp", "MP40" );
+    dlcws_add_weapon( "iw5_dlcgun2_mp", "Ohm" );
+    dlcws_add_weapon( "iw5_lsat_mp", "LSAT" );
+    dlcws_add_weapon( "iw5_dlcgun38_mp", "Repulsor" );
+    dlcws_add_weapon( "iw5_rhino_mp", "Rhino" );
+    dlcws_add_weapon( "iw5_sac3_mp", "SAC3" );
+    dlcws_add_weapon( "iw5_sn6_mp", "SN6" );
+    dlcws_add_weapon( "iw5_dlcgun6_mp", "STG-44" );
+    dlcws_add_weapon( "iw5_dlcgun7_mp", "DLC Weapon 7" );
+    dlcws_add_weapon( "iw5_stingerm7_mp", "Stinger M7" );
+    dlcws_add_weapon( "iw5_dlcgun28_mp", "Sten" );
+    dlcws_add_weapon( "iw5_asm1_mp", "ASM1" );
+    dlcws_add_weapon( "iw5_m182spr_mp", "M182 SPR" );
+    dlcws_add_weapon( "iw5_mors_mp", "MORS" );
+    dlcws_add_weapon( "iw5_bal27_mp", "BAL-27" );
+    dlcws_add_weapon( "iw5_rw1_mp", "RW1" );
+    dlcws_add_weapon( "iw5_exoxmg_mp", "XMG" );
+    dlcws_add_weapon( "iw5_thor_mp", "Thor" );
+}
+
+dlcws_precache_weapon_list()
+{
+    foreach ( entry in level.dlcws_weapons )
+    {
+        precacheitem( entry.weaponName );
+    }
 }
 
 dlcws_add_weapon( weaponName, displayName )
