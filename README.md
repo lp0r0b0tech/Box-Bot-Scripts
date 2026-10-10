@@ -3,10 +3,11 @@ put bots.txt in s1 folder 2
 
 ## Dump Exo Zombies map assets with ZoneTool
 
-The single-line command is in `zonetool_exo_zombies_dump.txt`. Copy and paste
-that whole line into the x64 ZoneTool console once. The semicolons separate
-commands; each fastfile is dumped for weapon assets with zones unloaded between
-dumps. This is intended to avoid accumulating assets across a full map dump.
+The pasteable commands are in `zonetool_exo_zombies_dump.txt`, split into
+SHARED ZONES, ARK, LAB, H2O, and BRG sections. Copy only one section's command
+line at a time into the x64 ZoneTool console, then wait for it to finish before
+pasting the next section. The semicolons separate commands, and zones are
+unloaded between fastfiles to avoid accumulating assets across the full map.
 
 ZoneTool reads assets from your local game installation; this repository does
 not include extracted game assets. Dumping assets does not rebuild or install
