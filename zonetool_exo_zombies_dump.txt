@@ -1,4 +1,56 @@
-dumpmap mp_zombie_ark
-dumpmap mp_zombie_lab
-dumpmap mp_zombie_h2o
-dumpmap mp_zombie_brg
+unloadzones
+dumpzone s1 code_post_gfx_mp weapon
+unloadzones
+dumpzone s1 patch_common_mp weapon
+unloadzones
+dumpzone s1 common_mp weapon
+unloadzones
+dumpzone s1 techsets_common_core_mp weapon
+unloadzones
+dumpzone s1 eng_mp_zombie_ark weapon
+unloadzones
+dumpzone s1 eng_patch_mp_zombie_ark weapon
+unloadzones
+dumpzone s1 patch_mp_zombie_ark weapon
+unloadzones
+dumpzone s1 mp_zombie_ark_path weapon
+unloadzones
+dumpzone s1 mp_zombie_ark_load weapon
+unloadzones
+dumpzone s1 mp_zombie_ark weapon
+unloadzones
+dumpzone s1 eng_mp_zombie_lab weapon
+unloadzones
+dumpzone s1 eng_patch_mp_zombie_lab weapon
+unloadzones
+dumpzone s1 patch_mp_zombie_lab weapon
+unloadzones
+dumpzone s1 mp_zombie_lab_path weapon
+unloadzones
+dumpzone s1 mp_zombie_lab_load weapon
+unloadzones
+dumpzone s1 mp_zombie_lab weapon
+unloadzones
+dumpzone s1 eng_mp_zombie_h2o weapon
+unloadzones
+dumpzone s1 eng_patch_mp_zombie_h2o weapon
+unloadzones
+dumpzone s1 patch_mp_zombie_h2o weapon
+unloadzones
+dumpzone s1 mp_zombie_h2o_path weapon
+unloadzones
+dumpzone s1 mp_zombie_h2o_load weapon
+unloadzones
+dumpzone s1 mp_zombie_h2o weapon
+unloadzones
+dumpzone s1 eng_mp_zombie_brg weapon
+unloadzones
+dumpzone s1 eng_patch_mp_zombie_brg weapon
+unloadzones
+dumpzone s1 patch_mp_zombie_brg weapon
+unloadzones
+dumpzone s1 mp_zombie_brg_path weapon
+unloadzones
+dumpzone s1 mp_zombie_brg_load weapon
+unloadzones
+dumpzone s1 mp_zombie_brg weapon
