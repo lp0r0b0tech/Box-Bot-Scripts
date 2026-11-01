@@ -1,15 +1,16 @@
 # Loading the Exo Zombies shop weapons with a ZoneTool fastfile
 
-> **Status: built and verified with ZoneTool's own loader, not yet tried in the game.**
-> The pack loads through the game's fastfile loader and contains all 27 shop weapons. Whether the client
-> mounts it as intended (the `fs_game` launch option, a real zombies map, the shop script) still has to be
-> confirmed on the game itself. See [Not verified](#not-verified).
+> **Status: built and verified with ZoneTool's own loader, not yet seen working in the game.**
+> The pack loads through the game's fastfile loader and contains all 27 shop weapons. A first in-game test with
+> the launch option `+set fs_game mods/exo_weapons_all` did **not** mount it. The launch option is now
+> `+loadmod mods/exo_weapons_all`, which has not been tried yet. See [Not verified](#not-verified).
 
 The shop (`scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc`) can only sell a weapon the game has
 loaded. A GSC script cannot load fastfiles, and a zombies map's default fastfiles hold only a few of the shop's
 27 weapons (on `mp_zombie_lab` the runtime log showed 1 of 27 registered). The fix is a fastfile that contains
 all of them. This directory builds one with [ZoneTool](https://github.com/Joelrau/x64-zt):
-`mods/exo_weapons_all/mod.ff`, which the client loads when `fs_game` is `mods/exo_weapons_all`.
+`mods/exo_weapons_all/mod.ff`, which the client loads when graphics assets load (start-up or `vid_restart`) while
+`fs_game` is `mods/exo_weapons_all`.
 
 "The shop" here is the advanced version of that file: the one with the `mods/exo_weapons_*` pack logic that
 writes `s1/dlcws_runtime_status.log` (added to the repository by PR #14). The shorter version that was on `main`
@@ -25,14 +26,15 @@ On the machine where the pack was built:
 zonetool/install-pack.sh        # copies ~/zonetool-workspace/exo_weapons_all.ff to <game>/mods/exo_weapons_all/mod.ff
 ```
 
-Installing the file is not enough: the client only mounts the pack when `fs_game` is `mods/exo_weapons_all`. Until
-then the advanced shop says `Weapon shop pack not loaded (fs_game: none)`. Set it when the game starts:
+Installing the file is not enough: the client only mounts the pack while `fs_game` is `mods/exo_weapons_all` **and
+the renderer (re)starts**. Until then the advanced shop says `Weapon shop pack not loaded`. The `loadmod` command
+does both: it sets `fs_game`, then runs `vid_restart`.
 
 **CB Servers launcher (S1x).** Open the game's page, click the cog wheel (Game Settings), open **Advanced**, and
 type this into **Launch Options**:
 
 ```text
-+set fs_game mods/exo_weapons_all
++loadmod mods/exo_weapons_all
 ```
 
 Then start Zombies from the launcher. The launcher puts that text on the `s1x.exe` command line
@@ -40,13 +42,16 @@ Then start Zombies from the launcher. The launcher puts that text on the `s1x.ex
 saved per game as `aw-launch-options` in `%LOCALAPPDATA%\cbservers\user\properties.json` (on Linux, the same path
 inside the launcher's Proton prefix). Close the launcher before editing that file by hand. Clear the field to undo.
 
-**Any other way of starting `s1x.exe`.** Add `+set fs_game mods/exo_weapons_all` to its command line (for a Steam
+Do **not** use `+set fs_game mods/exo_weapons_all` on its own: it sets the dvar only after the start-up graphics
+load, so nothing mounts the pack (the first test did exactly this). Do not combine `+set fs_game X` with
+`+loadmod X` either: `loadmod` does nothing when `fs_game` already equals its argument.
+
+**Any other way of starting `s1x.exe`.** Add `+loadmod mods/exo_weapons_all` to its command line (for a Steam
 shortcut, its Launch Options).
 
-**From the console** (main menu, not in a match; Multiplayer, Zombies and Survival only, not the campaign):
-`loadmod mods/exo_weapons_all` sets `fs_game` and runs `vid_restart`. It does not restart the process.
-`unloadmod` clears `fs_game` again. This route is less certain than the launch option, because the pack is then
-mounted by a graphics restart rather than at start-up.
+**From the console** (main menu, not in a match; Multiplayer, Zombies and Survival only, not the campaign): run
+`loadmod mods/exo_weapons_all` (or just `vid_restart` when `fs_game` is already `mods/exo_weapons_all`), then start
+the match. It does not restart the process. `unloadmod` clears `fs_game` and restarts the renderer again.
 
 To check it, start Exo Zombies and look at the last block of `s1/dlcws_runtime_status.log` (it is appended to on
 every map start). A working setup logs `fs_game=mods/exo_weapons_all` and 27 `weapon=<id> registered` lines
@@ -155,14 +160,22 @@ CSV's size is not a multiple of 4096. `-verifyzone` doubles as a cheap asset lis
 
 ## Not verified
 
-- **In-game mounting.** The pack has not yet been seen working in the game. A first test started without
-  `fs_game` (the CB Servers launcher passes none unless Launch Options sets it), and the shop correctly logged
-  `fs_game=` and `pack=not_loaded` with one weapon registered. The mounting path is read from the CBServers/s1-mod
-  client source (`src/client/component/mods.cpp`), not run: `<game>/<fs_game>/mod.ff` is added as a zone when
-  graphics assets load, so `fs_game` has to be set at start-up (`+set fs_game mods/exo_weapons_all`) or by `loadmod`,
-  which sets it and runs `vid_restart`. `s1x.exe` contains the matching `mod.ff`, `loadmod` and `unloadmod` strings.
-  It also assumes the client still loads the shop script from `s1/scripts/` while `fs_game` is set. The log's
-  `fs_game=` and `pack=` fields show whether the shop ran against the pack.
+- **In-game mounting.** The pack has not yet been seen working in the game. Test 1 started without `fs_game` (the
+  CB Servers launcher passes none unless Launch Options sets it), and the shop correctly logged `fs_game=` and
+  `pack=not_loaded` with one weapon registered. Test 2 used the launch option `+set fs_game mods/exo_weapons_all`:
+  the log showed `fs_game=mods/exo_weapons_all` but still `pack=not_loaded` on `mp_zombie_lab` with one weapon
+  registered, so the zone was not mounted. The CBServers/s1-mod client source (`src/client/component/mods.cpp`) and
+  the game binary explain it, though neither was run for this: `<game>/<fs_game>/mod.ff` is added as a zone only
+  when graphics assets load, which happens during start-up before the `+` command-line commands run, so a `+set` is
+  too late. `loadmod` sets `fs_game` and then runs `vid_restart`, which loads the graphics assets again with the
+  pack. `+loadmod mods/exo_weapons_all` is the current attempt and is untested; it assumes a `vid_restart` right after
+  start-up is harmless. `s1x.exe` contains the matching `mod.ff`, `loadmod` and `unloadmod` strings. It also assumes
+  the client still loads the shop script from `s1/scripts/` while `fs_game` is set. The log's `fs_game=` and `pack=`
+  fields show whether the shop ran against the pack.
+- **Weapon registration.** Also read from the game binary, not observed: a custom script's `main` and `init` run
+  while the engine still registers a weapon on first use, so the shop's `getweaponbasename(<roster weapon>)` calls
+  should register every roster weapon that a loaded zone defines. If the pack is mounted but the log still shows few
+  registered weapons, look here next.
 - **Duplicate definitions.** The Trident, Line Gun, Microwave and DLC ZM weapons are also defined by their own map
   zones, so on those maps the weapon is defined twice (later load wins, as with the patch zones). Expected to be
   harmless, not tested.

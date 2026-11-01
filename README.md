@@ -29,7 +29,8 @@ weapon assets.
 pack logic) can only sell a weapon the game has loaded, and a GSC cannot load fastfiles. The `zonetool/` folder
 builds `exo_weapons_all.ff` (all 27 of its weapons) with [ZoneTool](https://github.com/Joelrau/x64-zt), to be
 installed as `mods/exo_weapons_all/mod.ff` and selected by starting the game with
-`+set fs_game mods/exo_weapons_all` (in the CB Servers launcher: Game Settings, Advanced, Launch Options).
+`+loadmod mods/exo_weapons_all` (in the CB Servers launcher: Game Settings, Advanced, Launch Options; a plain
+`+set fs_game` does not mount it).
 See [ZONETOOL-LOAD-SHOP-WEAPONS.md](ZONETOOL-LOAD-SHOP-WEAPONS.md). The built
 `.ff` is made of the game's own assets and is not in this repository. It has
-been verified with ZoneTool's loader but not yet tried in the game.
+been verified with ZoneTool's loader but not yet seen working in the game.
