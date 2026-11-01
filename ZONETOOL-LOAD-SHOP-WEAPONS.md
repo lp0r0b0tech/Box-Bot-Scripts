@@ -1,11 +1,12 @@
 # Loading the Exo Zombies shop weapons with a ZoneTool fastfile
 
 > **Status: the pack mounts in the game, but the shop has not been seen working with it yet.**
-> The pack loads through ZoneTool's own loader and contains all 27 shop weapons. In the game,
+> The pack loads through ZoneTool's own loader and contains the 27 shop weapons (plus one helper weapon). In the game,
 > `+set fs_game mods/exo_weapons_all` did **not** mount it, while `+loadmod mods/exo_weapons_all` did (`s1x.exe` had
-> `mod.ff` open). With the first build, Zombies then stopped loading a map with `Exceeded limit of N '<type>' assets`.
-> The current build points every weapon's tracer at the default one to save pool slots (see **Asset pool limits
-> while playing** below) and has not been tried in the game. See [Not verified](#not-verified).
+> `mod.ff` open). Zombies then stopped loading a map with `Exceeded limit of N '<type>' assets`; on the second build N
+> was 5800, the size of the animation pool (`xanim`). The current build empties the weapons' attachment animation
+> overrides to fit that pool (see **Asset pool limits while playing** below) and has not been tried in the game. See
+> [Not verified](#not-verified).
 
 The shop (`scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc`) can only sell a weapon the game has
 loaded. A GSC script cannot load fastfiles, and a zombies map's default fastfiles hold only a few of the shop's
@@ -60,20 +61,22 @@ every map start). A working setup logs `fs_game=mods/exo_weapons_all` and 27 `we
 (`pack=loaded` alone only means that at least one roster weapon is registered, which is also true without the pack).
 To remove the pack, undo the launch option or delete `mods/exo_weapons_all`.
 
-If a map stops loading with `Exceeded limit of N '<type>' assets`, an engine pool is full. The message only appears
-in the error box, so note the type and N, and see **Asset pool limits while playing** in the technical notes.
+If a map stops loading with `Exceeded limit of N '<type>' assets`, an engine pool is full (N = 5800 is the animation
+pool, `xanim`). The message only appears in the error box, so note the type and N, and see
+**Asset pool limits while playing** in the technical notes.
 `zonetool/watch-s1x-fds.sh` (Linux) logs the fastfiles `s1x.exe` opens, in order, which shows what was loaded when
 it stopped.
 
-The `.ff` is 152 MB and consists of the game's own assets, so it is **not committed**. Build it with the
+The `.ff` is 150 MB and consists of the game's own assets, so it is **not committed**. Build it with the
 steps below.
 
 ## What the pack contains
 
 28 weapons: the 27 in the shop roster, plus `iw5_linegundamagezm_mp`, the weapon the Line Gun script fires for
-damage. In total 7,002 assets: 46 attachments, 249 models with their surfaces and 1,551 animations,
+damage. In total 6,293 assets: 46 attachments, 249 models with their surfaces and 842 animations,
 1,789 sounds, 171 effects, 672 images, 388 materials, 139 techsets and their shaders, 58 localized strings and one
-tracer (every weapon's tracer is set to `defaulttracer`, see **Asset pool limits while playing**).
+tracer (every weapon's tracer is set to `defaulttracer` and its attachment animation overrides are empty, see
+**Asset pool limits while playing**).
 
 | Taken from | Weapons (shop name = ID) |
 |---|---|
@@ -115,9 +118,9 @@ export WS="$HOME/zonetool-workspace"
 # 4. Dump the display names of the Trident and Line Gun (they live in the per-map English zones)
 ./dump-localize.sh eng_mp_zombie_h2o eng_mp_zombie_ark
 
-# 5. Add the pack source and the copied Magnetron string, then patch the weapon JSONs: blank the broken camo field
-#    and point every tracer at defaulttracer (patch-weapons.py resolves the CSV's paths relative to the workspace,
-#    so it runs from there)
+# 5. Add the pack source and the copied Magnetron string, then patch the weapon JSONs: blank the broken camo field,
+#    point every tracer at defaulttracer and empty the animOverrides lists (patch-weapons.py resolves the CSV's paths
+#    relative to the workspace, so it runs from there)
 cp -r exo_patch "$WS/dump/"
 cp exo_weapons_all.csv "$WS/zone_source/"
 (cd "$WS" && python3 "$OLDPWD/patch-weapons.py" zone_source/exo_weapons_all.csv dump/exo_patch)
@@ -127,7 +130,7 @@ cp exo_weapons_all.csv "$WS/zone_source/"
 ```
 
 Step 6 ends with a verdict line such as
-`exo_weapons_all: built 152397892 bytes; verify OK after 7002 assets; last=rawfile exo_weapons_all`. The result is
+`exo_weapons_all: built 150286874 bytes; verify OK after 6293 assets; last=rawfile exo_weapons_all`. The result is
 `$WS/exo_weapons_all.ff`; install it with `./install-pack.sh`. A run that crashed or hit an engine "Fatal Error"
 dialog says so in its verdict line and leaves a screenshot in `$WS/logs/fatal-*.png`.
 
@@ -158,33 +161,54 @@ each big zone is dumped in its own process. `-buildzone` has no such limit. Engl
 (limit 64), so `dump-localize.sh` is meant for at most about 10 zones per process, and `unloadzones` must not be
 used between them.
 
-**Asset pool limits while playing.** The engine keeps one fixed-size pool per asset type (a table in
-`s1_mp64_ship.exe`; a script or a pack cannot change it) and stops with `Exceeded limit of N '<type>' assets` when
-one is full. The pools a Zombies map plus this pack come closest to are tracer (32), phys_collmap (256), fx (2,048),
-techset (2,304), xmodelsurfs (5,248), material (11,648) and image (13,792); the shader pools (up to 72,864) stay far
-from full. Read from the binary, not observed: every asset a zone defines takes a slot, except one whose name is
-already loaded from a zone with the same load flags, and in Zombies the renderer zones load in this order:
-`code_post_gfx_mp`, `code_post_gfx_zm_mp`, `ui_mp`, `ui_zm_mp`, `common_zm_mp`, the mod zone, then the map's zones. So
-a pack asset that those five zones define costs nothing, one they lack costs a slot, and the map's own assets always
-cost one.
+**Asset pool limits while playing.** The engine keeps one fixed-size pool per asset type and stops with
+`Exceeded limit of N '<type>' assets` when one is full; a script or a pack cannot change the sizes. The second test
+stopped with N = 5800, the size of the animation pool (`xanim`): the zones of a Zombies map already hold roughly
+4,400 to 4,850 animations (estimated, see below) and the first two builds added about 1,500 more. `-verifyzone` does
+not catch this, because ZoneTool enlarges several pools inside its own process (`init_zonetool()`: xanim, sound,
+loaded_sound, weapon, attachment, localize, luafile, leaderboarddef and reverbpreset by 2, computeshader and
+equipsndtable by 4, vertexdecl by 6, impactfx by 10), so a pack that verifies there can still be too big for the game.
+The sizes in `zonetool/pool-estimate.py` are the pool table of a running ZoneTool with those factors divided out (the
+game's own table is stored encoded in `s1_mp64_ship.exe`); only the xanim size has been confirmed by the game's own
+error message.
 
-**Tracers.** The first build made a Zombies map stop with the error above (the pool name was not captured). Its
-weapons named 15 different tracers, 14 of them not in the five zones. Adding the map's own 13 to 16 tracers and the
-4 of the five zones, the estimate was 31 to 34 of the 32 tracer slots (more if other zones are loaded too), so the
-tracer pool was the likeliest to overflow. That is an inference. `patch-weapons.py` therefore points every tracer of
-the pack's weapons and attachments at `defaulttracer`, which `code_post_gfx_mp` already defines. Only the look of the
-bullet tracers changes. The pack now holds one tracer and the estimate is 17 to 20 of 32.
+**Anim overrides.** 709 of the first builds' 1,551 animations were referenced by the weapons only through
+`animOverrides`, the replacement first-person animations a weapon plays when a given attachment is fitted.
+`patch-weapons.py` empties that list in every weapon (`numAnimOverrides` becomes 0, which ZoneTool writes as no list,
+like a stock weapon without overrides). The pack then holds 842 animations, 792 of them not already loaded by the base
+zones, and a weapon with an attachment plays its base animations instead. If a pool is still full, the next options
+are to blank the left/right-hand animation sets of every weapon except `iw5_exoxmg_mp` (the only shop weapon with an
+akimbo variant; 122 fewer animations) and to build a pack per map without the weapons that map defines itself.
 
-**Estimate.** `zonetool/pool-estimate.py` applies the rules above to the zones' asset lists and the pack's
-`-verifyzone` log, for `mp_zombie_lab`, `_ark`, `_brg` and `_h2o`. `csv-zones.sh` writes the lists (the five zones,
-each map's zone and its `patch_` zone; a map zone needs `PRELOAD`, see the script's header). For the current build
-the fullest pools are fx (70% to 83%), techset (up to 85%, ark) and phys_collmap (75%, lab). With
-`patch_code_post_gfx_mp`, `common_core_mp`, `patch_common_core_mp` and `techsets_common_core_mp` also assumed loaded
-(`EXTRA_BASE`) they are fx 82% to 95% (`mp_zombie_h2o`: 1,945 of 2,048), techset up to 87% and phys_collmap 86%; the
-script's worst case, which also charges the pack assets the five zones define, is 96%. Nothing reaches 100%, but this
-is a model, not a measurement: it leaves out the maps' `_load`, `_path` and `eng_` zones and anything loaded at run
-time, and which zones a map really loads is unconfirmed. `watch-s1x-fds.sh` records the zones `s1x.exe` actually
-opens, in order; use the zone names it logs for `EXTRA_BASE`.
+**Tracers.** The first suspect for the first `Exceeded limit` error (its pool name was not captured) was the tracer
+pool (32 slots): the weapons named 15 different tracers, 14 of them not in the base zones, and the estimate was 31 to
+34 of 32. `patch-weapons.py` therefore points every tracer of the pack's weapons and attachments at `defaulttracer`,
+which `code_post_gfx_mp` already defines; only the look of the bullet tracers changes. The overflow that was then seen
+was the xanim pool, so this is a precaution. The pack holds one tracer and the estimate is 17 to 20 of 32.
+
+**Estimate.** `zonetool/pool-estimate.py` applies this model (read from the game binary, not observed): every asset a
+zone defines takes a slot, except one whose name is already loaded from a zone with the same load flags. It reads the
+zones' asset lists and the pack's `-verifyzone` log, for `mp_zombie_lab`, `_ark`, `_brg` and `_h2o`. The zones are the
+ones `watch-s1x-fds.sh` logged while a Zombies map loaded: `code_pre_gfx_mp`, `code_post_gfx_mp`,
+`code_post_gfx_zm_mp`, `common_zm_mp`, `common_bots_mp`, `common_core_zm_mp` and the map's own zones, each with its
+`patch_` and English (`eng_`, `eng_patch_`) variants (`ui_mp` and `ui_zm_mp` are unloaded when the map starts). The mod
+zone loads right after `common_zm_mp`, so a pack asset that the first four zones define costs nothing. `csv-zones.sh`
+writes the lists; the zones it did not dump (`code_pre_gfx_mp`, `common_bots_mp` and the maps' `_load` and `_path`
+zones) are small and skipped, so the real use is a little higher. For the current build, without the pack and with it
+(the share of the pool, with the pack):
+
+| Map | xanim (5,800) | loaded_sound (7,000) | localize (13,600) |
+|---|---|---|---|
+| `mp_zombie_lab` | 4,435 to 5,227 (90%) | 5,554 to 5,715 (82%) | 13,364 to 13,366 (98%) |
+| `mp_zombie_ark` | 4,846 to 5,638 (97%) | 6,065 to 6,226 (89%) | 13,433 to 13,435 (99%) |
+| `mp_zombie_brg` | 4,766 to 5,558 (96%) | 5,990 to 6,151 (88%) | 13,410 to 13,412 (99%) |
+| `mp_zombie_h2o` | 4,839 to 5,631 (97%) | 6,836 to 6,997 (**100%**) | 13,421 to 13,423 (99%) |
+
+Every other pool stays under 90% (`equipsndtable` is 1 of 1 without the pack, and the pack adds none). The same model
+puts the old build at 102% (`mp_zombie_lab`) to 109% (`_ark`, `_h2o`) of the xanim pool, which is what the game
+reported. loaded_sound is the tightest: `mp_zombie_h2o` needs 6,997 of 7,000 if a pack asset that the first four zones
+define costs nothing, as modelled, and up to 7,712 (110%) if the engine kept both copies. The pack's copies of the
+sounds of the weapons that map defines itself (`dlcgun1zm` to `4zm`, `tridentzm`) are charged in both figures.
 
 **Running ZoneTool headless under Wine.** `run-zonetool.sh` uses DXVK's `d3d11`/`dxgi`, a private headless
 `gamescope` for Wine's display, a copied `fileSysCheck.cfg`, and a memory cap through `systemd-run`.
@@ -195,7 +219,7 @@ CSV's size is not a multiple of 4096. `-verifyzone` doubles as a cheap asset lis
 
 ## Not verified
 
-- **In-game behaviour.** Three tests so far, all through the CB Servers launcher. Test 1 started without `fs_game`
+- **In-game behaviour.** Four tests so far, all through the CB Servers launcher. Test 1 started without `fs_game`
   (the launcher passes none unless Launch Options sets it): the shop correctly logged `fs_game=` and
   `pack=not_loaded` with one weapon registered. Test 2 used `+set fs_game mods/exo_weapons_all`: the log showed
   `fs_game=mods/exo_weapons_all` but still `pack=not_loaded` on `mp_zombie_lab` with one weapon registered, so the
@@ -205,9 +229,10 @@ CSV's size is not a multiple of 4096. `-verifyzone` doubles as a cheap asset lis
   the `+` command-line commands run, so a `+set` is too late. `loadmod` sets `fs_game` and then runs `vid_restart`,
   which loads the graphics assets again with the pack. Test 3 used `+loadmod mods/exo_weapons_all`: `s1x.exe` had
   `mod.ff` open, so the pack mounted (and the extra `vid_restart` did no harm), and the game then stopped loading a
-  Zombies map with `Exceeded limit of N '<type>' assets`. The shop never ran, so the log was not updated, and the type
-  and N were not captured. The rebuilt pack (tracers changed, see above) has **not been tried**. The log's `fs_game=`
-  and `pack=` fields show whether the shop ran against the pack.
+  Zombies map with `Exceeded limit of N '<type>' assets`. The type and N were not captured. Test 4 used the build with
+  every tracer set to `defaulttracer` and stopped the same way, with N = 5800: the `xanim` pool (see above). The shop
+  never ran in tests 3 and 4, so the log was not updated. The build with empty `animOverrides` has **not been tried**.
+  The log's `fs_game=` and `pack=` fields show whether the shop ran against the pack.
 - **Weapon registration.** Also read from the game binary, not observed: a custom script's `main` and `init` run
   while the engine still registers a weapon on first use, so the shop's `getweaponbasename(<roster weapon>)` calls
   should register every roster weapon that a loaded zone defines. If the pack is mounted but the log still shows few
@@ -217,7 +242,8 @@ CSV's size is not a multiple of 4096. `-verifyzone` doubles as a cheap asset lis
   harmless, not tested.
 - **Cosmetic gaps.** Six trail materials (`smoke_trail_dear`, `_m990`, `_mors`, `_ohm_machinegun`, `_sniper`,
   `trail_epm3_plasma`) exist in no retail zone and fall back to the default material. The camo override above is empty,
-  and every weapon uses `defaulttracer`.
-- **Pool headroom.** That the first build overflowed the tracer pool is an inference: the pool name in the error was
-  not captured. The rebuilt pack's headroom is an estimate too (see above; nothing over 96%). If a map stops loading
-  again, note the exact error text; `watch-s1x-fds.sh` shows which zones were open.
+  every weapon uses `defaulttracer`, and weapons with attachments play their base animations (no `animOverrides`).
+- **Pool headroom.** The estimate is a model, not a measurement. By it the xanim pool is 90% full on `mp_zombie_lab`
+  and 96% to 97% on `_ark`, `_brg` and `_h2o`, which the zones the model skips could push over, and on
+  `mp_zombie_h2o` loaded_sound is at 100% (6,997 of 7,000). If a map stops loading again, note the exact error text
+  (type and N); `watch-s1x-fds.sh` shows which zones were open. The options are in **Anim overrides** above.

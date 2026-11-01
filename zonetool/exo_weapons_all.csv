@@ -1,6 +1,8 @@
-# Exo Zombies DLC weapon shop pack: all 27 shop weapons (20 multiplayer + 7 zombie-map weapons).
+# Exo Zombies DLC weapon shop pack: 28 weapons = the 27 shop weapons (20 multiplayer + 7 zombie-map weapons) plus the
+# weapon the Line Gun script fires for damage.
 # Search order matters: the first directory that has a file wins.
-# exo_patch holds weapon JSONs with camoViewModelMaterialOverride blanked (made by patch-weapons.py),
+# exo_patch holds weapon JSONs made by patch-weapons.py (camoViewModelMaterialOverride blanked, tracers set to
+# defaulttracer, animOverrides emptied),
 # then the zombie map zones (they define the ZM weapons and win over the commons, as in-game), then the
 # patch zone, then the base zone. techsets_common_core_mp and code_post_gfx_mp provide the
 # techset/pixel-shader files that common_mp references but does not contain.

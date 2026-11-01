@@ -13,7 +13,14 @@ a pack tracer that duplicates a map's tracer takes a second pool slot, so the pa
 the map loads (the engine then stops with "Exceeded limit of N '<type>' assets").  Every non-empty
 tracerType / signatureTracerType in the patched weapons, and in the attachments they carry, is therefore
 pointed at defaulttracer, a stock asset that code_post_gfx_mp already defines.  Only the look of the bullet
-tracers changes.
+tracers changes.  This is a precaution: the overflow that was actually seen came from the xanim pool (item 3).
+
+3. Anim overrides.  The engine's xanim pool holds only 5,800 assets and the zones of a Zombies map fill an
+estimated 4,400-4,850 of them (see pool-estimate.py).  The pack's 1,551 xanims include 709 that the 28 weapons
+reference only through animOverrides (the replacement first-person animations a weapon plays when a given
+attachment is fitted, such as the ADS-up/down of a scope).  With them the game stopped loading a map with
+"Exceeded limit of 5800" (the xanim pool), so every weapon's animOverrides list is emptied (numAnimOverrides
+becomes 0, as for stock weapons without overrides).  A weapon with an attachment then plays its base animations.
 
 The originals in dump/ are not touched.  The script reads a ZoneTool CSV, resolves every
 `weapon,<name>` through the CSV's `addpath` lines (first match wins, like ZoneTool) and writes the
@@ -23,11 +30,13 @@ copy that would win the search order).  Put `addpath,<out-dir>` first in the CSV
 
 usage (from the workspace root):  patch-weapons.py zone_source/<pack>.csv dump/<out-dir>
 """
+import json
 import re
 import sys
 from pathlib import Path
 
 CAMO_FIELD = re.compile(r'("camoViewModelMaterialOverride"\s*:\s*)"([^"]*)"')
+ANIM_OVERRIDES = re.compile(r'("animOverrides"\s*:\s*)\[[^\]]*\]')
 WEAPON_TRACER = re.compile(r'("(?:tracerType|signatureTracerType)"\s*:\s*)"([^"]+)"')
 ATTACHMENT_TRACER = re.compile(r'("name"\s*:\s*"tracerType"[^{}]*?"value"\s*:\s*)"([^"]+)"')
 ATTACHMENT_LIST = re.compile(r'"attachments"\s*:\s*\[([^\]]*)\]')
@@ -52,6 +61,14 @@ def retarget_tracers(pattern, text):
     new = pattern.sub(lambda m: m.group(0) if m.group(2) == DEFAULT_TRACER
                       else f'{m.group(1)}"{DEFAULT_TRACER}"', text)
     return new, old
+
+
+def strip_anim_overrides(text):
+    """Empty the weapon's animOverrides list; returns the new text and how many entries it had."""
+    match = ANIM_OVERRIDES.search(text)
+    if not match:
+        return text, 0
+    return ANIM_OVERRIDES.sub(r"\1[]", text, count=1), match.group(0).count('"overrideAnim"')
 
 
 def main(argv):
@@ -83,12 +100,17 @@ def main(argv):
         camo = CAMO_FIELD.search(text)
         text = CAMO_FIELD.sub(r'\1""', text)
         text, tracers = retarget_tracers(WEAPON_TRACER, text)
+        text, overrides = strip_anim_overrides(text)
+        if json.loads(text).get("animOverrides"):
+            sys.exit(f"{name}: could not empty animOverrides")
         (out_dir / "weapons" / f"{name}.json").write_text(text, encoding="utf-8")
         notes = []
         if camo and camo.group(2):
             notes.append(f"camoViewModelMaterialOverride {camo.group(2)!r} -> ''")
         if tracers:
             notes.append(f"tracers {', '.join(tracers)} -> {DEFAULT_TRACER}")
+        if overrides:
+            notes.append(f"animOverrides {overrides} -> 0")
         print(f"{name}: {source.parent.parent.name}: {'; '.join(notes) or 'unchanged'}")
         for listed in ATTACHMENT_LIST.finditer(text):
             attachments.update(re.findall(r'"([^"]+)"', listed.group(1)))
