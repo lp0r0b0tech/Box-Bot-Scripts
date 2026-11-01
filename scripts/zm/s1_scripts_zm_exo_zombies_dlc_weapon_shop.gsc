@@ -8,8 +8,9 @@
         - Offer only the explicitly listed Exo Zombies and Multiplayer
           weapons for purchase, without other pack weapons or Royalty variants
           and without requiring any map-specific trigger or Radiant placement.
-        - The weapon pack must be selected before assets load. The S1x
-          Zombies launch path selects it on the command line.
+        - Uses the map's default fastfiles. No custom weapon pack
+          (mods/exo_weapons_*) needs to be selected or mounted; each
+          weapon is offered only when the default fastfiles loaded it.
         - Always offer the selected roster: Thor, Microwave,
           Line Gun, Trident, DLC Weapon I, Ohm, DLC Weapon III,
           Blunderbuss, 1911, AK-47, EPM3, Riot Shield, Lever Action,
@@ -101,18 +102,7 @@ dlcws_loadout_init()
 
     if ( !level.dlcws_packReady )
     {
-        if ( isdefined( level.dlcws_mountBlocked ) && level.dlcws_mountBlocked )
-        {
-            println( "DLCWeaponShop: another mod is selected. The roster stays visible, but these weapons cannot be given." );
-        }
-        else if ( isdefined( level.dlcws_mountStuck ) && level.dlcws_mountStuck )
-        {
-            println( "DLCWeaponShop: weapon pack is not loaded. Fully quit and relaunch Zombies through S1x." );
-        }
-        else
-        {
-            println( "DLCWeaponShop: showing the selected roster. Weapons cannot be given until mods/exo_weapons_all loads." );
-        }
+        println( "DLCWeaponShop: no roster weapon is loaded by this map's default fastfiles. The roster stays visible, but nothing can be purchased here." );
         return;
     }
 
@@ -173,7 +163,7 @@ dlcws_init()
     }
     else
     {
-        println( "DLCWeaponShop: weapon pack is not mounted. The selected roster stays visible, but unloaded weapons are not given." );
+        println( "DLCWeaponShop: no roster weapon is loaded by this map's default fastfiles. The roster stays visible, but nothing can be purchased here." );
     }
 
     level thread dlcws_watch_players();
@@ -1252,18 +1242,7 @@ dlcws_refresh_hud( player )
 
 dlcws_pack_missing_text()
 {
-    fsGame = getdvar( "fs_game" );
-    if ( fsGame == "" )
-    {
-        fsGame = "none";
-    }
-
-    if ( isdefined( level.dlcws_mountBlocked ) && level.dlcws_mountBlocked )
-    {
-        return "Weapon shop off: another mod is selected (fs_game: " + fsGame + ").";
-    }
-
-    return "Weapon shop pack not loaded (fs_game: " + fsGame + "). Relaunch Zombies from the launcher.";
+    return "Weapon shop: no weapons are loaded by this map's default fastfiles.";
 }
 
 dlcws_notify_pack_missing()
@@ -1281,22 +1260,7 @@ dlcws_notify_pack_missing()
 
 dlcws_not_loaded_message( entry )
 {
-    if ( isdefined( level.dlcws_mountBlocked ) && level.dlcws_mountBlocked )
-    {
-        return entry.displayName + " cannot load while another mod is selected.";
-    }
-
-    if ( isdefined( level.dlcws_mountStuck ) && level.dlcws_mountStuck )
-    {
-        return entry.displayName + " is not loaded. Fully quit and relaunch Zombies through S1x.";
-    }
-
-    if ( level.dlcws_packReady )
-    {
-        return entry.displayName + " is not loaded in the mounted pack.";
-    }
-
-    return entry.displayName + " is not loaded. Fully quit and relaunch Zombies through S1x.";
+    return entry.displayName + " is not loaded by this map's default fastfiles.";
 }
 
 dlcws_try_purchase( player )
@@ -1422,16 +1386,27 @@ dlcws_base_registered( weaponName )
 
 dlcws_pack_assets_loaded()
 {
-    modPath = tolower( getdvar( "fs_game" ) );
-    if ( modPath != "mods/exo_weapons_all" &&
-         modPath != "mods\\exo_weapons_all" )
+    // Default-fastfile mode: the shop no longer requires the custom
+    // mods/exo_weapons_* pack. Weapons are treated as available when the
+    // active fastfiles (the map's own default content, or a custom pack if
+    // one happens to be mounted) have registered at least one roster
+    // weapon. Per-weapon availability is still enforced at grant time by
+    // dlcws_base_registered(), so a weapon the default fastfiles did not
+    // load stays listed as "not loaded" and is never given.
+    if ( !isdefined( level.dlcws_weapons ) )
     {
         return false;
     }
 
-    // These custom-only weapons distinguish the pack from native common_mp.
-    return dlcws_base_registered( "iw5_dlcgun38_mp" ) &&
-        dlcws_base_registered( "iw5_dlcgun28_mp" );
+    foreach ( entry in level.dlcws_weapons )
+    {
+        if ( dlcws_base_registered( entry.weaponName ) )
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 dlcws_refresh_pack_state()
@@ -1540,6 +1515,9 @@ dlcws_grant_name( player, entry )
 
 dlcws_try_mount_pack()
 {
+    // Default-fastfile mode: there is no custom pack to mount, so the pack
+    // mount/guard logic is retired. Weapons come from the map's default
+    // fastfiles and are validated per weapon at registration/grant time.
     level.dlcws_mountBlocked = false;
     level.dlcws_mountStuck = false;
 
@@ -1547,29 +1525,6 @@ dlcws_try_mount_pack()
     {
         removefile( "s1/dlcws_mount_guard.txt" );
     }
-
-    if ( dlcws_pack_assets_loaded() )
-    {
-        return;
-    }
-
-    modPath = tolower( getdvar( "fs_game" ) );
-    if ( modPath != "" && modPath != "0" && !issubstr( modPath, "exo_weapons" ) )
-    {
-        level.dlcws_mountBlocked = true;
-        println( "DLCWeaponShop: another mod is selected. Leaving it alone." );
-        return;
-    }
-
-    if ( !fileexists( "mods/exo_weapons_all/mod.ff" ) )
-    {
-        level.dlcws_mountStuck = true;
-        println( "DLCWeaponShop: mods/exo_weapons_all/mod.ff is missing. The selected weapons cannot be given." );
-        return;
-    }
-
-    level.dlcws_mountStuck = true;
-    println( "DLCWeaponShop: weapon defs are not loaded. Fully quit and relaunch Zombies through S1x so the pack is selected before assets load." );
 }
 
 dlcws_build_native_shop()
