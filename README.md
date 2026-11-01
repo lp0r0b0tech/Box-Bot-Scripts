@@ -22,3 +22,13 @@ load it. Missing IDs are reported in-game and in the console. A
 Campaign-compatible fastfile/content port is still required for weapons that
 are not already available in Campaign; this GSC does not convert or create
 weapon assets.
+
+## Exo Zombies weapon shop: loading all its weapons
+
+`scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc` (the advanced version with the `mods/exo_weapons_*`
+pack logic) can only sell a weapon the game has loaded, and a GSC cannot load fastfiles. The `zonetool/` folder
+builds `exo_weapons_all.ff` (all 27 of its weapons) with [ZoneTool](https://github.com/Joelrau/x64-zt), to be
+installed as `mods/exo_weapons_all/mod.ff` and loaded with `loadmod mods/exo_weapons_all`.
+See [ZONETOOL-LOAD-SHOP-WEAPONS.md](ZONETOOL-LOAD-SHOP-WEAPONS.md). The built
+`.ff` is made of the game's own assets and is not in this repository. It has
+been verified with ZoneTool's loader but not yet tried in the game.

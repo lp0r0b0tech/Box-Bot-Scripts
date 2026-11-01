@@ -1,0 +1,62 @@
+# Exo Zombies DLC weapon shop pack: all 27 shop weapons (20 multiplayer + 7 zombie-map weapons).
+# Search order matters: the first directory that has a file wins.
+# exo_patch holds weapon JSONs with camoViewModelMaterialOverride blanked (made by patch-weapons.py),
+# then the zombie map zones (they define the ZM weapons and win over the commons, as in-game), then the
+# patch zone, then the base zone. techsets_common_core_mp and code_post_gfx_mp provide the
+# techset/pixel-shader files that common_mp references but does not contain.
+# eng_mp_zombie_h2o / eng_mp_zombie_ark hold only localizedstrings/ files (the Trident and LZ-52 Limbo display
+# names, which live in the per-map English zones and are not loaded while building).
+# exo_patch/localizedstrings/ZOMBIES_WEAPON_MWG ("Magnetron") is a copy of the retail string from eng_patch_code_post_gfx_zm_mp:
+# that zone is not loaded while building, and a weapon whose display-name string cannot be found makes the build fatal.
+addpath,dump\exo_patch
+addpath,dump\eng_mp_zombie_h2o
+addpath,dump\eng_mp_zombie_ark
+addpath,dump\mp_zombie_h2o
+addpath,dump\mp_zombie_ark
+addpath,dump\mp_zombie_brg
+addpath,dump\patch_common_mp
+addpath,dump\common_mp
+addpath,dump\common_zm_mp
+addpath,dump\common_zombie_mp
+addpath,dump\techsets_common_core_mp
+addpath,dump\code_post_gfx_mp
+
+# common_mp only
+weapon,iw5_thor_mp
+weapon,iw5_riotshieldt6_mp
+weapon,iw5_maaws_mp
+weapon,iw5_m990_mp
+weapon,iw5_stingerm7_mp
+
+# common_mp and patch_common_mp (the patch version wins through the search order)
+weapon,iw5_pbw_mp
+weapon,iw5_epm3_mp
+weapon,iw5_microdronelauncher_mp
+weapon,iw5_mors_mp
+weapon,iw5_exoxmg_mp
+
+# patch_common_mp only
+weapon,iw5_dlcgun13_mp
+weapon,iw5_dlcgun7loot0_mp
+weapon,iw5_dlcgun33_mp
+weapon,iw5_dlcgun23_mp
+weapon,iw5_dlcgun7loot6_mp
+weapon,iw5_dlcgun18_mp
+weapon,iw5_dlcgun38_mp
+weapon,iw5_dlcgun6_mp
+weapon,iw5_dlcgun6loot5_mp
+weapon,iw5_dlcgun28_mp
+
+# zombie-map weapons: mp_zombie_h2o defines the first five
+weapon,iw5_dlcgun1zm_mp
+weapon,iw5_dlcgun2zm_mp
+weapon,iw5_dlcgun3zm_mp
+weapon,iw5_dlcgun4zm_mp
+weapon,iw5_tridentzm_mp
+
+# mp_zombie_ark: Line Gun and the weapon its script fires for damage
+weapon,iw5_linegunzm_mp
+weapon,iw5_linegundamagezm_mp
+
+# mp_zombie_brg
+weapon,iw5_microwavezm_mp
