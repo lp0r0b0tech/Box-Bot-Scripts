@@ -92,20 +92,16 @@ dlcws_build_weapon_list()
     dlcws_add_weapon( "iw5_mp11zm_mp", "MP11" );
     dlcws_add_weapon( "iw5_asm1zm_mp", "ASM1" );
     dlcws_add_weapon( "iw5_sn6zm_mp", "SN6" );
-    dlcws_add_weapon( "iw5_sac3zm_mp", "SAC3" );
     dlcws_add_weapon( "iw5_hmr9zm_mp", "HMR9" );
 
     dlcws_add_weapon( "iw5_maulzm_mp", "Maul" );
     dlcws_add_weapon( "iw5_uts19zm_mp", "UTS-19" );
 
-    dlcws_add_weapon( "iw5_em1zm_mp", "EM1" );
 
     dlcws_add_weapon( "iw5_titan45zm_mp", "Titan 45" );
 
-    dlcws_add_weapon( "iw5_exocrossbowzm_mp", "Exo Crossbow" );
     dlcws_add_weapon( "iw5_mahemzm_mp", "MAHEM" );
 
-    dlcws_add_weapon( "iw5_fusionzm_mp", "CEL-3 Cauterizer" );
     dlcws_add_weapon( "iw5_microwavezm_mp", "Microwave" );
     dlcws_add_weapon( "iw5_linegunzm_mp", "Line Gun" );
     dlcws_add_weapon( "iw5_tridentzm_mp", "Trident" );
