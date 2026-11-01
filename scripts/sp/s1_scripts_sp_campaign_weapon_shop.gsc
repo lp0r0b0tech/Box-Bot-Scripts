@@ -61,8 +61,6 @@ spws_build_weapon_list()
     spws_add_weapon( "iw5_maul_mp", "Maul" );
     spws_add_weapon( "iw5_dlcgun8loot0_mp", "DLC Weapon 8" );
     spws_add_weapon( "iw5_combatknife_mp", "Combat Knife" );
-    spws_add_weapon( "iw5_exocrossbow_mp", "Crossbow" );
-    spws_add_weapon( "iw5_em1_mp", "EM1" );
     spws_add_weapon( "iw5_epm3_mp", "EPM3" );
     spws_add_weapon( "iw5_hbra3_mp", "HBRa3" );
     spws_add_weapon( "iw5_riotshieldt6_mp", "Riot Shield" );
@@ -83,7 +81,6 @@ spws_build_weapon_list()
     spws_add_weapon( "iw5_lsat_mp", "LSAT" );
     spws_add_weapon( "iw5_dlcgun38_mp", "DLC Weapon 38" );
     spws_add_weapon( "iw5_rhino_mp", "Rhino" );
-    spws_add_weapon( "iw5_sac3_mp", "SAC3" );
     spws_add_weapon( "iw5_sn6_mp", "SN6" );
     spws_add_weapon( "iw5_dlcgun6_mp", "DLC Weapon 6" );
     spws_add_weapon( "iw5_dlcgun7_mp", "DLC Weapon 7" );
@@ -112,15 +109,11 @@ spws_build_weapon_list()
     spws_add_weapon( "iw5_mp11zm_mp", "MP11 (Exo Zombies)" );
     spws_add_weapon( "iw5_asm1zm_mp", "ASM1 (Exo Zombies)" );
     spws_add_weapon( "iw5_sn6zm_mp", "SN6 (Exo Zombies)" );
-    spws_add_weapon( "iw5_sac3zm_mp", "SAC3 (Exo Zombies)" );
     spws_add_weapon( "iw5_hmr9zm_mp", "HMR9 (Exo Zombies)" );
     spws_add_weapon( "iw5_maulzm_mp", "Maul (Exo Zombies)" );
     spws_add_weapon( "iw5_uts19zm_mp", "UTS-19 (Exo Zombies)" );
-    spws_add_weapon( "iw5_em1zm_mp", "EM1 (Wonder Weapon)" );
     spws_add_weapon( "iw5_titan45zm_mp", "Titan 45 (Exo Zombies)" );
-    spws_add_weapon( "iw5_exocrossbowzm_mp", "Crossbow (Exo Zombies)" );
     spws_add_weapon( "iw5_mahemzm_mp", "MAHEM (Wonder Weapon)" );
-    spws_add_weapon( "iw5_fusionzm_mp", "CEL-3 Cauterizer (Wonder Weapon)" );
     spws_add_weapon( "iw5_microwavezm_mp", "Microwave Gun (Wonder Weapon)" );
     spws_add_weapon( "iw5_linegunzm_mp", "Line Gun (Wonder Weapon)" );
     spws_add_weapon( "iw5_tridentzm_mp", "Trident (Wonder Weapon)" );
