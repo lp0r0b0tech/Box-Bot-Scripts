@@ -35,5 +35,10 @@ See [ZONETOOL-LOAD-SHOP-WEAPONS.md](ZONETOOL-LOAD-SHOP-WEAPONS.md). The built
 `.ff` is made of the game's own assets and is not in this repository. Earlier builds loaded in the game with all 27
 weapons registered. The first of them had visible defects (multiplayer weapons as red boxes, no wonder-weapon reload
 sounds, a Line Gun without projectile or damage); the retest did not mention those, but reported optics that did not
-work right, no alternate fire on the Ohm and the XMG, no Mk2 to Mk25 camos and too little ammunition on the
-multiplayer weapons. The current build targets those four and has not been tried in the game yet.
+work right, no alternate fire on the Ohm and the XMG, no Mk2 to Mk25 camos, zombies that ignored the player (a
+leftover local test script) and too little ammunition on the multiplayer weapons. The next retest asked for four
+things: bullet and zombie-death effects for the Microwave Gun, working Mk2 and Mk15 camos, melee on the multiplayer
+weapons with and without the exo suit, and a Riot Shield that can be placed on every Zombies map. The current build
+targets those four and has not been tried in the game yet. Four support scripts go with it,
+`scripts/zm/exo_zombies_<weapon>_support.gsc` for the Line Gun, the Microwave Gun, the Riot Shield and the Trident
+(the guide says which to copy).
