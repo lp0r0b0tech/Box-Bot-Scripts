@@ -389,10 +389,10 @@ the zone (a 44-byte header, one 24-byte entry per stream file, then a single zli
 (0xDE8 bytes; the world override's asset reference is at offset 0x38, the first-person one at 0x40), copies the
 reference over, recompresses the zone and fixes the lengths in the header. It refuses to write anything unless it
 finds each weapon whose patched JSON has a world override exactly once (28 of the 29: the Riot Shield has none).
-`-verifyzone` accepts the result and a dump of it names the same material in both fields for all 29 weapons. Test 7,
-the first with this repair, reported only the Mk2 and Mk15 camos (camos 23 and 24, `toxictiger` and `infected`) as
-broken, no longer the whole range, which suggests that the repair worked for the others (an inference: the report does
-not say so).
+ZoneTool reads the repaired file back (a dump of it loads) and names the same material in both fields for all 29
+weapons. Test 7, the first with this repair, reported only the Mk2 and Mk15 camos (camos 23 and 24, `toxictiger` and
+`infected`) as broken, no longer the whole range, which suggests that the repair worked for the others (an inference:
+the report does not say so).
 
 Camos 23 and 24 are a separate case. The engine finds a camo by name in `mp/camotable.csv` (no header row; column 1 is
 the name, column 8 a global material, column 10 an index into the weapon's row of `mp/camomaterialtable.csv`). The
