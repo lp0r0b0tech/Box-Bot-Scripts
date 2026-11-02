@@ -92,13 +92,12 @@ dlcws_loadout_init()
     }
 
     dlcws_refresh_pack_state();
+    dlcws_read_camo_rows();
     level.dlcws_nativeCamosReady = level.dlcws_packReady &&
         dlcws_base_registered( "iw5_dlcwscamo41_mp" ) &&
-        tablelookup( "mp/camomaterialtable.csv", 0, "iw5_exoxmg", 5 ) ==
-            "m/exo_weapon_bracer_toxictiger" &&
-        tablelookup( "mp/camomaterialtable.csv", 0, "iw5_exoxmg", 6 ) ==
-            "m/exo_weapon_bracer_infected";
+        ( level.dlcws_camoRowsReady || dlcws_retail_camo_materials_ready() );
     dlcws_write_runtime_status( "gametype_init" );
+    dlcws_log_camo_status();
 
     if ( !level.dlcws_packReady )
     {
@@ -123,7 +122,7 @@ dlcws_loadout_init()
     level.dlcws_loadoutsReady = true;
     if ( !level.dlcws_nativeCamosReady )
     {
-        println( "DLCWeaponShop: R41 native Mk2/Mk15 materials or the native camo-table patch are missing. Imported weapons keep the visible legacy fallback." );
+        println( "DLCWeaponShop: the pack's Mk2/Mk15 camo rows are not active (see s1/dlcws_runtime_status.log). Imported weapons keep the visible legacy fallback." );
     }
     println( "DLCWeaponShop: selected roster ready. " + level.dlcws_registeredCount +
         " of " + level.dlcws_weapons.size + " weapons can be purchased." );
@@ -700,6 +699,48 @@ dlcws_replace_attachment_token( weaponName, attachment, replacement )
     return result;
 }
 
+dlcws_camo_row_material( row )
+{
+    material = tablelookupbyrow( "mp/camotable.csv", row, 8 );
+    if ( !isdefined( material ) )
+    {
+        return "";
+    }
+
+    return material;
+}
+
+dlcws_read_camo_rows()
+{
+    // The pack's mp/camotable.csv names a global camo material for the Mk2
+    // (row 23) and Mk15 (row 24) camos, the way retail row 25 (xom01) does.
+    level.dlcws_camoRow23 = dlcws_camo_row_material( 23 );
+    level.dlcws_camoRow24 = dlcws_camo_row_material( 24 );
+    level.dlcws_camoRowsReady = level.dlcws_camoRow23 == "camo_xom1_toxic_tiger_col" &&
+        level.dlcws_camoRow24 == "camo_xom1_infected_col";
+}
+
+dlcws_retail_camo_materials_ready()
+{
+    // Older packs patched the per-weapon camo table instead.
+    return tablelookup( "mp/camomaterialtable.csv", 0, "iw5_exoxmg", 5 ) ==
+            "m/exo_weapon_bracer_toxictiger" &&
+        tablelookup( "mp/camomaterialtable.csv", 0, "iw5_exoxmg", 6 ) ==
+            "m/exo_weapon_bracer_infected";
+}
+
+dlcws_log_camo_status()
+{
+    imported = "no";
+    if ( level.dlcws_nativeCamosReady )
+    {
+        imported = "yes";
+    }
+
+    dlcws_log( "camo table row23=" + level.dlcws_camoRow23 + " row24=" + level.dlcws_camoRow24 +
+        " mk2_mk15_on_imported_weapons=" + imported );
+}
+
 dlcws_camo_has_variants( weaponName )
 {
     switch ( weaponName )
@@ -787,6 +828,10 @@ dlcws_weapon_name_for_level( weaponName, weaponLevel, dualWield )
     {
         // buildweaponname always appends the akimbo attachment for these bases.
         result = dlcws_replace_attachment_token( result, dualToken, "" );
+    }
+    if ( camo == 23 || camo == 24 )
+    {
+        dlcws_log_once( "camo" + camo, "camo " + camo + " loadout " + result );
     }
     return result;
 }
@@ -1451,6 +1496,27 @@ dlcws_write_runtime_status( phase )
     }
 }
 
+dlcws_log( text )
+{
+    writefile( "s1/dlcws_runtime_status.log", text + "\n", 1 );
+}
+
+dlcws_log_once( key, text )
+{
+    if ( !isdefined( level.dlcws_logged ) )
+    {
+        level.dlcws_logged = [];
+    }
+
+    if ( isdefined( level.dlcws_logged[key] ) )
+    {
+        return;
+    }
+
+    level.dlcws_logged[key] = true;
+    dlcws_log( text );
+}
+
 dlcws_mark_grant_ready()
 {
     if ( !isdefined( level.dlcws_weapons ) )
@@ -1504,6 +1570,14 @@ dlcws_grant_name( player, entry )
 
         return weaponName;
     }
+
+    shownBase = "";
+    if ( isdefined( baseName ) )
+    {
+        shownBase = baseName;
+    }
+    dlcws_log_once( "grant_" + entry.weaponName, "grant fallback: " + weaponName +
+        " resolved to base '" + shownBase + "', giving " + entry.weaponName );
 
     if ( isdefined( entry.dualWield ) && entry.dualWield )
     {
