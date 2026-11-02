@@ -47,6 +47,20 @@ startAmmo and maxAmmo to the values of the Zombies weapon that matches each one 
 whole magazines.  Values are only ever raised and clipSize is not touched.  The EPM3 is left alone: it fires without
 using ammunition (ammoPerShot 0, it overheats instead), like the Microwave.
 
+6. Melee.  33 of the 35 stock Zombies guns in the dumped zones (iw5_*zm_mp, every class from pistols to launchers) carry
+one melee data set: the tactical knife (knifeModel vm_mp_tactical_knife, worldKnifeModel npc_mp_tactical_knife), the
+first-person animations vm_knife_melee_slice_l, vm_knife_melee_stab_l (also for a crouching victim, which five of the
+guns leave empty), vm_exo_melee_hook_r and vm_exo_melee_uppercut_l, and the timers meleeChargeTime 1200, meleeDelay 80 and
+meleeChargeDelay 100.  The multiplayer weapons of the pack still carry the multiplayer set (no knife model at all,
+viewmodel_knife_melee_* / vm_exo_melee_punch, 1160/130/160), which may not display properly in Zombies: the knife swipe
+without the exo suit would play with no knife in the hand, the punch with the suit the multiplayer animation.  That is a
+candidate cause of the broken melee reported in test 7 with and without the suit (unconfirmed; the damage side is
+weapon independent, see all_weapon_damage.gsc).  zm_melee_profile()
+gives every multiplayer weapon the Zombies set, replacing only values that equal the multiplayer ones; the pistols also get
+it in their left and right-handed animation sets, as the stock Zombies pistol does.  The Riot Shield (its own bash
+animations), the stock Zombies guns and hasTransientModels (the models come from the pack and show correctly) stay as
+they are.
+
 The originals in dump/ are not touched.  The script reads a ZoneTool CSV, resolves every
 `weapon,<name>` through the CSV's `addpath` lines (first match wins, like ZoneTool) and writes the
 patched copy to <out-dir>/weapons/<name>.json.  Attachments the weapons list that name a tracer are
@@ -62,6 +76,8 @@ from pathlib import Path
 
 CAMO_FIELD = re.compile(r'("camoViewModelMaterialOverride"\s*:\s*)"([^"]*)"')
 ANIM_OVERRIDES = re.compile(r'("animOverrides"\s*:\s*)\[[^\]]*\]')
+KNIFE_MODEL = re.compile(r'("knifeModel"\s*:\s*)"([^"]*)"')
+WORLD_KNIFE_MODEL = re.compile(r'("worldKnifeModel"\s*:\s*)"[^"]*"')
 WEAPON_TRACER = re.compile(r'("(?:tracerType|signatureTracerType)"\s*:\s*)"([^"]+)"')
 ATTACHMENT_TRACER = re.compile(r'("name"\s*:\s*"tracerType"[^{}]*?"value"\s*:\s*)"([^"]+)"')
 ATTACHMENT_LIST = re.compile(r'"attachments"\s*:\s*\[([^\]]*)\]')
@@ -118,6 +134,26 @@ AMMO_TARGETS = {
     "iw5_dlcgun38_mp": (140, 245),  # Repulsor: hmr9zm 140/200
     "iw5_exoxmg_mp": (400, 350),  # XMG (Dual): asawzm 200/350
 }
+
+# The melee data of the stock Zombies guns (item 6).  A weapon is a multiplayer weapon here when its knifeModel is one
+# of MP_KNIFE_MODELS; only values that equal the multiplayer ones are replaced.
+MP_KNIFE_MODELS = {"", "vm_mp_combat_knife"}
+ZM_KNIFE_MODEL, ZM_WORLD_KNIFE_MODEL = "vm_mp_tactical_knife", "npc_mp_tactical_knife"
+ZM_MELEE_ANIMS = {  # slot: ({multiplayer animation, ...}, Zombies animation)
+    "MELEE_SWIPE": ({"vm_knife_melee_slice", "viewmodel_knife_melee_slice"}, "vm_knife_melee_slice_l"),
+    "MELEE_FATAL": ({"vm_knife_melee_stab", "viewmodel_knife_melee_stab", "vm_knife_melee_slice"},
+                    "vm_knife_melee_stab_l"),
+    "MELEE_VICTIM_CROUCHING_FATAL": ({"vm_knife_melee_stab", "viewmodel_knife_melee_stab_crouched_hit"},
+                                     "vm_knife_melee_stab_l"),
+    "MELEE_ALT_STANDING": ({"vm_exo_melee_punch"}, "vm_exo_melee_hook_r"),
+    "MELEE_ALT_CROUCHING": ({"vm_exo_melee_punch"}, "vm_exo_melee_uppercut_l"),
+}
+ZM_MELEE_TIMERS = {"meleeChargeTime": (1160, 1200), "meleeDelay": (130, 80), "meleeChargeDelay": (160, 100)}
+# Weapons that keep their melee data: the Riot Shield bashes with its own animations.
+MELEE_PROFILE_SKIP = {"iw5_riotshieldt6_mp"}
+# weapClass of the pistols, whose left and right-handed animation sets follow the first-person set (as in the stock
+# Zombies pistol iw5_dlcgun3zm_mp); the stock Zombies guns of the other classes keep multiplayer values there.
+PISTOL_CLASS = 5
 
 
 def csv_lines(path):
@@ -185,6 +221,66 @@ def raise_ammo(name, text):
     return text, changes
 
 
+def edit_object(text, key, edit):
+    """Apply edit(body) -> (body, count) to the body of the flat JSON object `key`; returns the new text and count."""
+    found = re.search(r'"%s"\s*:\s*\{([^{}]*)\}' % re.escape(key), text)
+    if found is None:
+        return text, 0
+    body, count = edit(found.group(1))
+    return text[:found.start(1)] + body + text[found.end(1):], count
+
+
+def zm_melee_profile(name, text):
+    """Give a multiplayer weapon the melee data of the stock Zombies guns (item 6); returns the new text and the
+    number of fields changed (0 for weapons that are left alone)."""
+    knife = KNIFE_MODEL.search(text)
+    if name in MELEE_PROFILE_SKIP or knife is None or knife.group(2) not in MP_KNIFE_MODELS:
+        return text, 0
+    pistol = json.loads(text).get("weapClass") == PISTOL_CLASS
+    changed = 0
+
+    def set_models(match):
+        nonlocal changed
+        changed += 1
+        return f'{match.group(1)}"{ZM_KNIFE_MODEL}"'
+
+    text = KNIFE_MODEL.sub(set_models, text)
+    text = WORLD_KNIFE_MODEL.sub(lambda m: f'{m.group(1)}"{ZM_WORLD_KNIFE_MODEL}"', text)
+
+    def anims(body):
+        count = 0
+        for slot, (old, new) in ZM_MELEE_ANIMS.items():
+            def swap(match):
+                nonlocal count
+                if match.group(2) not in old:
+                    return match.group(0)
+                count += 1
+                return f'{match.group(1)}"{new}"'
+            body = re.sub(r'("%s"\s*:\s*)"([^"]*)"' % slot, swap, body)
+        return body, count
+
+    def timers(body):
+        count = 0
+        for field, (old, new) in ZM_MELEE_TIMERS.items():
+            def swap(match):
+                nonlocal count
+                if int(match.group(2)) != old:
+                    return match.group(0)
+                count += 1
+                return f"{match.group(1)}{new}"
+            body = re.sub(r'("%s"\s*:\s*)(-?\d+)' % field, swap, body)
+        return body, count
+
+    sections = ["szXAnims"] + (["szXAnimsRightHanded", "szXAnimsLeftHanded"] if pistol else [])
+    for key in sections:
+        text, count = edit_object(text, key, anims)
+        changed += count
+    for key in ("stateTimers", "stateTimersAkimbo"):
+        text, count = edit_object(text, key, timers)
+        changed += count
+    return text, changed
+
+
 def main(argv):
     if len(argv) != 3:
         sys.exit(__doc__)
@@ -219,6 +315,7 @@ def main(argv):
         text = CAMO_FIELD.sub(r'\1""', text)
         text, tracers = retarget_tracers(WEAPON_TRACER, text)
         text, overrides, kept = filter_anim_overrides(name, text)
+        text, melee = zm_melee_profile(name, text)
         ammo = []
         if name in AMMO_TARGETS:
             text, ammo = raise_ammo(name, text)
@@ -236,6 +333,8 @@ def main(argv):
             notes.append(f"tracers {', '.join(tracers)} -> {DEFAULT_TRACER}")
         if overrides:
             notes.append(f"animOverrides {overrides} -> {kept}")
+        if melee:
+            notes.append(f"melee profile ({melee} fields)")
         if ammo:
             notes.append(", ".join(ammo))
         print(f"{name}: {source.parent.parent.name}: {'; '.join(notes) or 'unchanged'}")

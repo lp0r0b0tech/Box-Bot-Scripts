@@ -1,10 +1,12 @@
 # Exo Zombies DLC weapon shop pack: all 27 shop weapons (20 multiplayer + 7 zombie-map weapons), the Line Gun's damage
-# weapon, and what exo_zombies_linegun_support.gsc needs to make the Line Gun work (see the end of this file):
-# 29 weapons in all.
+# weapon, and what the support scripts need (exo_zombies_linegun_support.gsc, exo_zombies_microwave_support.gsc and
+# exo_zombies_riotshield_support.gsc; see the end of this file): 29 weapons in all.
 # Search order matters: the first directory that has a file wins.
 # exo_patch holds what the helper scripts generate: weapon JSONs made by patch-weapons.py (camoViewModelMaterialOverride
 # blanked, tracers set to defaulttracer, animOverrides cut down to the entries of the optics and alt-fire modes the
-# shop uses, ammunition of the multiplayer weapons raised, plus the Line Gun's marker weapon) and the PCM copies
+# shop uses, ammunition of the multiplayer weapons raised, the melee data of the stock Zombies guns, plus the Line Gun's
+# marker weapon), sound alias overrides made by patch-sounds.py (take counts cut so the loaded_sound pool fits), the
+# Mk2/Mk15 camo table and its two camo materials made by patch-camos.py, and the PCM copies
 # of the FLAC sounds made by flac-to-wav.py,
 # then the zombie map zones (they define the ZM weapons and win over the commons, as in-game), then the
 # patch zone, then the base zone. techsets_common_core_mp and code_post_gfx_mp provide the
@@ -80,5 +82,45 @@ fx,vfx/muzzleflash/dlc_zombies_drone_death
 sound,wpn_linegun_beam_hi
 sound,wpn_linegun_exp
 
+# Mk2 and Mk15 camos (zmweaponlevels.csv levels 2 and 15 are camo rows 23 "toxictiger" and 24 "infected" of
+# mp/camotable.csv).  The retail rows point at camomaterialtable.csv, which only knows the retail weapons, so the pack's
+# weapons showed no camo.  patch-camos.py writes a copy of mp/camotable.csv whose rows 23 and 24 name the two materials
+# below, the way the retail row 25 (xom01) names camo_xom1_01; the materials are copies of camo_xom1_01 that carry the
+# toxic tiger / infected pattern image.  The table is meant to override the retail one by name (the game has not shown
+# yet that it does); exo_zombies_dlc_weapon_shop.gsc logs what the game reads back (dlcws_runtime_status.log).
+stringtable,mp/camotable.csv
+material,camo_xom1_toxic_tiger_col
+material,camo_xom1_infected_col
+
+# Riot Shield on every Zombies map: exo_zombies_riotshield_support.gsc starts the deploy system that stock Zombies never
+# starts (maps/mp/_riotshield.gsc).  The placed shield's animations and effects are defined by common_mp only, which the
+# Zombies maps do not load (its sounds are already in common_zm_mp, its collision brush is in every Zombies map).
+xanim,npc_deployable_riotshield_stand_deploy
+xanim,npc_deployable_riotshield_stand_destroyed
+xanim,npc_deployable_riotshield_stand_shot
+xanim,npc_deployable_riotshield_stand_shot_back
+xanim,npc_deployable_riotshield_stand_melee_front
+xanim,npc_deployable_riotshield_stand_melee_back
+fx,vfx/smoke/riotshield_deploy_smoke
+fx,vfx/lights/riotshield_deploy_lights
+fx,vfx/explosion/riotshield_stun
+
 # mp_zombie_brg
 weapon,iw5_microwavezm_mp
+
+# exo_zombies_microwave_support.gsc plays the Microwave's own effects, which stock Zombies defines only on mp_zombie_brg
+# (maps/mp/zombies/weapons/_zombie_microwave_gun.gsc): the bubbling flesh of a zombie that is being cooked (five
+# effects), the explosion of its body (this effect pulls in the gib models and blood effects it uses), the flesh sounds,
+# and the beam's impact on flammable surfaces and on water (the effects for concrete and the plain beam light are
+# already there).  The explosion sound keeps one of its five FLAC takes (patch-sounds.py).
+fx,vfx/weaponimpact/xombie_flesh_microwave_bubbles_1
+fx,vfx/weaponimpact/xombie_flesh_microwave_bubbles_2
+fx,vfx/weaponimpact/xombie_flesh_microwave_bubbles_head_2
+fx,vfx/weaponimpact/xombie_flesh_microwave_bubbles_le_2
+fx,vfx/weaponimpact/xombie_flesh_microwave_bubbles_ri_2
+fx,vfx/blood/dlc_zombie_microwave_death
+fx,vfx/weaponimpact/microwave_flammable
+fx,vfx/weaponimpact/mwave_water_splash
+sound,npc_mwave_flesh_bubble
+sound,npc_mwave_flesh_expl_front
+sound,npc_mwave_flesh_expl_rear
