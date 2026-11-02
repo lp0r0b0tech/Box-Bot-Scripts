@@ -1,8 +1,10 @@
-# Exo Zombies DLC weapon shop pack: 28 weapons = the 27 shop weapons (20 multiplayer + 7 zombie-map weapons) plus the
-# weapon the Line Gun script fires for damage.
+# Exo Zombies DLC weapon shop pack: all 27 shop weapons (20 multiplayer + 7 zombie-map weapons), the Line Gun's damage
+# weapon, and what exo_zombies_linegun_support.gsc needs to make the Line Gun work (see the end of this file):
+# 29 weapons in all.
 # Search order matters: the first directory that has a file wins.
-# exo_patch holds weapon JSONs made by patch-weapons.py (camoViewModelMaterialOverride blanked, tracers set to
-# defaulttracer, animOverrides emptied),
+# exo_patch holds what the helper scripts generate: weapon JSONs made by patch-weapons.py (camoViewModelMaterialOverride
+# blanked, tracers set to defaulttracer, animOverrides emptied, plus the Line Gun's marker weapon) and the PCM copies
+# of the FLAC sounds made by flac-to-wav.py,
 # then the zombie map zones (they define the ZM weapons and win over the commons, as in-game), then the
 # patch zone, then the base zone. techsets_common_core_mp and code_post_gfx_mp provide the
 # techset/pixel-shader files that common_mp references but does not contain.
@@ -22,6 +24,11 @@ addpath,dump\common_zm_mp
 addpath,dump\common_zombie_mp
 addpath,dump\techsets_common_core_mp
 addpath,dump\code_post_gfx_mp
+# The MP weapons' viewmodel/worldmodel geometry (xmodel + xmodelsurfs) is DEFINED only in the stock transient zones
+# mp_vm_<weapon>_tr, mp_vm_<weapon>_2_tr, mp_wm_<weapon>_tr and mp_wm_<weapon>_2_tr; the main zones only reference it.
+# dump-tr-zones.sh dumps them, ZoneTool puts all of them into dump/weapon_models. Without it the builder copies whatever
+# the running engine holds under that name (a placeholder) and the weapon is a red box in game.
+addpath,dump\weapon_models
 
 # common_mp only
 weapon,iw5_thor_mp
@@ -59,6 +66,17 @@ weapon,iw5_tridentzm_mp
 # mp_zombie_ark: Line Gun and the weapon its script fires for damage
 weapon,iw5_linegunzm_mp
 weapon,iw5_linegundamagezm_mp
+
+# exo_zombies_linegun_support.gsc makes the Line Gun deal damage on the maps that do not ship the Line Gun script, but
+# it stays off unless iw5_dlcwscamo41_mp is registered as well (patch-weapons.py writes it as a copy of
+# iw5_linegundamagezm_mp), and it then loads the three effects below and plays the two sounds itself: the traveling
+# beam, the hit/gib burst and the death burst. Without them the Line Gun fires plain bullets that do no damage.
+weapon,iw5_dlcwscamo41_mp
+fx,vfx/muzzleflash/dlc_zombies_linegun_laser
+fx,vfx/blood/dlc_zombie_line_gun_gib
+fx,vfx/muzzleflash/dlc_zombies_drone_death
+sound,wpn_linegun_beam_hi
+sound,wpn_linegun_exp
 
 # mp_zombie_brg
 weapon,iw5_microwavezm_mp

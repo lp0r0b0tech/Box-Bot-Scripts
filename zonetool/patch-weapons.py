@@ -8,7 +8,7 @@ decodes it as an alias offset and the game crashes while loading the weapon.  Wr
 makes it a null pointer, which the engine accepts (stock weapons such as iw5_riotshieldt6_mp do the same).
 
 2. Tracers.  The engine's tracer pool holds only 32 assets, and the stock Zombies zones plus the map already
-define 17-20 of them (every map brings 13-16 tracers of its own).  The 28 weapons name 15 different tracers;
+define 17-20 of them (every map brings 13-16 tracers of its own).  The 28 stock weapons name 15 different tracers;
 a pack tracer that duplicates a map's tracer takes a second pool slot, so the pack can overflow the pool while
 the map loads (the engine then stops with "Exceeded limit of N '<type>' assets").  Every non-empty
 tracerType / signatureTracerType in the patched weapons, and in the attachments they carry, is therefore
@@ -16,11 +16,19 @@ pointed at defaulttracer, a stock asset that code_post_gfx_mp already defines.  
 tracers changes.  This is a precaution: the overflow that was actually seen came from the xanim pool (item 3).
 
 3. Anim overrides.  The engine's xanim pool holds only 5,800 assets and the zones of a Zombies map fill an
-estimated 4,400-4,850 of them (see pool-estimate.py).  The pack's 1,551 xanims include 709 that the 28 weapons
+estimated 4,400-4,850 of them (see pool-estimate.py).  The pack's 1,551 xanims include 709 that the 28 stock weapons
 reference only through animOverrides (the replacement first-person animations a weapon plays when a given
 attachment is fitted, such as the ADS-up/down of a scope).  With them the game stopped loading a map with
 "Exceeded limit of 5800" (the xanim pool), so every weapon's animOverrides list is emptied (numAnimOverrides
 becomes 0, as for stock weapons without overrides).  A weapon with an attachment then plays its base animations.
+
+4. Marker weapons.  exo_zombies_linegun_support.gsc, the script that makes the Line Gun deal damage on the maps that do
+not ship the Line Gun script, stays off unless the weapon iw5_dlcwscamo41_mp is registered next to iw5_linegunzm_mp and
+iw5_linegundamagezm_mp (the earlier R41 pack defined it to show that its native Line Gun effects were loaded).  No stock
+zone has that weapon and the scripts only check that the name is registered, so it is written here as a copy of the
+damage weapon under the marker's name; every asset it needs is part of the pack already.  The shop's camo check also
+reads the marker, but it additionally needs two camo names in mp/camomaterialtable.csv that the stock table does not
+have, so the shop keeps its legacy camo handling.
 
 The originals in dump/ are not touched.  The script reads a ZoneTool CSV, resolves every
 `weapon,<name>` through the CSV's `addpath` lines (first match wins, like ZoneTool) and writes the
@@ -41,6 +49,9 @@ WEAPON_TRACER = re.compile(r'("(?:tracerType|signatureTracerType)"\s*:\s*)"([^"]
 ATTACHMENT_TRACER = re.compile(r'("name"\s*:\s*"tracerType"[^{}]*?"value"\s*:\s*)"([^"]+)"')
 ATTACHMENT_LIST = re.compile(r'"attachments"\s*:\s*\[([^\]]*)\]')
 DEFAULT_TRACER = "defaulttracer"
+# Weapons that no stock zone defines, each written as a copy of the (already patched) weapon it maps to.
+MARKER_WEAPONS = {"iw5_dlcwscamo41_mp": "iw5_linegundamagezm_mp"}
+WEAPON_NAME = re.compile(r'("(?:szInternalName|baseAsset)"\s*:\s*)"[^"]*"')
 
 
 def csv_lines(path):
@@ -90,7 +101,7 @@ def main(argv):
         stale.unlink()
 
     missing, attachments = 0, set()
-    for name in weapons:
+    for name in [w for w in weapons if w not in MARKER_WEAPONS]:
         source = find(search, "weapons", name)
         if source is None:
             print(f"{name}: NOT FOUND in any addpath")
@@ -114,6 +125,16 @@ def main(argv):
         print(f"{name}: {source.parent.parent.name}: {'; '.join(notes) or 'unchanged'}")
         for listed in ATTACHMENT_LIST.finditer(text):
             attachments.update(re.findall(r'"([^"]+)"', listed.group(1)))
+
+    for name in [w for w in weapons if w in MARKER_WEAPONS]:
+        base = out_dir / "weapons" / f"{MARKER_WEAPONS[name]}.json"
+        if not base.is_file():
+            print(f"{name}: its base weapon {MARKER_WEAPONS[name]} is not in the recipe")
+            missing += 1
+            continue
+        text = WEAPON_NAME.sub(lambda m: f'{m.group(1)}"{name}"', base.read_text(encoding="utf-8"))
+        (out_dir / "weapons" / f"{name}.json").write_text(text, encoding="utf-8")
+        print(f"{name}: copy of {MARKER_WEAPONS[name]}")
 
     for name in sorted(attachments):
         source = find(search, "attachments", name)
