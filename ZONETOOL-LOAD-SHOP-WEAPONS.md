@@ -593,8 +593,9 @@ zones) are small and skipped, so the real use is a little higher. For the curren
 
 Every other pool stays under 90% (`equipsndtable` is 1 of 1 without the pack, and the pack adds none). The fullest are
 `techset` (77% on `mp_zombie_lab`, 86% on `_ark`, 50% and 54% on `_brg` and `_h2o`) and `fx` (71% to 84%); `material`
-is at 61%, 67%, 45% and 47% in that order and `image` at 54% to 55%. Build 10's camo materials added 36 materials, 24
-images, 15 pixel shaders and one techset to the pack. The same model puts the test 3 and 4 builds at 102%
+is at 61%, 67%, 45% and 47% in that order and `image` at 54% to 55%. Compared with build 9, build 10 has 36 more
+materials (its 38 camo materials, minus the two of build 9), 24 more images, 15 more pixel shaders and one more
+techset. The same model puts the test 3 and 4 builds at 102%
 (`mp_zombie_lab`) to 109% (`_ark`, `_h2o`) of the xanim pool, which is what the
 game reported. The animations kept by **Anim overrides** are what moved the xanim column (it was 90% and 96% to 97%
 before): 497 free slots on `mp_zombie_lab` but only 86 (`_ark`), 166 (`_brg`) and 93 (`_h2o`) on the others, and
@@ -618,7 +619,7 @@ weapons, 46 attachments, 256 xmodels, 476 xsurfaces, 914 xanims, 192 fx, 924 sou
 859 are `.wav`); it holds the marker weapon, the Line Gun's effects and `wpn_linegun_*` aliases, the 38 camo materials
 of **Camos** (under `materials/m/`) and no camo table, and 160 of the 196 decoded WAVs byte for byte (the other 36 are
 not used by the current pack). In the weapon JSONs the first-person camo field names the same material as the world one
-in all 29 weapons (the Riot Shield has none), 101 `animOverrides` entries are left on the 19 weapons of **Anim
+in all 28 weapons that have one (the Riot Shield has none), 101 `animOverrides` entries are left on the 19 weapons of **Anim
 overrides**, `startAmmo` and `maxAmmo` are the values of **Ammunition**, and the XMG's swipe and kill slots of both
 hands name `vm_exo_melee_punch` (**Melee**). The attachments are the exception: the dumper loses their integer
 parameters again (**ZoneTool bugs**), so a dump shows the zeros that the repair removed, and
