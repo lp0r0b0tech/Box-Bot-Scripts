@@ -1,0 +1,166 @@
+# Exo Zombies DLC weapon shop pack: all 27 shop weapons (20 multiplayer + 7 zombie-map weapons), the Line Gun's damage
+# weapon, and what the support scripts need (exo_zombies_linegun_support.gsc, exo_zombies_microwave_support.gsc and
+# exo_zombies_riotshield_support.gsc; see the end of this file): 29 weapons in all.
+# Search order matters: the first directory that has a file wins.
+# exo_patch holds what the helper scripts generate: weapon JSONs made by patch-weapons.py (camoViewModelMaterialOverride
+# blanked, tracers set to defaulttracer, animOverrides cut down to the entries of the optics and alt-fire modes the
+# shop uses, ammunition of the multiplayer weapons raised, the melee data of the stock Zombies guns, plus the Line Gun's
+# marker weapon), sound alias overrides made by patch-sounds.py (take counts cut so the loaded_sound pool fits), the
+# Mk2/Mk15 camo materials of the weapons the retail Zombies zones have none for (patch-camos.py), and the PCM copies
+# of the FLAC sounds made by flac-to-wav.py,
+# then the zombie map zones (they define the ZM weapons and win over the commons, as in-game), then the
+# patch zone, then the base zone. techsets_common_core_mp and code_post_gfx_mp provide the
+# techset/pixel-shader files that common_mp references but does not contain.
+# eng_mp_zombie_h2o / eng_mp_zombie_ark hold only localizedstrings/ files (the Trident and LZ-52 Limbo display
+# names, which live in the per-map English zones and are not loaded while building).
+# exo_patch/localizedstrings/ZOMBIES_WEAPON_MWG ("Magnetron") is a copy of the retail string from eng_patch_code_post_gfx_zm_mp:
+# that zone is not loaded while building, and a weapon whose display-name string cannot be found makes the build fatal.
+# The built .ff then goes through camo-fix-ff.py, which fills the blanked camoViewModelMaterialOverride slots again, and
+# through fix-attachment-fields.py, which puts back the attachment values that ZoneTool's dump and build lose.
+addpath,dump\exo_patch
+addpath,dump\eng_mp_zombie_h2o
+addpath,dump\eng_mp_zombie_ark
+addpath,dump\mp_zombie_h2o
+addpath,dump\mp_zombie_ark
+addpath,dump\mp_zombie_brg
+addpath,dump\patch_common_mp
+addpath,dump\common_mp
+addpath,dump\common_zm_mp
+addpath,dump\common_zombie_mp
+addpath,dump\techsets_common_core_mp
+addpath,dump\code_post_gfx_mp
+# The MP weapons' viewmodel/worldmodel geometry (xmodel + xmodelsurfs) is DEFINED only in the stock transient zones
+# mp_vm_<weapon>_tr, mp_vm_<weapon>_2_tr, mp_wm_<weapon>_tr and mp_wm_<weapon>_2_tr; the main zones only reference it.
+# dump-tr-zones.sh dumps them, ZoneTool puts all of them into dump/weapon_models. Without it the builder copies whatever
+# the running engine holds under that name (a placeholder) and the weapon is a red box in game.
+addpath,dump\weapon_models
+
+# common_mp only
+weapon,iw5_thor_mp
+weapon,iw5_riotshieldt6_mp
+weapon,iw5_maaws_mp
+weapon,iw5_m990_mp
+weapon,iw5_stingerm7_mp
+
+# common_mp and patch_common_mp (the patch version wins through the search order)
+weapon,iw5_pbw_mp
+weapon,iw5_epm3_mp
+weapon,iw5_microdronelauncher_mp
+weapon,iw5_mors_mp
+weapon,iw5_exoxmg_mp
+
+# patch_common_mp only
+weapon,iw5_dlcgun13_mp
+weapon,iw5_dlcgun7loot0_mp
+weapon,iw5_dlcgun33_mp
+weapon,iw5_dlcgun23_mp
+weapon,iw5_dlcgun7loot6_mp
+weapon,iw5_dlcgun18_mp
+weapon,iw5_dlcgun38_mp
+weapon,iw5_dlcgun6_mp
+weapon,iw5_dlcgun6loot5_mp
+weapon,iw5_dlcgun28_mp
+
+# zombie-map weapons: mp_zombie_h2o defines the first five
+weapon,iw5_dlcgun1zm_mp
+weapon,iw5_dlcgun2zm_mp
+weapon,iw5_dlcgun3zm_mp
+weapon,iw5_dlcgun4zm_mp
+weapon,iw5_tridentzm_mp
+
+# mp_zombie_ark: Line Gun and the weapon its script fires for damage
+weapon,iw5_linegunzm_mp
+weapon,iw5_linegundamagezm_mp
+
+# exo_zombies_linegun_support.gsc makes the Line Gun deal damage on the maps that do not ship the Line Gun script, but
+# it stays off unless iw5_dlcwscamo41_mp is registered as well (patch-weapons.py writes it as a copy of
+# iw5_linegundamagezm_mp), and it then loads the three effects below and plays the two sounds itself: the traveling
+# beam, the hit/gib burst and the death burst. Without them the Line Gun fires plain bullets that do no damage.
+weapon,iw5_dlcwscamo41_mp
+fx,vfx/muzzleflash/dlc_zombies_linegun_laser
+fx,vfx/blood/dlc_zombie_line_gun_gib
+fx,vfx/muzzleflash/dlc_zombies_drone_death
+sound,wpn_linegun_beam_hi
+sound,wpn_linegun_exp
+
+# Mk2 and Mk15 camos (zmweaponlevels.csv levels 2 and 15 are camo rows 23 "toxictiger" and 24 "infected" of
+# mp/camotable.csv; column 10 of such a row picks a column of camomaterialtable.csv, which names one finished material
+# per weapon).  The retail Zombies zones define those materials only for their own weapons, and the pack cannot replace
+# the two tables (the asset of a startup zone wins over a later copy of its name; an earlier build that shipped its own
+# mp/camotable.csv showed no camo).  patch-camos.py therefore makes the materials the tables already name, from the
+# multiplayer m/<weapon>_reptile material with the toxic tiger / infected decal textures:
+#  - the six weapons whose table cells name materials that no Zombies zone defines: m/<weapon>_toxictiger and _infected;
+#  - the thirteen weapons whose cells are blank: the materials of the camo01 and camo04 rows (m/<weapon>_reptile and
+#    _lava), which exo_zombies_dlc_weapon_shop.gsc hands them as camos 19 (Mk2) and 22 (Mk15) in place of 23 and 24.
+# The Riot Shield has no row in the table and so no camo.  The seven weapons the Zombies zones already cover need nothing.
+material,m/m1911_toxictiger
+material,m/m1911_infected
+material,m/ak47_toxictiger
+material,m/ak47_infected
+material,m/m16_toxictiger
+material,m/m16_infected
+material,m/ger_mp40_dlc_toxictiger
+material,m/ger_mp40_dlc_infected
+material,m/stg44_toxictiger
+material,m/stg44_infected
+material,m/dragunov_dlc_toxictiger
+material,m/dragunov_dlc_infected
+material,m/thor_reptile
+material,m/thor_lava
+material,m/mp443_reptile
+material,m/mp443_lava
+material,m/epm3_reptile
+material,m/epm3_lava
+material,m/winchester_reptile
+material,m/winchester_lava
+material,m/m1garand_reptile
+material,m/m1garand_lava
+material,m/maaws_reptile
+material,m/maaws_lava
+material,m/mdl_reptile
+material,m/mdl_lava
+material,m/m990_reptile
+material,m/m990_lava
+material,m/fm4_reptile
+material,m/fm4_lava
+material,m/stingerm7_top_reptile
+material,m/stingerm7_top_lava
+material,m/eng_sten_dlc_reptile
+material,m/eng_sten_dlc_lava
+material,m/mors_reptile
+material,m/mors_lava
+material,m/exo_weapon_bracer_reptile
+material,m/exo_weapon_bracer_lava
+
+# Riot Shield on every Zombies map: exo_zombies_riotshield_support.gsc starts the deploy system that stock Zombies never
+# starts (maps/mp/_riotshield.gsc).  The placed shield's animations and effects are defined by common_mp only, which the
+# Zombies maps do not load (its sounds are already in common_zm_mp, its collision brush is in every Zombies map).
+xanim,npc_deployable_riotshield_stand_deploy
+xanim,npc_deployable_riotshield_stand_destroyed
+xanim,npc_deployable_riotshield_stand_shot
+xanim,npc_deployable_riotshield_stand_shot_back
+xanim,npc_deployable_riotshield_stand_melee_front
+xanim,npc_deployable_riotshield_stand_melee_back
+fx,vfx/smoke/riotshield_deploy_smoke
+fx,vfx/lights/riotshield_deploy_lights
+fx,vfx/explosion/riotshield_stun
+
+# mp_zombie_brg
+weapon,iw5_microwavezm_mp
+
+# exo_zombies_microwave_support.gsc plays the Microwave's own effects, which stock Zombies defines only on mp_zombie_brg
+# (maps/mp/zombies/weapons/_zombie_microwave_gun.gsc): the bubbling flesh of a zombie that is being cooked (five
+# effects), the explosion of its body (this effect pulls in the gib models and blood effects it uses), the flesh sounds,
+# and the beam's impact on flammable surfaces and on water (the effects for concrete and the plain beam light are
+# already there).  The explosion sound keeps one of its five FLAC takes (patch-sounds.py).
+fx,vfx/weaponimpact/xombie_flesh_microwave_bubbles_1
+fx,vfx/weaponimpact/xombie_flesh_microwave_bubbles_2
+fx,vfx/weaponimpact/xombie_flesh_microwave_bubbles_head_2
+fx,vfx/weaponimpact/xombie_flesh_microwave_bubbles_le_2
+fx,vfx/weaponimpact/xombie_flesh_microwave_bubbles_ri_2
+fx,vfx/blood/dlc_zombie_microwave_death
+fx,vfx/weaponimpact/microwave_flammable
+fx,vfx/weaponimpact/mwave_water_splash
+sound,npc_mwave_flesh_bubble
+sound,npc_mwave_flesh_expl_front
+sound,npc_mwave_flesh_expl_rear

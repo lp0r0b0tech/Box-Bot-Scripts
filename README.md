@@ -22,3 +22,26 @@ load it. Missing IDs are reported in-game and in the console. A
 Campaign-compatible fastfile/content port is still required for weapons that
 are not already available in Campaign; this GSC does not convert or create
 weapon assets.
+
+## Exo Zombies weapon shop: loading all its weapons
+
+`scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc` (the advanced version with the `mods/exo_weapons_*`
+pack logic) can only sell a weapon the game has loaded, and a GSC cannot load fastfiles. The `zonetool/` folder
+builds `exo_weapons_all.ff` (all 27 of its weapons) with [ZoneTool](https://github.com/Joelrau/x64-zt), to be
+installed as `mods/exo_weapons_all/mod.ff` and selected by starting the game with
+`+loadmod mods/exo_weapons_all` (in the CB Servers launcher: Game Settings, Advanced, Launch Options; a plain
+`+set fs_game` does not mount it).
+See [ZONETOOL-LOAD-SHOP-WEAPONS.md](ZONETOOL-LOAD-SHOP-WEAPONS.md). The built
+`.ff` is made of the game's own assets and is not in this repository. Earlier builds loaded in the game with all 27
+weapons registered. The first of them had visible defects (multiplayer weapons as red boxes, no wonder-weapon reload
+sounds, a Line Gun without projectile or damage); the retest did not mention those, but reported optics that did not
+work right, no alternate fire on the Ohm and the XMG, no Mk2 to Mk25 camos, zombies that ignored the player (a
+leftover local test script) and too little ammunition on the multiplayer weapons. The next retest asked for four
+things: bullet and zombie-death effects for the Microwave Gun, working Mk2 and Mk15 camos, melee on the multiplayer
+weapons with and without the exo suit, and a Riot Shield that can be placed on every Zombies map. The build after that
+ran in the game (the map loaded and all 27 weapons registered) and the report left three things open: the XMG's melee
+transition, the Ohm's alternate fire and the animated Mk2 and Mk15 camos. The current build targets those three and
+has not been tried in the game yet; it must be installed together with the matching shop script. Four support scripts
+go with it,
+`scripts/zm/exo_zombies_<weapon>_support.gsc` for the Line Gun, the Microwave Gun, the Riot Shield and the Trident
+(the guide says which to copy).
