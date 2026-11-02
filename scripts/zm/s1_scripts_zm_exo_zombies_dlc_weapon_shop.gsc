@@ -28,9 +28,12 @@
           a dual-wield weapon and stays dual-wield when upgraded.
           Compatible attachment upgrades follow the native Mk4/Mk7/Mk10
           thresholds and remain equipped through Mk20 and Mk25.
-        - R41 extends the native Toxic Tiger (Mk2) and Infected (Mk15)
-          materials and mappings to the imported roster without changing
-          the native Mk camo progression. The Riot Shield stays stock.
+        - The animated Toxic Tiger (Mk2) and Infected (Mk15) camos reach
+          the imported roster without changing the native Mk camo
+          progression: the pack defines the materials the stock camo
+          tables name, and the thirteen weapons whose table cells are
+          blank get them as the camo01 and camo04 rows (see
+          dlcws_mk_camo). The Riot Shield has no camo table row.
         - The Ohm's alt-fire toggle (action slot 3) is set again after the
           Ohm is bought or upgraded.
 
@@ -92,10 +95,9 @@ dlcws_loadout_init()
     }
 
     dlcws_refresh_pack_state();
-    dlcws_read_camo_rows();
+    // The pack's marker weapon says its camo materials are loaded.
     level.dlcws_nativeCamosReady = level.dlcws_packReady &&
-        dlcws_base_registered( "iw5_dlcwscamo41_mp" ) &&
-        ( level.dlcws_camoRowsReady || dlcws_retail_camo_materials_ready() );
+        dlcws_base_registered( "iw5_dlcwscamo41_mp" );
     dlcws_write_runtime_status( "gametype_init" );
     dlcws_log_camo_status();
 
@@ -122,7 +124,7 @@ dlcws_loadout_init()
     level.dlcws_loadoutsReady = true;
     if ( !level.dlcws_nativeCamosReady )
     {
-        println( "DLCWeaponShop: the pack's Mk2/Mk15 camo rows are not active (see s1/dlcws_runtime_status.log). Imported weapons keep the visible legacy fallback." );
+        println( "DLCWeaponShop: the pack's Mk2/Mk15 camo materials are not loaded. Imported weapons keep the plain camo of the previous level." );
     }
     println( "DLCWeaponShop: selected roster ready. " + level.dlcws_registeredCount +
         " of " + level.dlcws_weapons.size + " weapons can be purchased." );
@@ -699,54 +701,121 @@ dlcws_replace_attachment_token( weaponName, attachment, replacement )
     return result;
 }
 
-dlcws_camo_row_material( row )
+dlcws_camo_table_key( weaponName )
 {
-    material = tablelookupbyrow( "mp/camotable.csv", row, 8 );
-    if ( !isdefined( material ) )
+    // mp/camomaterialtable.csv lists weapons without the _mp and zm suffixes.
+    key = maps\mp\_utility::strip_suffix( weaponName, "_mp" );
+    return maps\mp\_utility::strip_suffix( key, "zm" );
+}
+
+dlcws_camo_cell( weaponName, camo )
+{
+    // The column of mp/camomaterialtable.csv that names the material of a
+    // camo: camo01 (19) 1, camo04 (22) 4, toxictiger (23) 5, infected (24) 6.
+    column = 5;
+    if ( camo == 19 )
+    {
+        column = 1;
+    }
+    else if ( camo == 22 )
+    {
+        column = 4;
+    }
+    else if ( camo == 24 )
+    {
+        column = 6;
+    }
+
+    cell = tablelookup( "mp/camomaterialtable.csv", 0, dlcws_camo_table_key( weaponName ), column );
+    if ( !isdefined( cell ) )
     {
         return "";
     }
 
-    return material;
+    return cell;
 }
 
-dlcws_read_camo_rows()
+dlcws_camo_swaps_rows( weaponName )
 {
-    // The pack's mp/camotable.csv names a global camo material for the Mk2
-    // (row 23) and Mk15 (row 24) camos, the way retail row 25 (xom01) does.
-    level.dlcws_camoRow23 = dlcws_camo_row_material( 23 );
-    level.dlcws_camoRow24 = dlcws_camo_row_material( 24 );
-    level.dlcws_camoRowsReady = level.dlcws_camoRow23 == "camo_xom1_toxic_tiger_col" &&
-        level.dlcws_camoRow24 == "camo_xom1_infected_col";
+    // Weapons whose Mk2 and Mk15 cells in the stock camo table are blank and
+    // whose camo01 and camo04 cells name a material that only the pack defines.
+    switch ( weaponName )
+    {
+        case "iw5_thor_mp":
+        case "iw5_pbw_mp":
+        case "iw5_epm3_mp":
+        case "iw5_dlcgun33_mp":
+        case "iw5_dlcgun23_mp":
+        case "iw5_maaws_mp":
+        case "iw5_microdronelauncher_mp":
+        case "iw5_m990_mp":
+        case "iw5_dlcgun38_mp":
+        case "iw5_stingerm7_mp":
+        case "iw5_dlcgun28_mp":
+        case "iw5_mors_mp":
+        case "iw5_exoxmg_mp":
+            return true;
+    }
+
+    return false;
 }
 
-dlcws_retail_camo_materials_ready()
+dlcws_mk_camo( weaponName, camo )
 {
-    // Older packs patched the per-weapon camo table instead.
-    return tablelookup( "mp/camomaterialtable.csv", 0, "iw5_exoxmg", 5 ) ==
-            "m/exo_weapon_bracer_toxictiger" &&
-        tablelookup( "mp/camomaterialtable.csv", 0, "iw5_exoxmg", 6 ) ==
-            "m/exo_weapon_bracer_infected";
+    // Camo 23 is the Mk2 (Toxic Tiger) and camo 24 the Mk15 (Infected) camo.
+    // The pack cannot replace the stock camo tables, so the imported weapons
+    // whose Mk2/Mk15 cells are blank wear the same two looks as camo 19 and
+    // camo 22; the others use 23 and 24 with the materials the pack defines
+    // under the names the table already gives them.
+    if ( !dlcws_camo_swaps_rows( weaponName ) )
+    {
+        return camo;
+    }
+
+    if ( camo == 23 )
+    {
+        return 19;
+    }
+
+    return 22;
 }
 
 dlcws_log_camo_status()
 {
-    imported = "no";
+    ready = "no";
     if ( level.dlcws_nativeCamosReady )
     {
-        imported = "yes";
+        ready = "yes";
     }
 
-    dlcws_log( "camo table row23=" + level.dlcws_camoRow23 + " row24=" + level.dlcws_camoRow24 +
-        " mk2_mk15_on_imported_weapons=" + imported );
+    blank = "";
+    foreach ( entry in level.dlcws_weapons )
+    {
+        if ( entry.weaponName == "iw5_riotshieldt6_mp" )
+        {
+            continue;
+        }
+
+        if ( dlcws_camo_cell( entry.weaponName, dlcws_mk_camo( entry.weaponName, 23 ) ) == "" ||
+             dlcws_camo_cell( entry.weaponName, dlcws_mk_camo( entry.weaponName, 24 ) ) == "" )
+        {
+            blank += " " + entry.weaponName;
+        }
+    }
+
+    if ( blank == "" )
+    {
+        blank = " none";
+    }
+
+    dlcws_log( "camo pack_materials=" + ready + " weapons_without_a_camo_material_in_the_table:" + blank );
 }
 
 dlcws_camo_has_variants( weaponName )
 {
+    // The Zombies guns: the stock Zombies zones define their Mk2/Mk15 materials.
     switch ( weaponName )
     {
-        case "iw5_em1zm_mp":
-        case "iw5_fusionzm_mp":
         case "iw5_microwavezm_mp":
         case "iw5_linegunzm_mp":
         case "iw5_tridentzm_mp":
@@ -754,17 +823,13 @@ dlcws_camo_has_variants( weaponName )
         case "iw5_dlcgun2zm_mp":
         case "iw5_dlcgun3zm_mp":
         case "iw5_dlcgun4zm_mp":
-        case "iw5_sac3_mp":
-        case "iw5_sac3zm_mp":
-        case "iw5_exocrossbow_mp":
-        case "iw5_exocrossbowzm_mp":
             return true;
     }
 
     return false;
 }
 
-dlcws_camo_for_level( weaponName, weaponLevel )
+dlcws_camo_for_level( weaponName, weaponLevel, plainOnly )
 {
     camo = maps\mp\zombies\_wall_buys::getcamoforweaponlevel( weaponName, weaponLevel );
 
@@ -783,17 +848,21 @@ dlcws_camo_for_level( weaponName, weaponLevel )
         return camo;
     }
 
-    if ( dlcws_camo_has_variants( weaponName ) )
+    if ( !isdefined( plainOnly ) || !plainOnly )
     {
-        return camo;
+        if ( dlcws_camo_has_variants( weaponName ) )
+        {
+            return camo;
+        }
+
+        if ( isdefined( level.dlcws_nativeCamosReady ) && level.dlcws_nativeCamosReady )
+        {
+            return dlcws_mk_camo( weaponName, camo );
+        }
     }
 
-    if ( isdefined( level.dlcws_nativeCamosReady ) && level.dlcws_nativeCamosReady )
-    {
-        return camo;
-    }
-
-    // Older packs lack these materials; never grant an invisible legacy weapon.
+    // Without the pack's materials a table cell would name a missing material
+    // and the weapon would be invisible, so take the plain camo of an earlier level.
     for ( previousLevel = int( weaponLevel ) - 1; previousLevel >= 0; previousLevel-- )
     {
         fallback = maps\mp\zombies\_wall_buys::getcamoforweaponlevel( weaponName, previousLevel );
@@ -808,8 +877,47 @@ dlcws_camo_for_level( weaponName, weaponLevel )
 
 dlcws_weapon_name_for_level( weaponName, weaponLevel, dualWield )
 {
+    result = dlcws_build_weapon_name( weaponName, weaponLevel, dualWield, false );
+    if ( !isdefined( level.dlcws_weaponEntries[weaponName] ) )
+    {
+        return result;
+    }
+
+    camo = maps\mp\zombies\_wall_buys::getcamoforweaponlevel( weaponName, weaponLevel );
+    if ( camo != 23 && camo != 24 )
+    {
+        return result;
+    }
+
+    baseName = getweaponbasename( result );
+    if ( isdefined( baseName ) && baseName == weaponName )
+    {
+        dlcws_log_once( "camo_" + weaponName + "_" + camo, "camo " + camo + " loadout " + result );
+        return result;
+    }
+
+    // The game refused the Mk camo variant; a refused name would not be given at all.
+    plain = dlcws_build_weapon_name( weaponName, weaponLevel, dualWield, true );
+    plainBase = getweaponbasename( plain );
+    if ( plain != result && isdefined( plainBase ) && plainBase == weaponName )
+    {
+        shownBase = "";
+        if ( isdefined( baseName ) )
+        {
+            shownBase = baseName;
+        }
+        dlcws_log_once( "camo_refused_" + weaponName, "camo variant " + result + " resolved to base '" +
+            shownBase + "', using " + plain );
+        return plain;
+    }
+
+    return result;
+}
+
+dlcws_build_weapon_name( weaponName, weaponLevel, dualWield, plainCamo )
+{
     attachments = dlcws_upgrade_attachments( weaponName, weaponLevel );
-    camo = dlcws_camo_for_level( weaponName, weaponLevel );
+    camo = dlcws_camo_for_level( weaponName, weaponLevel, plainCamo );
     baseName = maps\mp\_utility::strip_suffix( weaponName, "_mp" );
     result = maps\mp\gametypes\_class::buildweaponname(
         baseName, attachments[0], attachments[1], attachments[2], camo, 0 );
@@ -828,10 +936,6 @@ dlcws_weapon_name_for_level( weaponName, weaponLevel, dualWield )
     {
         // buildweaponname always appends the akimbo attachment for these bases.
         result = dlcws_replace_attachment_token( result, dualToken, "" );
-    }
-    if ( camo == 23 || camo == 24 )
-    {
-        dlcws_log_once( "camo" + camo, "camo " + camo + " loadout " + result );
     }
     return result;
 }
