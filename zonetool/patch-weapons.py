@@ -37,9 +37,9 @@ entries the shop can use are kept; the game has not confirmed that yet.  The 101
 not ship the Line Gun script, stays off unless the weapon iw5_dlcwscamo41_mp is registered next to iw5_linegunzm_mp and
 iw5_linegundamagezm_mp (the earlier R41 pack defined it to show that its native Line Gun effects were loaded).  No stock
 zone has that weapon and the scripts only check that the name is registered, so it is written here as a copy of the
-damage weapon under the marker's name; every asset it needs is part of the pack already.  The shop's camo check also
-reads the marker, but it additionally needs two camo names in mp/camomaterialtable.csv that the stock table does not
-have, so the shop keeps its legacy camo handling.
+damage weapon under the marker's name; every asset it needs is part of the pack already.  The shop reads the marker as
+well: with it registered the shop knows that the camo materials of patch-camos.py are in the game, so the pack and the
+shop script must always be installed together (older packs carry the marker as well, but not those materials).
 
 5. Ammo.  The multiplayer weapons keep their multiplayer ammunition (the Thor 16 to start and 48 at most, the MAAWS a
 single rocket, the 1911 28 and 42), well below the stock Zombies weapons of their class.  AMMO_TARGETS raises
@@ -60,6 +60,12 @@ gives every multiplayer weapon the Zombies set, replacing only values that equal
 it in their left and right-handed animation sets, as the stock Zombies pistol does.  The Riot Shield (its own bash
 animations), the stock Zombies guns and hasTransientModels (the models come from the pack and show correctly) stay as
 they are.
+The XMG, which the shop sells only as a dual-wield gun, is the other exception (test 8: no proper melee transition).  Its
+animOverrides (item 3) force vm_exo_melee_punch into MELEE_ALT_STANDING and MELEE_ALT_CROUCHING of both hands, so the
+hook and the uppercut of the profile never play in the dual state, and the tactical knife model would hang in the hand
+during a punch.  It therefore keeps its multiplayer set, and hand_melee_anims() fills MELEE_SWIPE and MELEE_FATAL of its
+left and right-handed animation sets, which the multiplayer weapon leaves empty, with the same punch, the way the stock
+Zombies dual-wield gun iw5_sac3zm_mp fills them (with its knife swipe and stab).  Unconfirmed in game.
 
 The originals in dump/ are not touched.  The script reads a ZoneTool CSV, resolves every
 `weapon,<name>` through the CSV's `addpath` lines (first match wins, like ZoneTool) and writes the
@@ -149,8 +155,12 @@ ZM_MELEE_ANIMS = {  # slot: ({multiplayer animation, ...}, Zombies animation)
     "MELEE_ALT_CROUCHING": ({"vm_exo_melee_punch"}, "vm_exo_melee_uppercut_l"),
 }
 ZM_MELEE_TIMERS = {"meleeChargeTime": (1160, 1200), "meleeDelay": (130, 80), "meleeChargeDelay": (160, 100)}
-# Weapons that keep their melee data: the Riot Shield bashes with its own animations.
-MELEE_PROFILE_SKIP = {"iw5_riotshieldt6_mp"}
+# Weapons the shop sells only dual-wielded.  They keep their multiplayer melee data (a punch with both hands, no knife),
+# and hand_melee_anims() fills the one gap of their left and right-handed animation sets (item 6).
+DUAL_MELEE_WEAPONS = {"iw5_exoxmg_mp"}
+HAND_MELEE_SLOTS = ("MELEE_SWIPE", "MELEE_FATAL")
+# Weapons that keep their melee data: the Riot Shield bashes with its own animations and the dual XMG punches.
+MELEE_PROFILE_SKIP = {"iw5_riotshieldt6_mp"} | DUAL_MELEE_WEAPONS
 # weapClass of the pistols, whose left and right-handed animation sets follow the first-person set (as in the stock
 # Zombies pistol iw5_dlcgun3zm_mp); the stock Zombies guns of the other classes keep multiplayer values there.
 PISTOL_CLASS = 5
@@ -281,6 +291,28 @@ def zm_melee_profile(name, text):
     return text, changed
 
 
+def hand_melee_anims(name, text):
+    """Copy the first-person MELEE_SWIPE and MELEE_FATAL of a dual-wield weapon into its left and right-handed
+    animation sets where they are empty (item 6); returns the new text and the number of entries filled."""
+    if name not in DUAL_MELEE_WEAPONS:
+        return text, 0
+    first = json.loads(text)["szXAnims"]
+
+    def fill(body):
+        filled = 0
+        for slot in HAND_MELEE_SLOTS:
+            if first.get(slot):
+                body, found = re.subn(r'("%s"\s*:\s*)""' % slot, lambda m: f'{m.group(1)}"{first[slot]}"', body)
+                filled += found
+        return body, filled
+
+    changed = 0
+    for key in ("szXAnimsRightHanded", "szXAnimsLeftHanded"):
+        text, count = edit_object(text, key, fill)
+        changed += count
+    return text, changed
+
+
 def main(argv):
     if len(argv) != 3:
         sys.exit(__doc__)
@@ -294,9 +326,10 @@ def main(argv):
         elif fields[0] == "weapon" and len(fields) > 1:
             weapons.append(fields[1])
 
-    unknown = sorted((set(KEEP_ANIM_ATTACHMENTS) | set(AMMO_TARGETS)) - set(weapons))
+    unknown = sorted((set(KEEP_ANIM_ATTACHMENTS) | set(AMMO_TARGETS) | DUAL_MELEE_WEAPONS) - set(weapons))
     if unknown:
-        sys.exit(f"{csv_path} does not list {', '.join(unknown)}, which KEEP_ANIM_ATTACHMENTS or AMMO_TARGETS name")
+        sys.exit(f"{csv_path} does not list {', '.join(unknown)}, which KEEP_ANIM_ATTACHMENTS, AMMO_TARGETS or "
+                 f"DUAL_MELEE_WEAPONS name")
 
     (out_dir / "weapons").mkdir(parents=True, exist_ok=True)
     (out_dir / "attachments").mkdir(parents=True, exist_ok=True)
@@ -316,6 +349,7 @@ def main(argv):
         text, tracers = retarget_tracers(WEAPON_TRACER, text)
         text, overrides, kept = filter_anim_overrides(name, text)
         text, melee = zm_melee_profile(name, text)
+        text, hands = hand_melee_anims(name, text)
         ammo = []
         if name in AMMO_TARGETS:
             text, ammo = raise_ammo(name, text)
@@ -335,6 +369,8 @@ def main(argv):
             notes.append(f"animOverrides {overrides} -> {kept}")
         if melee:
             notes.append(f"melee profile ({melee} fields)")
+        if hands:
+            notes.append(f"per-hand melee animations ({hands} entries)")
         if ammo:
             notes.append(", ".join(ammo))
         print(f"{name}: {source.parent.parent.name}: {'; '.join(notes) or 'unchanged'}")

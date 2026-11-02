@@ -38,7 +38,10 @@ sounds, a Line Gun without projectile or damage); the retest did not mention tho
 work right, no alternate fire on the Ohm and the XMG, no Mk2 to Mk25 camos, zombies that ignored the player (a
 leftover local test script) and too little ammunition on the multiplayer weapons. The next retest asked for four
 things: bullet and zombie-death effects for the Microwave Gun, working Mk2 and Mk15 camos, melee on the multiplayer
-weapons with and without the exo suit, and a Riot Shield that can be placed on every Zombies map. The current build
-targets those four and has not been tried in the game yet. Four support scripts go with it,
+weapons with and without the exo suit, and a Riot Shield that can be placed on every Zombies map. The build after that
+ran in the game (the map loaded and all 27 weapons registered) and the report left three things open: the XMG's melee
+transition, the Ohm's alternate fire and the animated Mk2 and Mk15 camos. The current build targets those three and
+has not been tried in the game yet; it must be installed together with the matching shop script. Four support scripts
+go with it,
 `scripts/zm/exo_zombies_<weapon>_support.gsc` for the Line Gun, the Microwave Gun, the Riot Shield and the Trident
 (the guide says which to copy).

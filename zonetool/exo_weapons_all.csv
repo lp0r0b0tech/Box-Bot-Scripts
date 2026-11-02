@@ -6,7 +6,7 @@
 # blanked, tracers set to defaulttracer, animOverrides cut down to the entries of the optics and alt-fire modes the
 # shop uses, ammunition of the multiplayer weapons raised, the melee data of the stock Zombies guns, plus the Line Gun's
 # marker weapon), sound alias overrides made by patch-sounds.py (take counts cut so the loaded_sound pool fits), the
-# Mk2/Mk15 camo table and its two camo materials made by patch-camos.py, and the PCM copies
+# Mk2/Mk15 camo materials of the weapons the retail Zombies zones have none for (patch-camos.py), and the PCM copies
 # of the FLAC sounds made by flac-to-wav.py,
 # then the zombie map zones (they define the ZM weapons and win over the commons, as in-game), then the
 # patch zone, then the base zone. techsets_common_core_mp and code_post_gfx_mp provide the
@@ -15,7 +15,8 @@
 # names, which live in the per-map English zones and are not loaded while building).
 # exo_patch/localizedstrings/ZOMBIES_WEAPON_MWG ("Magnetron") is a copy of the retail string from eng_patch_code_post_gfx_zm_mp:
 # that zone is not loaded while building, and a weapon whose display-name string cannot be found makes the build fatal.
-# The built .ff then goes through camo-fix-ff.py, which fills the blanked camoViewModelMaterialOverride slots again.
+# The built .ff then goes through camo-fix-ff.py, which fills the blanked camoViewModelMaterialOverride slots again, and
+# through fix-attachment-fields.py, which puts back the attachment values that ZoneTool's dump and build lose.
 addpath,dump\exo_patch
 addpath,dump\eng_mp_zombie_h2o
 addpath,dump\eng_mp_zombie_ark
@@ -83,14 +84,53 @@ sound,wpn_linegun_beam_hi
 sound,wpn_linegun_exp
 
 # Mk2 and Mk15 camos (zmweaponlevels.csv levels 2 and 15 are camo rows 23 "toxictiger" and 24 "infected" of
-# mp/camotable.csv).  The retail rows point at camomaterialtable.csv, which only knows the retail weapons, so the pack's
-# weapons showed no camo.  patch-camos.py writes a copy of mp/camotable.csv whose rows 23 and 24 name the two materials
-# below, the way the retail row 25 (xom01) names camo_xom1_01; the materials are copies of camo_xom1_01 that carry the
-# toxic tiger / infected pattern image.  The table is meant to override the retail one by name (the game has not shown
-# yet that it does); exo_zombies_dlc_weapon_shop.gsc logs what the game reads back (dlcws_runtime_status.log).
-stringtable,mp/camotable.csv
-material,camo_xom1_toxic_tiger_col
-material,camo_xom1_infected_col
+# mp/camotable.csv; column 10 of such a row picks a column of camomaterialtable.csv, which names one finished material
+# per weapon).  The retail Zombies zones define those materials only for their own weapons, and the pack cannot replace
+# the two tables (the asset of a startup zone wins over a later copy of its name; an earlier build that shipped its own
+# mp/camotable.csv showed no camo).  patch-camos.py therefore makes the materials the tables already name, from the
+# multiplayer m/<weapon>_reptile material with the toxic tiger / infected decal textures:
+#  - the six weapons whose table cells name materials that no Zombies zone defines: m/<weapon>_toxictiger and _infected;
+#  - the thirteen weapons whose cells are blank: the materials of the camo01 and camo04 rows (m/<weapon>_reptile and
+#    _lava), which exo_zombies_dlc_weapon_shop.gsc hands them as camos 19 (Mk2) and 22 (Mk15) in place of 23 and 24.
+# The Riot Shield has no row in the table and so no camo.  The seven weapons the Zombies zones already cover need nothing.
+material,m/m1911_toxictiger
+material,m/m1911_infected
+material,m/ak47_toxictiger
+material,m/ak47_infected
+material,m/m16_toxictiger
+material,m/m16_infected
+material,m/ger_mp40_dlc_toxictiger
+material,m/ger_mp40_dlc_infected
+material,m/stg44_toxictiger
+material,m/stg44_infected
+material,m/dragunov_dlc_toxictiger
+material,m/dragunov_dlc_infected
+material,m/thor_reptile
+material,m/thor_lava
+material,m/mp443_reptile
+material,m/mp443_lava
+material,m/epm3_reptile
+material,m/epm3_lava
+material,m/winchester_reptile
+material,m/winchester_lava
+material,m/m1garand_reptile
+material,m/m1garand_lava
+material,m/maaws_reptile
+material,m/maaws_lava
+material,m/mdl_reptile
+material,m/mdl_lava
+material,m/m990_reptile
+material,m/m990_lava
+material,m/fm4_reptile
+material,m/fm4_lava
+material,m/stingerm7_top_reptile
+material,m/stingerm7_top_lava
+material,m/eng_sten_dlc_reptile
+material,m/eng_sten_dlc_lava
+material,m/mors_reptile
+material,m/mors_lava
+material,m/exo_weapon_bracer_reptile
+material,m/exo_weapon_bracer_lava
 
 # Riot Shield on every Zombies map: exo_zombies_riotshield_support.gsc starts the deploy system that stock Zombies never
 # starts (maps/mp/_riotshield.gsc).  The placed shield's animations and effects are defined by common_mp only, which the
