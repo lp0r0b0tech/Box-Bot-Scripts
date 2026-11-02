@@ -3,7 +3,8 @@
 # 29 weapons in all.
 # Search order matters: the first directory that has a file wins.
 # exo_patch holds what the helper scripts generate: weapon JSONs made by patch-weapons.py (camoViewModelMaterialOverride
-# blanked, tracers set to defaulttracer, animOverrides emptied, plus the Line Gun's marker weapon) and the PCM copies
+# blanked, tracers set to defaulttracer, animOverrides cut down to the entries of the optics and alt-fire modes the
+# shop uses, ammunition of the multiplayer weapons raised, plus the Line Gun's marker weapon) and the PCM copies
 # of the FLAC sounds made by flac-to-wav.py,
 # then the zombie map zones (they define the ZM weapons and win over the commons, as in-game), then the
 # patch zone, then the base zone. techsets_common_core_mp and code_post_gfx_mp provide the
@@ -12,6 +13,7 @@
 # names, which live in the per-map English zones and are not loaded while building).
 # exo_patch/localizedstrings/ZOMBIES_WEAPON_MWG ("Magnetron") is a copy of the retail string from eng_patch_code_post_gfx_zm_mp:
 # that zone is not loaded while building, and a weapon whose display-name string cannot be found makes the build fatal.
+# The built .ff then goes through camo-fix-ff.py, which fills the blanked camoViewModelMaterialOverride slots again.
 addpath,dump\exo_patch
 addpath,dump\eng_mp_zombie_h2o
 addpath,dump\eng_mp_zombie_ark

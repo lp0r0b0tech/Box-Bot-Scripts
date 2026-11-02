@@ -32,8 +32,8 @@ installed as `mods/exo_weapons_all/mod.ff` and selected by starting the game wit
 `+loadmod mods/exo_weapons_all` (in the CB Servers launcher: Game Settings, Advanced, Launch Options; a plain
 `+set fs_game` does not mount it).
 See [ZONETOOL-LOAD-SHOP-WEAPONS.md](ZONETOOL-LOAD-SHOP-WEAPONS.md). The built
-`.ff` is made of the game's own assets and is not in this repository. An earlier
-build loaded in the game with all 27 weapons registered but with visible defects
-(multiplayer weapons as red boxes, no wonder-weapon reload sounds, a Line Gun
-without projectile or damage); the current build targets them and has not been
-tried in the game yet.
+`.ff` is made of the game's own assets and is not in this repository. Earlier builds loaded in the game with all 27
+weapons registered. The first of them had visible defects (multiplayer weapons as red boxes, no wonder-weapon reload
+sounds, a Line Gun without projectile or damage); the retest did not mention those, but reported optics that did not
+work right, no alternate fire on the Ohm and the XMG, no Mk2 to Mk25 camos and too little ammunition on the
+multiplayer weapons. The current build targets those four and has not been tried in the game yet.

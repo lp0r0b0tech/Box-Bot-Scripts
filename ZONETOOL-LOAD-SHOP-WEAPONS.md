@@ -1,15 +1,20 @@
 # Loading the Exo Zombies shop weapons with a ZoneTool fastfile
 
-> **Status: the pack loads and all 27 shop weapons register in the game (test 5), but that build had three visible
-> defects. The current build targets them and has not been tried in the game yet.**
+> **Status: the pack loads and all 27 shop weapons register in the game (tests 5 and 6). Test 6 reported five more
+> problems with the previous build; the current build targets them and has not been tried in the game yet.**
 > In the game, `+set fs_game mods/exo_weapons_all` did **not** mount the pack, while `+loadmod mods/exo_weapons_all`
 > did (`s1x.exe` had `mod.ff` open). Zombies then stopped loading a map with `Exceeded limit of N '<type>' assets`
 > until the animation pool (`xanim`, N = 5800) was relieved (see **Asset pool limits while playing**). Test 5 then
 > loaded `mp_zombie_lab` with all 27 weapons registered, but the multiplayer weapons were red floating boxes (they
 > still fired), the wonder weapons had no reload sound, and the Line Gun had no visible projectile and did no damage.
-> The current build packs the multiplayer weapons' real models (**Transient zones**), the assets the Line Gun's script
-> needs (**Line Gun support**) and PCM instead of FLAC sounds (**FLAC sounds**). The pack also holds two helper
-> weapons for the Line Gun. See [Not verified](#not-verified).
+> The build tested next (test 6) packed the multiplayer weapons' real models (**Transient zones**), the assets the Line
+> Gun's script needs (**Line Gun support**) and PCM instead of FLAC sounds (**FLAC sounds**). It loaded and registered
+> all 27 weapons again, and the report named five problems: the optic attachments did not work right, the alternate
+> fire modes of the Ohm and the XMG did not work, there were no Mk2 to Mk25 Pack-a-Punch camos, zombies did not go
+> after the player (a leftover local test script, see [Not verified](#not-verified)) and the multiplayer weapons'
+> ammunition was low next to the zombie weapons'. The current build keeps the animation overrides of the optics and
+> the alternate fire modes (**Anim overrides**), fills the first-person camo slot again (**Camos**) and raises the
+> multiplayer weapons' ammunition (**Ammunition**). The pack also holds two helper weapons for the Line Gun.
 
 The shop (`scripts/zm/s1_scripts_zm_exo_zombies_dlc_weapon_shop.gsc`) can only sell a weapon the game has
 loaded. A GSC script cannot load fastfiles, and a zombies map's default fastfiles hold only a few of the shop's
@@ -77,10 +82,11 @@ added) and consists of the game's own assets, so it is **not committed**. Build 
 
 29 weapons: the 27 in the shop roster, plus two helpers for the Line Gun: `iw5_linegundamagezm_mp`, the weapon its
 script fires for damage, and `iw5_dlcwscamo41_mp`, a marker weapon that script wants registered (see **Line Gun
-support**). In total 6,979 assets: 46 attachments, 250 models with their 464 surfaces and 842 animations, 1,841 sounds
+support**). In total 7,053 assets: 46 attachments, 250 models with their 464 surfaces and 916 animations, 1,841 sounds
 (923 sound aliases and 918 loaded sounds, 917 of them PCM and one empty), 175 effects, 817 images, 462 materials,
-160 techsets and their shaders, 58 localized strings and one tracer (every weapon's tracer is set to `defaulttracer`
-and its attachment animation overrides are empty, see **Asset pool limits while playing**).
+160 techsets and their shaders, 58 localized strings and one tracer (every weapon's tracer is set to `defaulttracer`,
+and of the weapons' attachment animation overrides only the 101 entries of the optics and alternate fire modes are
+kept, see **Anim overrides**).
 
 | Taken from | Weapons (shop name = ID) |
 |---|---|
@@ -134,7 +140,8 @@ export WS="$HOME/zonetool-workspace"
   $(for w in epm3 exoxmg m990 maaws mors pbw stingerm7 thor; do echo mp_{vm,wm}_${w}{,_2}_tr; done)
 
 # 6. Add the pack source and the copied Magnetron string, then patch the weapon JSONs: blank the broken camo field,
-#    point every tracer at defaulttracer, empty the animOverrides lists and write the Line Gun's marker weapon
+#    point every tracer at defaulttracer, keep only the animOverrides entries of the optics and alternate fire modes the
+#    shop uses, raise the multiplayer weapons' ammunition and write the Line Gun's marker weapon
 #    (patch-weapons.py resolves the CSV's paths relative to the workspace, so it runs from there)
 cp -r exo_patch "$WS/dump/"
 cp exo_weapons_all.csv "$WS/zone_source/"
@@ -152,10 +159,17 @@ cp exo_weapons_all.csv "$WS/zone_source/"
 #    "FLAC sounds".
 (cd "$WS" && python3 "$OLDPWD/flac-to-wav.py" zone_source/exo_weapons_all.csv dump/exo_patch)
 ./build-verify.sh exo_weapons_all
+
+# 10. Fill the first-person camo slots, which the build leaves empty (see "Camos"). It rewrites exo_weapons_all.ff in
+#     place and keeps the unfixed build as exo_weapons_all.ff.nocamofix. Run it after the LAST build: build-verify.sh
+#     deletes the .ff before it builds.
+(cd "$WS" && python3 "$OLDPWD/camo-fix-ff.py" exo_weapons_all.ff --weapons-dir dump/exo_patch/weapons)
 ```
 
 Step 8 and the last build of step 9 end with a verdict line such as
-`exo_weapons_all: built 189722898 bytes; verify OK after 6979 assets; last=rawfile exo_weapons_all`. The result is
+`exo_weapons_all: built 189984488 bytes; verify OK after 7053 assets; last=rawfile exo_weapons_all`. Step 10 makes the
+file a little larger (189,984,662 bytes for that build) and prints its size and sha256; check the fixed file like any
+other build (**Checking a built pack**). The result is
 `$WS/exo_weapons_all.ff`; install it with `./install-pack.sh`. A run that crashed or hit an engine "Fatal Error"
 dialog says so in its verdict line and leaves a screenshot in `$WS/logs/fatal-*.png`.
 
@@ -170,9 +184,9 @@ shader. `weapon_models` is last and holds the multiplayer weapons' models (see *
 **ZoneTool bugs, and the workarounds.**
 - The FX writer emits a third decal material that does not exist and crashes `-buildzone`.
   `patch-zonetool.py` changes one byte of `zonetool.exe` (idempotent, keeps `zonetool.exe.orig`).
-- The weapon writer copies `camoViewModelMaterialOverride` as a raw pointer, which crashes the game while loading
-  the weapon. `patch-weapons.py` writes patched JSON copies with the field blanked (stock weapons do the same).
-  The viewmodel camo override of the pack's weapons is therefore empty.
+- The weapon writer copies `camoViewModelMaterialOverride` (the first-person camo material) as a raw pointer, which
+  crashes the game while loading the weapon. `patch-weapons.py` therefore writes patched JSON copies with the field
+  blanked, and `camo-fix-ff.py` fills the slot in the built zone afterwards (see **Camos**).
 - When no dump holds a model's surfaces (`xsurface::init` finds no `.xsb`), ZoneTool copies whatever the running
   engine holds under that name and prints no warning. A clean build and a passing `-verifyzone` therefore prove
   nothing about the models: use `model-closure.py` before the build and dump the finished pack (see **Checking a
@@ -239,12 +253,81 @@ game's own table is stored encoded in `s1_mp64_ship.exe`); only the xanim size h
 error message.
 
 **Anim overrides.** 709 of the first builds' 1,551 animations were referenced by the weapons only through
-`animOverrides`, the replacement first-person animations a weapon plays when a given attachment is fitted.
-`patch-weapons.py` empties that list in every weapon (`numAnimOverrides` becomes 0, which ZoneTool writes as no list,
-like a stock weapon without overrides). The pack then holds 842 animations, 792 of them not already loaded by the base
-zones, and a weapon with an attachment plays its base animations instead. If a pool is still full, the next options
-are to blank the left/right-hand animation sets of every weapon except `iw5_exoxmg_mp` (the only shop weapon with an
-akimbo variant; 122 fewer animations) and to build a pack per map without the weapons that map defines itself.
+`animOverrides`, the replacement first-person animations a weapon plays when a given set of attachments is fitted
+(the ADS-up/down of a scope, the switch into an alternate fire mode). With them the game stopped loading a map, so
+the builds of tests 5 and 6 emptied every weapon's list (`numAnimOverrides` 0, which ZoneTool writes as no list, like
+a stock weapon without overrides): 842 animations, 792 of them not already loaded by the base zones. Test 6 then
+reported optics that did not work right and no alternate fire on the Ohm and the XMG. Neither has an alternate weapon
+(`szAltWeaponName` is empty, `altWeapon` is 0, `altModeSameWeapon` is false and the pack holds no `alt_*` assets), so
+the animations of their alternate mode (`altmodeAnim`, `altTime`) are stored only in `animOverrides`. That the emptied
+lists are the cause is a reading of the data; the game has not confirmed it.
+
+`patch-weapons.py` now keeps an entry when it names at least one attachment and every attachment it names is in the
+weapon's set in `KEEP_ANIM_ATTACHMENTS`: the optic the shop fits to the weapon (it takes the optic of the stock Zombies
+weapon that stands in for it, see `dlcws_upgrade_donor` in the shop) plus the attachments the game adds by itself.
+Every other weapon keeps none:
+
+| Weapons | Attachments an entry may name | Entries kept (of) |
+|---|---|---|
+| Ohm | `sensorheartbeatzm`, `opticstargetenhancer` | 24 (45) |
+| XMG (Dual) | `akimboxmg` | 32 (32) |
+| EPM3 | `variablereddot` | 5 (35) |
+| SVO | `opticsacog2` | 5 (12) |
+| M990 | `opticsacog2` | 3 (8) |
+| MORS | `opticsacog2` | 2 (5) |
+| Trident, Line Gun | `opticstargetenhancer` | 4 each (4 each) |
+| MP443 | `opticstargetenhancer` | 2 (68) |
+| DLC Weapon I, M1 Garand, Lever Action, STG-44, AK-47, M16 | `opticseotech` | 2 each (48, 64, 78, 89, 74, 73) |
+| Microwave, MP40, Sten, Repulsor | `opticsreddot` | 2 each (36, 44, 48, 40) |
+
+That is 101 entries on 19 weapons, using 109 animations, 74 of them new to the pack. All 74 take an animation slot, so
+the pack now holds 916 animations, 866 of them not already loaded by the base zones. By the estimate below that leaves
+499 free `xanim` slots on `mp_zombie_lab` and 88 to 168 on the other maps. The 1911, DLC Weapon III, the Blunderbuss and
+the Line Gun's helper weapons keep nothing, and the Thor, Riot Shield, MAAWS, Stinger M7 and MDL have no overrides at
+all. If a pool is still full, trim `KEEP_ANIM_ATTACHMENTS` (the EPM3, SVO and Ohm entries are the cheapest to lose),
+then blank the left/right-hand animation sets of every weapon except `iw5_exoxmg_mp` (the only shop weapon with an
+akimbo variant; 122 fewer animations) and build a pack per map without the weapons that map defines itself.
+
+**Camos.** A weapon's camo is applied over one material of its model, named by `camoWorldModelMaterialOverride` (world
+model) and `camoViewModelMaterialOverride` (first-person model); that is a reading of the field names and the stock
+data. In the stock zones every weapon that names the first names the same material in the second
+(`iw5_gm6loot7_mp`, which is not in the pack, is the one exception). The ZoneTool weapon writer never converts the
+second field (see **ZoneTool bugs**), so the weapon JSON must leave it blank, and a blank field means no camo on the
+first-person weapon: test 6 had no Mk2 to Mk25 camos. `camo-fix-ff.py` (step 10) repairs the finished `.ff`. It unpacks
+the zone (a 44-byte header, one 24-byte entry per stream file, then a single zlib stream), finds each `WeaponDef`
+(0xDE8 bytes; the world override's asset reference is at offset 0x38, the first-person one at 0x40), copies the
+reference over, recompresses the zone and fixes the lengths in the header. It refuses to write anything unless it
+finds each weapon whose patched JSON has a world override exactly once (28 of the 29: the Riot Shield has none).
+`-verifyzone` accepts the result and a dump of it names the same material in both fields for all 29 weapons. Whether
+the game loads it and shows the camos is not tested. Camos 23 and 24 are a separate gap: the shop grants them only to
+weapons with Zombies variants (`dlcws_camo_has_variants`) or when its native-camo check passes
+(`level.dlcws_nativeCamosReady`; the check needs two camo-table strings that the stock table lacks, see **Line Gun
+support**), so the multiplayer weapons get the previous camo at those two steps.
+
+**Ammunition.** The multiplayer weapons keep their multiplayer ammunition (the Thor starts with 16 and holds 48 at
+most, the MAAWS has one rocket, the 1911 starts with 28 and holds 42), well below the stock Zombies weapons of their
+class, and the shop has no ammunition logic of its own. `patch-weapons.py` (`AMMO_TARGETS`) raises `startAmmo`
+(magazine plus reserve at the start) and `maxAmmo` (the reserve) of 15 of them to the values of the Zombies weapon
+that matches each one, in whole magazines; values are only ever raised and `clipSize` is not touched. In the stock
+scripts, ammo purchases and refills go up to `maxAmmo` (`weaponmaxammo`, `givemaxammo`):
+
+| Weapon | start / max (was) | Zombies weapon it follows (start / max) |
+|---|---|---|
+| Thor | 24 / 48 (16 / 48) | `gm6zm` 24 / 48 |
+| MAAWS | 2 / 10 (1 / 1) | `mahemzm` 2 / 10 |
+| M990 | 24 / 80 (20 / 80) | `gm6zm` 24 / 48 |
+| Stinger M7 | 8 / 40 (8 / 16) | `tridentzm` 5 / 40 |
+| MDL | 12 / 36 (12 / 12) | no Zombies weapon: six magazines of reserve |
+| 1911, MP443 | 42 / 70 (28 / 42), 48 / 72 (48 / 60) | `titan45zm` 40 / 65 |
+| AK-47, STG-44 | 120 / 210 (120 / 180) | `ak12zm` 120 / 210 |
+| Lever Action, M1 Garand | 80 / 120 (64 / 80, 40 / 48) | `m182sprzm` 80 / 120 |
+| MP40, Sten | 128 / 224 (128 / 192) | `sn6zm` 128 / 200, `mp11zm` 128 / 220 |
+| Repulsor | 140 / 245 (140 / 192) | `hmr9zm` 140 / 200 |
+| XMG (Dual) | 400 / 350 (400 / 300) | `asawzm` 200 / 350 |
+
+The M16 (180 / 225), the SVO (30 / 60) and the MORS (24 / 48) are already at the level of their Zombies weapons, the
+Riot Shield stays at 1 / 1, and the EPM3 and the Microwave run on a heat bar (`ammoPerShot` 0), so none of them
+changes. The new values have only been checked in a dump of the pack, not in the game.
 
 **Tracers.** The first suspect for the first `Exceeded limit` error (its pool name was not captured) was the tracer
 pool (32 slots): the weapons named 15 different tracers, 14 of them not in the base zones, and the estimate was 31 to
@@ -265,14 +348,17 @@ zones) are small and skipped, so the real use is a little higher. For the curren
 
 | Map | xanim (5,800) | loaded_sound (7,000) | localize (13,600) |
 |---|---|---|---|
-| `mp_zombie_lab` | 4,435 to 5,227 (90%) | 5,554 to 5,743 (82%) | 13,364 to 13,366 (98%) |
-| `mp_zombie_ark` | 4,846 to 5,638 (97%) | 6,065 to 6,254 (89%) | 13,433 to 13,435 (99%) |
-| `mp_zombie_brg` | 4,766 to 5,558 (96%) | 5,990 to 6,179 (88%) | 13,410 to 13,412 (99%) |
-| `mp_zombie_h2o` | 4,839 to 5,631 (97%) | 6,836 to 7,025 (**100.4%, 25 over**) | 13,421 to 13,423 (99%) |
+| `mp_zombie_lab` | 4,435 to 5,301 (91%) | 5,554 to 5,743 (82%) | 13,364 to 13,366 (98%) |
+| `mp_zombie_ark` | 4,846 to 5,712 (98%) | 6,065 to 6,254 (89%) | 13,433 to 13,435 (99%) |
+| `mp_zombie_brg` | 4,766 to 5,632 (97%) | 5,990 to 6,179 (88%) | 13,410 to 13,412 (99%) |
+| `mp_zombie_h2o` | 4,839 to 5,705 (98%) | 6,836 to 7,025 (**100.4%, 25 over**) | 13,421 to 13,423 (99%) |
 
 Every other pool stays under 90% (`equipsndtable` is 1 of 1 without the pack, and the pack adds none). The same model
 puts the test 3 and 4 builds at 102% (`mp_zombie_lab`) to 109% (`_ark`, `_h2o`) of the xanim pool, which is what the
-game reported. loaded_sound is the tightest: `mp_zombie_h2o` needs 7,025 of 7,000 if a pack asset that the first four
+game reported. The animations kept by **Anim overrides** are what moved the xanim column (it was 90% and 96% to 97%
+before): 499 free slots on `mp_zombie_lab` but only 88 (`_ark`), 168 (`_brg`) and 95 (`_h2o`) on the others, and
+up to 5,762 of 5,800 (99%) on `_ark` if the engine kept both copies of an animation that the base zones define too.
+loaded_sound is the tightest: `mp_zombie_h2o` needs 7,025 of 7,000 if a pack asset that the first four
 zones define costs nothing, as modelled, and up to 7,754 (111%) if the engine kept both copies. The pack's copies of
 the sounds of the weapons that map defines itself (`dlcgun1zm` to `4zm`, `tridentzm`) are charged in both figures: 151
 of the pack's 918 loaded sounds are also defined by `mp_zombie_h2o`. A pack for that map without those five weapons
@@ -284,15 +370,19 @@ look at what it holds. Copy it to another name first (`dumpzone` needs a `dump/<
 a command file of `loadzone common_mp`, `loadzone techsets_common_core_mp`,
 `dumpzone s1 <copy> weapon,attachment,xanim,sound,loaded_sound,fx,xmodel,xmodelsurfs` and `quit`, and run
 `console-run.sh <tag> <command file>`; it takes about 20 seconds (`assets=0` in the verdict is normal for a dump, look
-at `dumped=1`). Dumping a zone that the same process has already loaded never finishes. For the current pack the
-counts of that dump equal the build log's (29 weapons, 46 attachments, 250 xmodels, 464 xsurfaces, 842 xanims, 175 fx,
-923 sound aliases, 918 loaded sounds of which 917 are `.wav`); it holds the marker weapon, the Line Gun's effects and
-`wpn_linegun_*` aliases, and the 194 decoded WAVs byte for byte. A byte comparison of its `.xsb` surface files with the
+at `dumped=1`). Dumping a zone that the same process has already loaded never finishes. Do this after step 10, so that
+the dump is of the file that gets installed. For the current pack the counts of that dump equal the build log's (29
+weapons, 46 attachments, 250 xmodels, 464 xsurfaces, 916 xanims, 175 fx, 923 sound aliases, 918 loaded sounds of which
+917 are `.wav`); it holds the marker weapon, the Line Gun's effects and `wpn_linegun_*` aliases, and the 194 decoded
+WAVs byte for byte. In the weapon JSONs the first-person camo field names the same material as the world one in all 29
+weapons (the Riot Shield has none), 101 `animOverrides` entries are left on the 19 weapons of **Anim overrides**, and
+`startAmmo` and `maxAmmo` are the values of **Ammunition**. A byte comparison of its `.xsb` surface files with the
 stock dumps shows differences that are not defects: ZoneTool's dumper writes an array that lies inside an earlier one as
 a 9-byte reference record instead of the data, a stock surface shares its triangle indices that way, and the pack stores
 each array separately, so the pack's file is `6 * triangles - 3` bytes larger per such surface (for example 1,858
-triangles, +11,145 bytes). With the references resolved and pointer fields ignored, all 464 surfaces match the stock
-dump they were taken from (checked with a throwaway script that is not part of this directory).
+triangles, +11,145 bytes). With the references resolved and pointer fields ignored, all 464 surfaces of the test 6 pack
+match the stock dump they were taken from (checked with a throwaway script that is not part of this directory); the
+dump of the current pack holds the same 464 files with the same sizes, as the recipe's models did not change.
 
 **Running ZoneTool headless under Wine.** `run-zonetool.sh` uses DXVK's `d3d11`/`dxgi`, a private headless
 `gamescope` for Wine's display, a copied `fileSysCheck.cfg`, and a memory cap through `systemd-run`.
@@ -303,7 +393,7 @@ CSV's size is not a multiple of 4096. `-verifyzone` doubles as a cheap asset lis
 
 ## Not verified
 
-- **In-game behaviour.** Five tests so far, all through the CB Servers launcher. Test 1 started without `fs_game`
+- **In-game behaviour.** Six tests so far, all through the CB Servers launcher. Test 1 started without `fs_game`
   (the launcher passes none unless Launch Options sets it): the shop correctly logged `fs_game=` and
   `pack=not_loaded` with one weapon registered. Test 2 used `+set fs_game mods/exo_weapons_all`: the log showed
   `fs_game=mods/exo_weapons_all` but still `pack=not_loaded` on `mp_zombie_lab` with one weapon registered, so the
@@ -318,29 +408,43 @@ CSV's size is not a multiple of 4096. `-verifyzone` doubles as a cheap asset lis
   never ran in tests 3 and 4, so the log was not updated. Test 5 used the build with empty `animOverrides`:
   `mp_zombie_lab` loaded and all 27 weapons registered. In it the multiplayer weapons were red floating boxes that
   still fired, the wonder weapons had no reload sound, and the Line Gun had no visible projectile and did no damage.
-  The log's `fs_game=` and `pack=` fields show whether the shop ran against the pack.
-- **The fixes for the test 5 defects have not been tried (test 6 is pending).** What this guide says about them comes
-  from the pack's contents and the scripts, not from the game. The real models are packed and every surface matches
-  its stock dump, but how the weapons render is not known. The Line Gun script now finds all three weapons, the
-  effects and the sounds it needs, but whether it deals damage and shows the beam is not known (after a retest, look
-  for the console line `LineGunSupport: ready.`; `support stays off` means it still lacks a weapon). The PCM sounds are
-  an experiment: whether they bring the wonder weapons' reload sounds back is not known.
-- **Weapon registration.** Observed in test 5 on `mp_zombie_lab`: all 27 roster weapons registered. The mechanism is
-  read from the game binary, not observed: a custom script's `main` and `init` run while the engine still registers a
-  weapon on first use, so the shop's `getweaponbasename(<roster weapon>)` calls register every roster weapon that a
-  loaded zone defines.
+  Test 6 used the build with real models, the Line Gun's marker weapon and PCM sounds (and still empty
+  `animOverrides`): the pack mounted, `mp_zombie_lab` loaded without a limit error and all 27 weapons registered. The
+  report was five items: optics that did not work right, no alternate fire on the Ohm and the XMG, no Mk2 to Mk25
+  camos, zombies that did not go after the player, and a request for more ammunition on the multiplayer weapons. It did
+  not mention the red boxes, the reload sounds or the Line Gun's beam and damage, so whether those are fixed is not
+  known. The zombies that ignored the player were caused by a local diagnostic script, deployed next to the shop and
+  not part of this repository, that set `zombiesignoreme`; it was taken out of the game's `scripts/zm` folder before
+  the next build. The log's `fs_game=` and `pack=` fields show whether the shop ran against the pack.
+- **The fixes for the test 6 items have not been tried (test 7 is pending).** What this guide says about them comes
+  from a dump of the finished pack and from the scripts, not from the game. The optics and the Ohm and XMG alternate
+  fire are the restored `animOverrides` entries; that the emptied lists caused them is a reading of the data, so if the
+  alternate fire is still dead, look at the `sensorheartbeatzm` and `akimboxmg` attachments next (**Anim overrides**).
+  The camo slot is filled by hand in the finished file; whether the game accepts that file and shows the camos is not
+  known, and camos 23 and 24 on the multiplayer weapons reuse an earlier camo (**Camos**). The raised ammunition is
+  only checked in the dump (**Ammunition**). The earlier fixes (real models, the Line Gun marker and its script, the
+  PCM sounds) are in the same state: the real models are packed and every surface matches its stock dump, but how the
+  weapons render is not known. The Line Gun script finds all three weapons, the effects and the sounds it needs, but
+  whether it deals damage and shows the beam is not known (after a retest, look for the console line
+  `LineGunSupport: ready.`; `support stays off` means it still lacks a weapon). The PCM sounds are an experiment:
+  whether they bring the wonder weapons' reload sounds back is not known.
+- **Weapon registration.** Observed in tests 5 and 6 on `mp_zombie_lab`: all 27 roster weapons registered. The
+  mechanism is read from the game binary, not observed: a custom script's `main` and `init` run while the engine still
+  registers a weapon on first use, so the shop's `getweaponbasename(<roster weapon>)` calls register every roster
+  weapon that a loaded zone defines.
 - **Duplicate definitions.** The Trident, Line Gun, Microwave and DLC ZM weapons are also defined by their own map
   zones, so on those maps the weapon is defined twice (later load wins, as with the patch zones). Expected to be
   harmless, not tested.
 - **Cosmetic gaps.** Six trail materials (`smoke_trail_dear`, `_m990`, `_mors`, `_ohm_machinegun`, `_sniper`,
-  `trail_epm3_plasma`) exist in no retail zone and fall back to the default material. The camo override above is empty,
-  every weapon uses `defaulttracer`, and weapons with attachments play their base animations (no `animOverrides`).
-  Fifteen sound aliases that the pack's weapons reference (for example `weap_de50_reload_npc`) are defined by no dumped
-  zone, so the pack holds them as aliases without a sound file; they look like sounds only other characters play and
-  were left alone.
-- **Pool headroom.** The estimate is a model, not a measurement. By it the xanim pool is 90% full on `mp_zombie_lab`
-  and 96% to 97% on `_ark`, `_brg` and `_h2o`, which the zones the model skips could push over, and `mp_zombie_h2o`
-  is 25 slots over in loaded_sound (7,025 of 7,000; a lighter pack for that map is described under **Estimate**). The
-  pack is also about 190 MB now, and whether the game has a size or memory limit for a mod fastfile is unknown. If a
-  map stops loading again, note the exact error text (type and N); `watch-s1x-fds.sh` shows which zones were open.
-  The options are in **Anim overrides** above.
+  `trail_epm3_plasma`) exist in no retail zone and fall back to the default material. Camos 23 and 24 of the
+  multiplayer weapons reuse an earlier camo (**Camos**), every weapon uses `defaulttracer`, and attachments other than
+  the optics and alternate fire modes of **Anim overrides** play their base animations. Fifteen sound aliases that
+  the pack's weapons reference (for example `weap_de50_reload_npc`) are defined by no dumped zone, so the pack holds
+  them as aliases without a sound file; they look like sounds only other characters play and were left alone.
+- **Pool headroom.** The estimate is a model, not a measurement. By it the xanim pool is 91% full on `mp_zombie_lab`
+  (499 free slots) and 97% to 98% on `_ark`, `_brg` and `_h2o` (88 to 168 free), which the zones the model skips could
+  push over, and `mp_zombie_h2o` is 25 slots over in loaded_sound (7,025 of 7,000; a lighter pack for that map is
+  described under **Estimate**). Only `mp_zombie_lab` has been played, and not yet with the current pack. The pack is
+  also about 190 MB now, and whether the game has a size or memory limit for a mod fastfile is unknown. If a map stops
+  loading again, note the exact error text (type and N); `watch-s1x-fds.sh` shows which zones were open. The options
+  are in **Anim overrides** above.
