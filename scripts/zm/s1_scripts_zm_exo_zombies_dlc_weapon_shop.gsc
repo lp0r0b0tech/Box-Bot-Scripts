@@ -12,6 +12,10 @@
         - Every purchase costs a flat 1000 points, deducted from
           self.score, and the chosen weapon/attachment set is handed to
           the player immediately.
+        - Weapons are given through the native zombie weapon give
+          (maps\mp\zombies\_wall_buys::givezombieweapon), so every purchase
+          gets a weapon state: it can be upgraded at the upgrade station and
+          receives the Mk2-Mk25 damage multipliers from all_weapon_damage.gsc.
 
     Controls (per player, once connected and spawned):
         Hold  [Aim] + tap [Melee]  to open the shop.
@@ -331,8 +335,12 @@ dlcws_try_purchase( player )
 
     player.score -= DLCWS_WEAPON_COST;
 
-    player giveweapon( entry.weaponName );
-    player switchtoweapon( entry.weaponName );
+    // A raw giveweapon() leaves the weapon without a weapon state, so it
+    // could not be upgraded and all_weapon_damage.gsc would treat it as Mk1.
+    // The native give creates that state, replaces the current weapon when two
+    // primaries are held, and only refills ammo (keeping the upgrade level)
+    // when the weapon is already owned.
+    maps\mp\zombies\_wall_buys::givezombieweapon( player, entry.weaponName, 0, 1 );
 
     player iprintln( "Purchased " + entry.displayName + " for " + DLCWS_WEAPON_COST + " points." );
 
