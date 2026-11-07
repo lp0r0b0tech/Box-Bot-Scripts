@@ -2,22 +2,15 @@
     All Exo Zombies weapons — direct Mk2-Mk25 damage modifier
     Advanced Warfare Exo Zombies / S1x / CBServers
 
-    Tuned for a 30,000 zombie health cap (e.g. BO2 round scaling):
-        Mk1  = native damage
-        Mk2  = 6000 base damage
-        Mk10 = 10000 base damage
-        Mk20 = 15000 base damage
-        Mk25 = 15000 base damage
-
     Progression:
-        Smooth linear +600 damage increase per mark from Mk2 through Mk25.
-        At Mk20-Mk25, headshots (x4) deal 48,000-60,000 damage (guaranteed 1-shot kill)
-        and body shots (x1) deal 12,000-15,000 damage (2-3 shots to kill capped zombies).
+        Mk1      = native damage
+        Mk2-Mk25 = native damage x AWD_MK#_MULTIPLIER (3x..49x), scaled up per round after round 25
 
     Melee weapons:
         Exo suit melee ("exo_melee_zm"), Goliath combat knife ("iw5_combatknifegoliath_mp"),
         and any MOD_MELEE hit made while holding ANY weapon (listed or not)
-        are guaranteed 1-hit kills on standard zombies, but deal configured Mk25 damage on bosses.
+        kill in a set number of hits: 1 on normal zombies, 2 on special zombies,
+        20 on bosses (AWD_MELEE_HITS_NORMAL / _SPECIAL / _BOSS).
 
         The native Exo Zombies damage callback replaces all MOD_MELEE damage with
         level.playermeleedamage / level.playerexomeleedamage AFTER the
@@ -39,10 +32,8 @@
         because the native trapmodifydamage() overwrites their damage after
         every script callback has run.
 
-    Hit-location multipliers (configurable):
-        Head / helmet = x4 (AWD_HEAD_MULTIPLIER)
-        Neck          = x5 (AWD_NECK_MULTIPLIER)
-        Other (body)  = x1 (AWD_BODY_MULTIPLIER)
+    Each upgrade has its own multiplier define (AWD_MK2_MULTIPLIER .. AWD_MK25_MULTIPLIER).
+    There are no head/neck/body hit-location multipliers.
 
     Native hook:
         level.modifyweapondamage[weaponName]
@@ -81,9 +72,46 @@
 #define AWD_DEFAULT_MK25_DAMAGE   3750
 #define AWD_ONE_HIT_MELEE_DAMAGE 250000
 
-#define AWD_HEAD_MULTIPLIER       2.0
-#define AWD_NECK_MULTIPLIER       1.5
-#define AWD_BODY_MULTIPLIER       1.0
+// Melee hits to kill (exo melee, Goliath knife, any MOD_MELEE hit).
+// Each hit deals max health / hits (rounded up), so the kill lands on exactly
+// that hit from full health. 1 = instant kill.
+#define AWD_MELEE_HITS_NORMAL         1
+#define AWD_MELEE_HITS_SPECIAL        2
+#define AWD_MELEE_HITS_BOSS           20
+
+// Per-upgrade base damage multiplier (x native damage) used before round scaling.
+// Default = 2 * mark - 1 (Mk2 = 3x ... Mk25 = 49x). Edit each value freely.
+// From AWD_SCALE_START_ROUND onward the multiplier is further multiplied by
+// AWD_SCALE_RATE ^ ( ( round - start ) * mark / 25 ), so higher tiers keep pace
+// with zombie health growth while low tiers fall behind.
+#define AWD_SCALE_START_ROUND     25
+#define AWD_SCALE_RATE            1.065
+#define AWD_SCALE_MAX_ROUNDS      150
+#define AWD_MAX_DAMAGE            2000000000
+#define AWD_MK2_MULTIPLIER 3.0
+#define AWD_MK3_MULTIPLIER 5.0
+#define AWD_MK4_MULTIPLIER 7.0
+#define AWD_MK5_MULTIPLIER 9.0
+#define AWD_MK6_MULTIPLIER 11.0
+#define AWD_MK7_MULTIPLIER 13.0
+#define AWD_MK8_MULTIPLIER 15.0
+#define AWD_MK9_MULTIPLIER 17.0
+#define AWD_MK10_MULTIPLIER 19.0
+#define AWD_MK11_MULTIPLIER 21.0
+#define AWD_MK12_MULTIPLIER 23.0
+#define AWD_MK13_MULTIPLIER 25.0
+#define AWD_MK14_MULTIPLIER 27.0
+#define AWD_MK15_MULTIPLIER 29.0
+#define AWD_MK16_MULTIPLIER 31.0
+#define AWD_MK17_MULTIPLIER 33.0
+#define AWD_MK18_MULTIPLIER 35.0
+#define AWD_MK19_MULTIPLIER 37.0
+#define AWD_MK20_MULTIPLIER 39.0
+#define AWD_MK21_MULTIPLIER 41.0
+#define AWD_MK22_MULTIPLIER 43.0
+#define AWD_MK23_MULTIPLIER 45.0
+#define AWD_MK24_MULTIPLIER 47.0
+#define AWD_MK25_MULTIPLIER 49.0
 
 #define AWD_HOOK_WAIT_SECONDS     30
 #define AWD_MONITOR_INTERVAL      1.0
@@ -578,6 +606,92 @@ awd_is_one_hit_melee( weaponName, weapon, meansOfDeath )
 
 
 /*
+    Normal zombies are the basic walker/dog types; every other non-boss
+    zombie type counts as special. Edit this list to reclassify types.
+*/
+awd_is_normal_zombie( victim )
+{
+    if ( !isdefined( victim ) ||
+         !isdefined( victim.agent_type ) )
+    {
+        return true;
+    }
+
+    agentType = tolower( victim.agent_type );
+
+    return agentType == "zombie_generic" ||
+           agentType == "zombie_host" ||
+           agentType == "zombie_dog";
+}
+
+
+/*
+    Melee damage by target class: normal / special / boss hit counts.
+*/
+awd_get_melee_damage(
+    victim,
+    weaponName,
+    hitLocation
+)
+{
+    if ( awd_is_boss( victim ) )
+    {
+        hits = AWD_MELEE_HITS_BOSS;
+    }
+    else if ( awd_is_normal_zombie( victim ) )
+    {
+        hits = AWD_MELEE_HITS_NORMAL;
+    }
+    else
+    {
+        hits = AWD_MELEE_HITS_SPECIAL;
+    }
+
+    if ( hits <= 1 )
+    {
+        if ( awd_is_boss( victim ) )
+        {
+            return AWD_ONE_HIT_MELEE_DAMAGE;
+        }
+
+        return awd_get_one_hit_damage(
+            victim,
+            weaponName,
+            hitLocation
+        );
+    }
+
+    maxHealth = 0;
+
+    if ( isdefined( victim ) )
+    {
+        if ( isdefined( victim.maxhealth ) && victim.maxhealth > 0 )
+        {
+            maxHealth = victim.maxhealth;
+        }
+        else if ( isdefined( victim.health ) && victim.health > 0 )
+        {
+            maxHealth = victim.health;
+        }
+    }
+
+    if ( maxHealth <= 0 )
+    {
+        return AWD_ONE_HIT_MELEE_DAMAGE;
+    }
+
+    damage = int( maxHealth / hits ) + 1;
+
+    if ( damage > AWD_MAX_DAMAGE )
+    {
+        damage = AWD_MAX_DAMAGE;
+    }
+
+    return damage;
+}
+
+
+/*
     1-hit damage (melee, exo slam, grenades, equipment, rockets,
     turrets, killstreaks, and map traps):
         Standard zombies = guaranteed 1-hit kill.
@@ -621,12 +735,7 @@ awd_get_one_hit_damage(
             weaponName
         );
 
-    return int(
-        awd_apply_hit_location_multiplier(
-            baseDamage,
-            hitLocation
-        )
-    );
+    return int( baseDamage );
 }
 
 
@@ -712,7 +821,7 @@ awd_agent_modify_damage(
         }
 
         finalDamage =
-            awd_get_one_hit_damage(
+            awd_get_melee_damage(
                 victim,
                 weaponName,
                 hitLocation
@@ -995,6 +1104,31 @@ awd_is_boss( victim )
 */
 awd_init_weapon_damage()
 {
+    level.awd_mark_multiplier[2] = AWD_MK2_MULTIPLIER;
+    level.awd_mark_multiplier[3] = AWD_MK3_MULTIPLIER;
+    level.awd_mark_multiplier[4] = AWD_MK4_MULTIPLIER;
+    level.awd_mark_multiplier[5] = AWD_MK5_MULTIPLIER;
+    level.awd_mark_multiplier[6] = AWD_MK6_MULTIPLIER;
+    level.awd_mark_multiplier[7] = AWD_MK7_MULTIPLIER;
+    level.awd_mark_multiplier[8] = AWD_MK8_MULTIPLIER;
+    level.awd_mark_multiplier[9] = AWD_MK9_MULTIPLIER;
+    level.awd_mark_multiplier[10] = AWD_MK10_MULTIPLIER;
+    level.awd_mark_multiplier[11] = AWD_MK11_MULTIPLIER;
+    level.awd_mark_multiplier[12] = AWD_MK12_MULTIPLIER;
+    level.awd_mark_multiplier[13] = AWD_MK13_MULTIPLIER;
+    level.awd_mark_multiplier[14] = AWD_MK14_MULTIPLIER;
+    level.awd_mark_multiplier[15] = AWD_MK15_MULTIPLIER;
+    level.awd_mark_multiplier[16] = AWD_MK16_MULTIPLIER;
+    level.awd_mark_multiplier[17] = AWD_MK17_MULTIPLIER;
+    level.awd_mark_multiplier[18] = AWD_MK18_MULTIPLIER;
+    level.awd_mark_multiplier[19] = AWD_MK19_MULTIPLIER;
+    level.awd_mark_multiplier[20] = AWD_MK20_MULTIPLIER;
+    level.awd_mark_multiplier[21] = AWD_MK21_MULTIPLIER;
+    level.awd_mark_multiplier[22] = AWD_MK22_MULTIPLIER;
+    level.awd_mark_multiplier[23] = AWD_MK23_MULTIPLIER;
+    level.awd_mark_multiplier[24] = AWD_MK24_MULTIPLIER;
+    level.awd_mark_multiplier[25] = AWD_MK25_MULTIPLIER;
+
     level.awd_default_mark_damage = [];
     level.awd_default_mark_damage[2]  = AWD_DEFAULT_MK2_DAMAGE;
     level.awd_default_mark_damage[3]  = AWD_DEFAULT_MK3_DAMAGE;
@@ -1181,7 +1315,7 @@ awd_modify_damage(
         );
 
         finalDamage =
-            awd_get_one_hit_damage(
+            awd_get_melee_damage(
                 victim,
                 weaponName,
                 hitLocation
@@ -1244,11 +1378,7 @@ awd_modify_damage(
                 weaponName
             );
 
-        finalDamage =
-            awd_apply_hit_location_multiplier(
-                baseDamage,
-                hitLocation
-            );
+        finalDamage = baseDamage;
 
         awd_debug_damage(
             weaponName,
@@ -1297,17 +1427,14 @@ awd_modify_damage(
         weaponName
     );
 
-    baseDamage =
-        awd_get_base_damage(
-            weaponName,
-            weaponLevel
-        );
+    baseDamage = damage;
+    finalDamage = damage * awd_get_scaled_multiplier( weaponLevel );
 
-    finalDamage =
-        awd_apply_hit_location_multiplier(
-            baseDamage,
-            hitLocation
-        );
+    if ( finalDamage > AWD_MAX_DAMAGE )
+    {
+        finalDamage = AWD_MAX_DAMAGE;
+    }
+
 
     awd_debug_damage(
         weaponName,
@@ -1533,28 +1660,68 @@ awd_get_base_damage(
 }
 
 
-awd_apply_hit_location_multiplier(
-    baseDamage,
-    hitLocation
-)
+awd_get_mark_multiplier( mark )
 {
-    if ( !isdefined( hitLocation ) )
+    if ( isdefined( level.awd_mark_multiplier ) &&
+         isdefined( level.awd_mark_multiplier[mark] ) )
     {
-        return int( baseDamage * AWD_BODY_MULTIPLIER );
+        return level.awd_mark_multiplier[mark];
     }
 
-    if ( hitLocation == "head" ||
-         hitLocation == "helmet" )
+    return 1.0 + 2.0 * ( mark - 1 );
+}
+
+
+awd_get_current_round()
+{
+    if ( isdefined( level.wavecounter ) )
     {
-        return int( baseDamage * AWD_HEAD_MULTIPLIER );
+        return level.wavecounter;
     }
 
-    if ( hitLocation == "neck" )
+    if ( isdefined( level.round_number ) )
     {
-        return int( baseDamage * AWD_NECK_MULTIPLIER );
+        return level.round_number;
     }
 
-    return int( baseDamage * AWD_BODY_MULTIPLIER );
+    if ( isdefined( level.currentroundnumber ) )
+    {
+        return level.currentroundnumber;
+    }
+
+    return 1;
+}
+
+
+/*
+    Round-scaled multiplier for an upgrade tier.
+    Below AWD_SCALE_START_ROUND only the per-mark base multiplier applies.
+*/
+awd_get_scaled_multiplier( mark )
+{
+    multiplier = awd_get_mark_multiplier( mark );
+    roundsOver = awd_get_current_round() - AWD_SCALE_START_ROUND;
+
+    if ( roundsOver <= 0 )
+    {
+        return multiplier;
+    }
+
+    if ( roundsOver > AWD_SCALE_MAX_ROUNDS )
+    {
+        roundsOver = AWD_SCALE_MAX_ROUNDS;
+    }
+
+    exponent = roundsOver * mark / AWD_MAX_CUSTOM_MARK;
+    whole = int( exponent );
+    frac = exponent - whole;
+
+    for ( i = 0; i < whole; i++ )
+    {
+        multiplier *= AWD_SCALE_RATE;
+    }
+
+    return multiplier * ( 1.0 + frac * ( AWD_SCALE_RATE - 1.0 ) );
 }
 
 
