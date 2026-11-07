@@ -3,6 +3,9 @@
     Advanced Warfare Exo Zombies / S1x / CBServers
 
     Progression:
+        Every weapon has its own native hit damage, and each upgrade
+        multiplies that weapon's own native damage (there are no shared
+        flat damage values), so a stronger weapon stays stronger at every tier.
         Mk1      = native damage
         Mk2-Mk25 = native damage x AWD_MK#_MULTIPLIER (3x..49x), scaled up per round after round 25
 
@@ -22,8 +25,9 @@
     Max-damage weapons:
         Exo slam ("boost_slam_mp"), grenades, equipment, rockets, turrets,
         killstreak weapons, and every map trap weapon are guaranteed 1-hit /
-        1-shot kills on standard zombies, but deal configured Mk25 damage
-        on bosses.
+        1-shot kills on standard zombies, but deal their own native damage
+        x the Mk25 multiplier on bosses. The special guns (line gun, trident,
+        microwave gun) always deal their native damage x the Mk25 multiplier.
 
         The 1-hit damage is enforced twice: in level.modifyweapondamage and
         again in level.modifydamagebyagenttype[agentType], which the native
@@ -46,30 +50,6 @@
 #define AWD_MIN_CUSTOM_MARK       2
 #define AWD_MAX_CUSTOM_MARK       25
 
-#define AWD_DEFAULT_MK2_DAMAGE    3750
-#define AWD_DEFAULT_MK3_DAMAGE    3750
-#define AWD_DEFAULT_MK4_DAMAGE    3750
-#define AWD_DEFAULT_MK5_DAMAGE    3750
-#define AWD_DEFAULT_MK6_DAMAGE    3750
-#define AWD_DEFAULT_MK7_DAMAGE    3750
-#define AWD_DEFAULT_MK8_DAMAGE    3750
-#define AWD_DEFAULT_MK9_DAMAGE    3750
-#define AWD_DEFAULT_MK10_DAMAGE   3750
-#define AWD_DEFAULT_MK11_DAMAGE   3750
-#define AWD_DEFAULT_MK12_DAMAGE   3750
-#define AWD_DEFAULT_MK13_DAMAGE   3750
-#define AWD_DEFAULT_MK14_DAMAGE   3750
-#define AWD_DEFAULT_MK15_DAMAGE   3750
-#define AWD_DEFAULT_MK16_DAMAGE   3750
-#define AWD_DEFAULT_MK17_DAMAGE   3750
-#define AWD_DEFAULT_MK18_DAMAGE   3750
-#define AWD_DEFAULT_MK19_DAMAGE   3750
-#define AWD_DEFAULT_MK20_DAMAGE   3750
-#define AWD_DEFAULT_MK21_DAMAGE   3750
-#define AWD_DEFAULT_MK22_DAMAGE   3750
-#define AWD_DEFAULT_MK23_DAMAGE   3750
-#define AWD_DEFAULT_MK24_DAMAGE   3750
-#define AWD_DEFAULT_MK25_DAMAGE   3750
 #define AWD_ONE_HIT_MELEE_DAMAGE 250000
 
 // Melee hits to kill (exo melee, Goliath knife, any MOD_MELEE hit).
@@ -81,11 +61,12 @@
 
 // Per-upgrade base damage multiplier (x native damage) used before round scaling.
 // Default = 2 * mark - 1 (Mk2 = 3x ... Mk25 = 49x). Edit each value freely.
-// From AWD_SCALE_START_ROUND onward the multiplier is further multiplied by
-// AWD_SCALE_RATE ^ ( ( round - start ) * mark / 25 ), so higher tiers keep pace
-// with zombie health growth while low tiers fall behind.
+// From AWD_SCALE_START_ROUND onward the multiplier grows every round by a factor of
+// ( 1 + AWD_SCALE_RATE * mark / 25 ): AWD_SCALE_RATE (6.5%) per round at Mk25 and
+// proportionally less for lower tiers, so higher tiers keep pace with zombie health
+// growth while low tiers fall behind.
 #define AWD_SCALE_START_ROUND     25
-#define AWD_SCALE_RATE            1.065
+#define AWD_SCALE_RATE            0.065
 #define AWD_SCALE_MAX_ROUNDS      150
 #define AWD_MAX_DAMAGE            2000000000
 #define AWD_MK2_MULTIPLIER 3.0
@@ -280,11 +261,11 @@ awd_init_weapon_list()
 /*
     Grenades, equipment, rockets, turrets, killstreak weapons,
     exo slam, and map traps are guaranteed 1-hit / 1-shot kills on
-    standard zombies (configured Mk25 damage on bosses), even if they
-    do not have a normal player weaponstate entry.
+    standard zombies (their native damage x the Mk25 multiplier on
+    bosses), even if they do not have a normal player weaponstate entry.
 
-    The listed special guns keep the previous behavior: they always
-    use configured Mk25 damage.
+    The listed special guns always use their native damage x the Mk25
+    multiplier.
 */
 awd_init_max_damage_weapons()
 {
@@ -416,7 +397,7 @@ awd_init_max_damage_weapons()
     );
 
     /*
-        Special weapons forced to direct Mk25 behavior.
+        Special weapons forced to Mk25 multiplier behavior.
     */
     awd_add_max_damage_weapon(
         "iw5_linegunzm_mp"
@@ -514,8 +495,9 @@ awd_add_max_damage_weapon( weaponName )
 
 
 /*
-    One-hit weapons are also max-damage weapons: the Mk25 damage is
-    still used against bosses, which are never 1-hit killed.
+    One-hit weapons are also max-damage weapons: their native damage
+    x the Mk25 multiplier is still used against bosses, which are never
+    1-hit killed.
 */
 awd_add_one_hit_weapon( weaponName )
 {
@@ -656,8 +638,7 @@ awd_get_melee_damage(
 
         return awd_get_one_hit_damage(
             victim,
-            weaponName,
-            hitLocation
+            0
         );
     }
 
@@ -695,12 +676,11 @@ awd_get_melee_damage(
     1-hit damage (melee, exo slam, grenades, equipment, rockets,
     turrets, killstreaks, and map traps):
         Standard zombies = guaranteed 1-hit kill.
-        Bosses           = configured Mk25 damage with hit-location multiplier.
+        Bosses           = the weapon's own native damage x the Mk25 multiplier.
 */
 awd_get_one_hit_damage(
     victim,
-    weaponName,
-    hitLocation
+    nativeDamage
 )
 {
     if ( !awd_is_boss( victim ) )
@@ -728,14 +708,10 @@ awd_get_one_hit_damage(
     }
 
     /*
-        Target is a boss: do not 1-hit kill. Use configured Mk25 damage.
+        Target is a boss: do not 1-hit kill. Multiply the weapon's own
+        native damage by the Mk25 multiplier.
     */
-    baseDamage =
-        awd_get_mk25_damage(
-            weaponName
-        );
-
-    return int( baseDamage );
+    return awd_get_mk25_damage( nativeDamage );
 }
 
 
@@ -870,11 +846,21 @@ awd_agent_modify_damage(
 
         if ( awd_is_one_hit_weapon( weaponName ) )
         {
+            /*
+                The incoming damage was rescaled by the native callback,
+                so use the native hit damage saved by awd_modify_damage.
+            */
+            nativeDamage =
+                awd_get_saved_native_damage(
+                    victim,
+                    weaponName,
+                    damage
+                );
+
             finalDamage =
                 awd_get_one_hit_damage(
                     victim,
-                    weaponName,
-                    hitLocation
+                    nativeDamage
                 );
 
             awd_debug_damage(
@@ -882,7 +868,7 @@ awd_agent_modify_damage(
                 AWD_MAX_CUSTOM_MARK,
                 hitLocation,
                 damage,
-                finalDamage,
+                nativeDamage,
                 finalDamage
             );
 
@@ -1097,13 +1083,13 @@ awd_is_boss( victim )
 
 
 /*
-    Configure default direct-damage ranges.
-
-    Standard weapons scale across Mk2 (1,200) to Mk25 (15,000).
-    You can override individual weapons here.
+    Per-upgrade multiplier table and the set of weapons this script
+    modifies. Damage itself always comes from each weapon's own native
+    hit damage, so there are no per-weapon damage values to configure.
 */
 awd_init_weapon_damage()
 {
+    level.awd_mark_multiplier = [];
     level.awd_mark_multiplier[2] = AWD_MK2_MULTIPLIER;
     level.awd_mark_multiplier[3] = AWD_MK3_MULTIPLIER;
     level.awd_mark_multiplier[4] = AWD_MK4_MULTIPLIER;
@@ -1129,48 +1115,13 @@ awd_init_weapon_damage()
     level.awd_mark_multiplier[24] = AWD_MK24_MULTIPLIER;
     level.awd_mark_multiplier[25] = AWD_MK25_MULTIPLIER;
 
-    level.awd_default_mark_damage = [];
-    level.awd_default_mark_damage[2]  = AWD_DEFAULT_MK2_DAMAGE;
-    level.awd_default_mark_damage[3]  = AWD_DEFAULT_MK3_DAMAGE;
-    level.awd_default_mark_damage[4]  = AWD_DEFAULT_MK4_DAMAGE;
-    level.awd_default_mark_damage[5]  = AWD_DEFAULT_MK5_DAMAGE;
-    level.awd_default_mark_damage[6]  = AWD_DEFAULT_MK6_DAMAGE;
-    level.awd_default_mark_damage[7]  = AWD_DEFAULT_MK7_DAMAGE;
-    level.awd_default_mark_damage[8]  = AWD_DEFAULT_MK8_DAMAGE;
-    level.awd_default_mark_damage[9]  = AWD_DEFAULT_MK9_DAMAGE;
-    level.awd_default_mark_damage[10] = AWD_DEFAULT_MK10_DAMAGE;
-    level.awd_default_mark_damage[11] = AWD_DEFAULT_MK11_DAMAGE;
-    level.awd_default_mark_damage[12] = AWD_DEFAULT_MK12_DAMAGE;
-    level.awd_default_mark_damage[13] = AWD_DEFAULT_MK13_DAMAGE;
-    level.awd_default_mark_damage[14] = AWD_DEFAULT_MK14_DAMAGE;
-    level.awd_default_mark_damage[15] = AWD_DEFAULT_MK15_DAMAGE;
-    level.awd_default_mark_damage[16] = AWD_DEFAULT_MK16_DAMAGE;
-    level.awd_default_mark_damage[17] = AWD_DEFAULT_MK17_DAMAGE;
-    level.awd_default_mark_damage[18] = AWD_DEFAULT_MK18_DAMAGE;
-    level.awd_default_mark_damage[19] = AWD_DEFAULT_MK19_DAMAGE;
-    level.awd_default_mark_damage[20] = AWD_DEFAULT_MK20_DAMAGE;
-    level.awd_default_mark_damage[21] = AWD_DEFAULT_MK21_DAMAGE;
-    level.awd_default_mark_damage[22] = AWD_DEFAULT_MK22_DAMAGE;
-    level.awd_default_mark_damage[23] = AWD_DEFAULT_MK23_DAMAGE;
-    level.awd_default_mark_damage[24] = AWD_DEFAULT_MK24_DAMAGE;
-    level.awd_default_mark_damage[25] = AWD_DEFAULT_MK25_DAMAGE;
-
-    level.awd_weapon_damage = [];
+    level.awd_known_weapons = [];
 
     foreach ( weaponName in level.awd_weapon_list )
     {
-        level.awd_weapon_damage[weaponName] = [];
-
-        level.awd_weapon_damage[weaponName]["mk2"] =
-            AWD_DEFAULT_MK2_DAMAGE;
-
-        level.awd_weapon_damage[weaponName]["mk25"] =
-            AWD_DEFAULT_MK25_DAMAGE;
+        level.awd_known_weapons[weaponName] = 1;
     }
 
-    /*
-        Max-damage weapons also receive a damage configuration.
-    */
     maxWeapons =
         getArrayKeys(
             level.awd_max_damage_weapons
@@ -1178,40 +1129,8 @@ awd_init_weapon_damage()
 
     foreach ( weaponName in maxWeapons )
     {
-        if ( !isdefined(
-                level.awd_weapon_damage[weaponName]
-            ) )
-        {
-            level.awd_weapon_damage[weaponName] = [];
-
-            level.awd_weapon_damage[weaponName]["mk2"] =
-                AWD_DEFAULT_MK2_DAMAGE;
-
-            level.awd_weapon_damage[weaponName]["mk25"] =
-                AWD_DEFAULT_MK25_DAMAGE;
-        }
+        level.awd_known_weapons[weaponName] = 1;
     }
-
-    /*
-        Optional per-weapon overrides.
-
-        Uncomment and edit these if certain weapons need
-        different Mk2/Mk25 values.
-    */
-
-    /*
-    level.awd_weapon_damage["iw5_titan45zm_mp"]["mk2"] = 1200;
-    level.awd_weapon_damage["iw5_titan45zm_mp"]["mk25"] = 15000;
-
-    level.awd_weapon_damage["iw5_gm6zm_mp"]["mk2"] = 2400;
-    level.awd_weapon_damage["iw5_gm6zm_mp"]["mk25"] = 20000;
-
-    level.awd_weapon_damage["iw5_linegunzm_mp"]["mk2"] = 3000;
-    level.awd_weapon_damage["iw5_linegunzm_mp"]["mk25"] = 25000;
-
-    level.awd_weapon_damage["iw5_tridentzm_mp"]["mk2"] = 3000;
-    level.awd_weapon_damage["iw5_tridentzm_mp"]["mk25"] = 25000;
-    */
 }
 
 
@@ -1249,12 +1168,15 @@ awd_register_all_weapons()
 /*
     Generic Exo Zombies weapon-damage callback.
 
+    The incoming damage is the weapon's own native hit damage, so every
+    result below is relative to that specific weapon.
+
     For normal weapons:
-        Mk1  = native damage
-        Mk2-Mk25 = direct configured damage
+        Mk1      = native damage
+        Mk2-Mk25 = native damage x that upgrade's multiplier
 
     For max-damage weapons:
-        always use configured Mk25 damage
+        always native damage x the Mk25 multiplier
 */
 awd_modify_damage(
     victim,
@@ -1344,11 +1266,16 @@ awd_modify_damage(
             weaponName
         );
 
+        awd_save_native_damage(
+            victim,
+            weaponName,
+            damage
+        );
+
         finalDamage =
             awd_get_one_hit_damage(
                 victim,
-                weaponName,
-                hitLocation
+                damage
             );
 
         awd_debug_damage(
@@ -1356,7 +1283,7 @@ awd_modify_damage(
             AWD_MAX_CUSTOM_MARK,
             hitLocation,
             damage,
-            finalDamage,
+            damage,
             finalDamage
         );
 
@@ -1364,7 +1291,8 @@ awd_modify_damage(
     }
 
     /*
-        Listed special weapons always receive Mk25 damage.
+        Listed special weapons always receive their native damage
+        x the Mk25 multiplier.
     */
     if ( awd_is_max_damage_weapon( weaponName ) )
     {
@@ -1373,30 +1301,28 @@ awd_modify_damage(
             weaponName
         );
 
-        baseDamage =
+        finalDamage =
             awd_get_mk25_damage(
-                weaponName
+                damage
             );
-
-        finalDamage = baseDamage;
 
         awd_debug_damage(
             weaponName,
             AWD_MAX_CUSTOM_MARK,
             hitLocation,
             damage,
-            baseDamage,
+            damage,
             finalDamage
         );
 
-        return int( finalDamage );
+        return finalDamage;
     }
 
     /*
         If this weapon is not configured, preserve native damage.
     */
     if ( !isdefined(
-            level.awd_weapon_damage[weaponName]
+            level.awd_known_weapons[weaponName]
         ) )
     {
         return damage;
@@ -1427,25 +1353,22 @@ awd_modify_damage(
         weaponName
     );
 
-    baseDamage = damage;
-    finalDamage = damage * awd_get_scaled_multiplier( weaponLevel );
-
-    if ( finalDamage > AWD_MAX_DAMAGE )
-    {
-        finalDamage = AWD_MAX_DAMAGE;
-    }
-
+    finalDamage =
+        awd_apply_mark_multiplier(
+            damage,
+            weaponLevel
+        );
 
     awd_debug_damage(
         weaponName,
         weaponLevel,
         hitLocation,
         damage,
-        baseDamage,
+        damage,
         finalDamage
     );
 
-    return int( finalDamage );
+    return finalDamage;
 }
 
 
@@ -1455,7 +1378,7 @@ awd_modify_damage(
 awd_get_damage_weapon_name( weaponName )
 {
     if ( isdefined(
-            level.awd_weapon_damage[weaponName]
+            level.awd_known_weapons[weaponName]
         ) )
     {
         return weaponName;
@@ -1530,133 +1453,87 @@ awd_disable_stock_multiplier(
 
 
 /*
-    Return the configured Mk25 value.
-
-    Grenades and killstreaks use this value regardless of their
-    weapon-state level.
+    The per-agent hook runs after the native callback has rescaled the
+    damage (equipment, killstreak, melee), so remember each one-hit
+    weapon's native hit damage for it. Both hooks run in the same
+    server frame, which keeps a stale value from being reused.
 */
-awd_get_mk25_damage( weaponName )
+awd_save_native_damage(
+    victim,
+    weaponName,
+    nativeDamage
+)
 {
-    if ( isdefined(
-            level.awd_weapon_damage[weaponName]
-        ) &&
-        isdefined(
-            level.awd_weapon_damage[weaponName]["mk25"]
-        ) )
+    if ( !isdefined( victim ) )
     {
-        return level.awd_weapon_damage[weaponName]["mk25"];
+        return;
     }
 
-    return AWD_DEFAULT_MK25_DAMAGE;
+    victim.awd_native_damage = nativeDamage;
+    victim.awd_native_weapon = weaponName;
+    victim.awd_native_time = gettime();
+}
+
+
+awd_get_saved_native_damage(
+    victim,
+    weaponName,
+    fallbackDamage
+)
+{
+    if ( isdefined( victim ) &&
+         isdefined( victim.awd_native_time ) &&
+         victim.awd_native_time == gettime() &&
+         isdefined( victim.awd_native_weapon ) &&
+         victim.awd_native_weapon == weaponName )
+    {
+        return victim.awd_native_damage;
+    }
+
+    return fallbackDamage;
 }
 
 
 /*
-    Upgrade damage calculation:
+    Multiply a weapon's own native hit damage by an upgrade tier's
+    multiplier (per-mark multiplier x round scaling), capped at
+    AWD_MAX_DAMAGE.
 
-        Mk2  = configured Mk2 damage (default 1200)
-        Mk20 = configured Mk20 damage (default 12000)
-        Mk25 = configured Mk25 damage (default 15000)
+        Mk2  = native damage x AWD_MK2_MULTIPLIER
+        Mk25 = native damage x AWD_MK25_MULTIPLIER
 
-    Standard weapons use the defined mark table (AWD_DEFAULT_MK#_DAMAGE).
-    Weapons with custom overrides interpolate between their mk2 and mk25 values.
+    Each weapon therefore scales from its own native damage.
 */
-awd_get_base_damage(
-    weaponName,
+awd_apply_mark_multiplier(
+    nativeDamage,
     mark
 )
 {
-    if ( mark < AWD_MIN_CUSTOM_MARK )
+    finalDamage =
+        nativeDamage *
+        awd_get_scaled_multiplier( mark );
+
+    if ( finalDamage > AWD_MAX_DAMAGE )
     {
-        mark = AWD_MIN_CUSTOM_MARK;
+        finalDamage = AWD_MAX_DAMAGE;
     }
 
-    if ( mark > AWD_MAX_CUSTOM_MARK )
-    {
-        mark = AWD_MAX_CUSTOM_MARK;
-    }
+    return int( finalDamage );
+}
 
-    /*
-        Per-weapon mark override.
-    */
-    if ( isdefined( level.awd_weapon_damage ) &&
-         isdefined( level.awd_weapon_damage[weaponName] ) &&
-         isdefined( level.awd_weapon_damage[weaponName][mark] ) )
-    {
-        return level.awd_weapon_damage[weaponName][mark];
-    }
 
-    /*
-        If custom per-weapon mk2 and mk25 overrides were set.
-    */
-    if ( isdefined( level.awd_weapon_damage ) &&
-         isdefined( level.awd_weapon_damage[weaponName] ) &&
-         isdefined( level.awd_weapon_damage[weaponName]["mk2"] ) &&
-         isdefined( level.awd_weapon_damage[weaponName]["mk25"] ) &&
-         ( level.awd_weapon_damage[weaponName]["mk2"] != AWD_DEFAULT_MK2_DAMAGE ||
-           level.awd_weapon_damage[weaponName]["mk25"] != AWD_DEFAULT_MK25_DAMAGE ) )
-    {
-        mk2Damage =
-            level.awd_weapon_damage[weaponName]["mk2"];
+/*
+    Return the weapon's native damage x the Mk25 multiplier.
 
-        mk25Damage =
-            level.awd_weapon_damage[weaponName]["mk25"];
-
-        markRange =
-            AWD_MAX_CUSTOM_MARK -
-            AWD_MIN_CUSTOM_MARK;
-
-        damageRange =
-            mk25Damage -
-            mk2Damage;
-
-        return mk2Damage +
-            int(
-                (
-                    (
-                        ( mark - AWD_MIN_CUSTOM_MARK ) *
-                        damageRange
-                    ) +
-                    int( markRange / 2 )
-                ) /
-                markRange
-            );
-    }
-
-    /*
-        Default per-mark damage lookup.
-    */
-    if ( isdefined( level.awd_default_mark_damage ) &&
-         isdefined( level.awd_default_mark_damage[mark] ) )
-    {
-        return level.awd_default_mark_damage[mark];
-    }
-
-    mk2Damage =
-        AWD_DEFAULT_MK2_DAMAGE;
-
-    mk25Damage =
-        AWD_DEFAULT_MK25_DAMAGE;
-
-    markRange =
-        AWD_MAX_CUSTOM_MARK -
-        AWD_MIN_CUSTOM_MARK;
-
-    damageRange =
-        mk25Damage -
-        mk2Damage;
-
-    return mk2Damage +
-        int(
-            (
-                (
-                    ( mark - AWD_MIN_CUSTOM_MARK ) *
-                    damageRange
-                ) +
-                int( markRange / 2 )
-            ) /
-            markRange
-        );
+    Grenades, killstreaks, traps, and the forced-Mk25 special guns use
+    this value regardless of their weapon-state level.
+*/
+awd_get_mk25_damage( nativeDamage )
+{
+    return awd_apply_mark_multiplier(
+        nativeDamage,
+        AWD_MAX_CUSTOM_MARK
+    );
 }
 
 
@@ -1694,8 +1571,13 @@ awd_get_current_round()
 
 
 /*
-    Round-scaled multiplier for an upgrade tier.
+    Round-scaled multiplier for an upgrade tier:
+
+        multiplier x ( 1 + AWD_SCALE_RATE * mark / 25 ) ^ ( round - 25 )
+
     Below AWD_SCALE_START_ROUND only the per-mark base multiplier applies.
+    The per-round growth is looped instead of using a power function so
+    it does not depend on one being available in the script engine.
 */
 awd_get_scaled_multiplier( mark )
 {
@@ -1712,16 +1594,14 @@ awd_get_scaled_multiplier( mark )
         roundsOver = AWD_SCALE_MAX_ROUNDS;
     }
 
-    exponent = roundsOver * mark / AWD_MAX_CUSTOM_MARK;
-    whole = int( exponent );
-    frac = exponent - whole;
+    growth = 1.0 + AWD_SCALE_RATE * mark / AWD_MAX_CUSTOM_MARK;
 
-    for ( i = 0; i < whole; i++ )
+    for ( i = 0; i < roundsOver; i++ )
     {
-        multiplier *= AWD_SCALE_RATE;
+        multiplier = multiplier * growth;
     }
 
-    return multiplier * ( 1.0 + frac * ( AWD_SCALE_RATE - 1.0 ) );
+    return multiplier;
 }
 
 
