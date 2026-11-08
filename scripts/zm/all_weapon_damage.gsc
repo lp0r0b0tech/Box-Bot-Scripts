@@ -7,7 +7,21 @@
         multiplies that weapon's own native damage (there are no shared
         flat damage values), so a stronger weapon stays stronger at every tier.
         Mk1      = native damage
-        Mk2-Mk25 = native damage x AWD_MK#_MULTIPLIER (3x..49x), scaled up per round after round 25
+        Mk2-Mk25 = native damage x AWD_MK#_MULTIPLIER (3x..49x) up to round 25,
+                   then scaled with zombie health (see below)
+
+    Infinite health scaling:
+        Native zombie health never stops growing: 150 on round 1, +100 per
+        round up to round 9 (950), then +10% every round from round 10 on.
+        After AWD_SCALE_START_ROUND each upgrade's multiplier is also multiplied by
+        ( zombie health growth since that round ) ^ AWD_MK#_TRACKING:
+            Mk25 (tracking 1.00)  damage grows exactly as fast as zombie health, so
+                                  its hits-to-kill stay the same on every round
+            Mk13 (tracking 0.52)  grows about like the square root of zombie health
+                                  and slowly falls behind
+            Mk2  (tracking 0.08)  barely grows and falls off in the late rounds
+        There is no round limit. One hit is capped at AWD_MAX_DAMAGE (just under the
+        32-bit int limit); zombie health itself reaches that limit around round 160.
 
     Melee weapons:
         Exo suit melee ("exo_melee_zm"), Goliath combat knife ("iw5_combatknifegoliath_mp"),
@@ -59,16 +73,8 @@
 #define AWD_MELEE_HITS_SPECIAL        2
 #define AWD_MELEE_HITS_BOSS           20
 
-// Per-upgrade base damage multiplier (x native damage) used before round scaling.
+// Per-upgrade base damage multiplier (x native damage), used up to AWD_SCALE_START_ROUND.
 // Default = 2 * mark - 1 (Mk2 = 3x ... Mk25 = 49x). Edit each value freely.
-// From AWD_SCALE_START_ROUND onward the multiplier grows every round by a factor of
-// ( 1 + AWD_SCALE_RATE * mark / 25 ): AWD_SCALE_RATE (6.5%) per round at Mk25 and
-// proportionally less for lower tiers, so higher tiers keep pace with zombie health
-// growth while low tiers fall behind.
-#define AWD_SCALE_START_ROUND     25
-#define AWD_SCALE_RATE            0.065
-#define AWD_SCALE_MAX_ROUNDS      150
-#define AWD_MAX_DAMAGE            2000000000
 #define AWD_MK2_MULTIPLIER 3.0
 #define AWD_MK3_MULTIPLIER 5.0
 #define AWD_MK4_MULTIPLIER 7.0
@@ -93,6 +99,52 @@
 #define AWD_MK23_MULTIPLIER 45.0
 #define AWD_MK24_MULTIPLIER 47.0
 #define AWD_MK25_MULTIPLIER 49.0
+
+// Infinite health scaling. After AWD_SCALE_START_ROUND every upgrade multiplier is also
+// multiplied by ( zombie health growth since that round ) ^ tracking, so damage keeps
+// pace with the native zombie health curve, which has no cap:
+//     round 1 = 150, rounds 2-9 = +100 per round, round 10+ = 950 x 1.1 ^ ( round - 9 )
+//
+// AWD_MK#_TRACKING is how much of that growth each upgrade keeps:
+//     1.00      = grows exactly as fast as zombie health (hits to kill never change)
+//     0.50      = grows like the square root of zombie health (slowly falls behind)
+//     0.00      = never grows past its base multiplier
+//     above 1.0 = gets stronger relative to zombie health every round
+// Default = mark / 25 (Mk2 = 0.08 ... Mk25 = 1.00). Edit each value freely.
+//
+// AWD_HEALTH_GROWTH_RATE: native zombie health growth per round from round 10 (10%).
+// AWD_HEALTH_CAP: 0 = native uncapped health. If bo2_emz_combined.gsc caps zombie health
+//                 (scr_bo2_health_cap, default 30000), set the same value here so damage
+//                 stops growing when zombie health does.
+// AWD_MAX_DAMAGE: largest single hit (the 32-bit int limit is 2147483647).
+#define AWD_SCALE_START_ROUND     25
+#define AWD_HEALTH_GROWTH_RATE    0.10
+#define AWD_HEALTH_CAP            0
+#define AWD_MAX_DAMAGE            2000000000
+#define AWD_MK2_TRACKING 0.08
+#define AWD_MK3_TRACKING 0.12
+#define AWD_MK4_TRACKING 0.16
+#define AWD_MK5_TRACKING 0.20
+#define AWD_MK6_TRACKING 0.24
+#define AWD_MK7_TRACKING 0.28
+#define AWD_MK8_TRACKING 0.32
+#define AWD_MK9_TRACKING 0.36
+#define AWD_MK10_TRACKING 0.40
+#define AWD_MK11_TRACKING 0.44
+#define AWD_MK12_TRACKING 0.48
+#define AWD_MK13_TRACKING 0.52
+#define AWD_MK14_TRACKING 0.56
+#define AWD_MK15_TRACKING 0.60
+#define AWD_MK16_TRACKING 0.64
+#define AWD_MK17_TRACKING 0.68
+#define AWD_MK18_TRACKING 0.72
+#define AWD_MK19_TRACKING 0.76
+#define AWD_MK20_TRACKING 0.80
+#define AWD_MK21_TRACKING 0.84
+#define AWD_MK22_TRACKING 0.88
+#define AWD_MK23_TRACKING 0.92
+#define AWD_MK24_TRACKING 0.96
+#define AWD_MK25_TRACKING 1.00
 
 #define AWD_HOOK_WAIT_SECONDS     30
 #define AWD_MONITOR_INTERVAL      1.0
@@ -1115,6 +1167,32 @@ awd_init_weapon_damage()
     level.awd_mark_multiplier[24] = AWD_MK24_MULTIPLIER;
     level.awd_mark_multiplier[25] = AWD_MK25_MULTIPLIER;
 
+    level.awd_mark_tracking = [];
+    level.awd_mark_tracking[2] = AWD_MK2_TRACKING;
+    level.awd_mark_tracking[3] = AWD_MK3_TRACKING;
+    level.awd_mark_tracking[4] = AWD_MK4_TRACKING;
+    level.awd_mark_tracking[5] = AWD_MK5_TRACKING;
+    level.awd_mark_tracking[6] = AWD_MK6_TRACKING;
+    level.awd_mark_tracking[7] = AWD_MK7_TRACKING;
+    level.awd_mark_tracking[8] = AWD_MK8_TRACKING;
+    level.awd_mark_tracking[9] = AWD_MK9_TRACKING;
+    level.awd_mark_tracking[10] = AWD_MK10_TRACKING;
+    level.awd_mark_tracking[11] = AWD_MK11_TRACKING;
+    level.awd_mark_tracking[12] = AWD_MK12_TRACKING;
+    level.awd_mark_tracking[13] = AWD_MK13_TRACKING;
+    level.awd_mark_tracking[14] = AWD_MK14_TRACKING;
+    level.awd_mark_tracking[15] = AWD_MK15_TRACKING;
+    level.awd_mark_tracking[16] = AWD_MK16_TRACKING;
+    level.awd_mark_tracking[17] = AWD_MK17_TRACKING;
+    level.awd_mark_tracking[18] = AWD_MK18_TRACKING;
+    level.awd_mark_tracking[19] = AWD_MK19_TRACKING;
+    level.awd_mark_tracking[20] = AWD_MK20_TRACKING;
+    level.awd_mark_tracking[21] = AWD_MK21_TRACKING;
+    level.awd_mark_tracking[22] = AWD_MK22_TRACKING;
+    level.awd_mark_tracking[23] = AWD_MK23_TRACKING;
+    level.awd_mark_tracking[24] = AWD_MK24_TRACKING;
+    level.awd_mark_tracking[25] = AWD_MK25_TRACKING;
+
     level.awd_known_weapons = [];
 
     foreach ( weaponName in level.awd_weapon_list )
@@ -1571,37 +1649,119 @@ awd_get_current_round()
 
 
 /*
+    Zombie health on a round as the game calculates it for the standard
+    zombie class (maps\mp\gametypes\zombies::calculatezombiehealth), which
+    has no upper limit. AWD_HEALTH_CAP > 0 stops it growing at that value for
+    setups that cap zombie health.
+*/
+awd_get_zombie_health( round )
+{
+    if ( round <= 1 )
+    {
+        health = 150.0;
+    }
+    else if ( round <= 9 )
+    {
+        health = 150.0 + ( round - 1 ) * 100.0;
+    }
+    else
+    {
+        health = 950.0 * pow( 1.0 + AWD_HEALTH_GROWTH_RATE, round - 9 );
+    }
+
+    if ( AWD_HEALTH_CAP > 0 && health > AWD_HEALTH_CAP )
+    {
+        health = AWD_HEALTH_CAP;
+    }
+
+    return health;
+}
+
+
+/*
+    How much of the zombie health growth an upgrade tier keeps pace with.
+    1.0 = its damage grows exactly as fast as zombie health.
+*/
+awd_get_mark_tracking( mark )
+{
+    if ( isdefined( level.awd_mark_tracking ) &&
+         isdefined( level.awd_mark_tracking[mark] ) )
+    {
+        return level.awd_mark_tracking[mark];
+    }
+
+    return 1.0 * mark / AWD_MAX_CUSTOM_MARK;
+}
+
+
+/*
+    Growth of an upgrade tier's multiplier on a round:
+
+        ( zombie health on the round / zombie health on AWD_SCALE_START_ROUND ) ^ tracking
+
+    The result is cached per round and tier, so a hit only costs an array
+    lookup. It is limited to AWD_MAX_DAMAGE, which any hit would be capped
+    to anyway, so extreme rounds can never overflow into infinity or NaN.
+*/
+awd_get_round_growth(
+    mark,
+    round
+)
+{
+    if ( !isdefined( level.awd_growth_round ) ||
+         level.awd_growth_round != round )
+    {
+        level.awd_growth_round = round;
+        level.awd_growth_cache = [];
+    }
+
+    if ( !isdefined( level.awd_growth_cache[mark] ) )
+    {
+        healthGrowth =
+            awd_get_zombie_health( round ) /
+            awd_get_zombie_health( AWD_SCALE_START_ROUND );
+
+        growth =
+            pow(
+                healthGrowth,
+                awd_get_mark_tracking( mark )
+            );
+
+        if ( growth > AWD_MAX_DAMAGE )
+        {
+            growth = AWD_MAX_DAMAGE;
+        }
+
+        level.awd_growth_cache[mark] = growth;
+    }
+
+    return level.awd_growth_cache[mark];
+}
+
+
+/*
     Round-scaled multiplier for an upgrade tier:
 
-        multiplier x ( 1 + AWD_SCALE_RATE * mark / 25 ) ^ ( round - 25 )
+        base multiplier x round growth
 
-    Below AWD_SCALE_START_ROUND only the per-mark base multiplier applies.
-    The per-round growth is looped instead of using a power function so
-    it does not depend on one being available in the script engine.
+    Up to AWD_SCALE_START_ROUND only the per-mark base multiplier applies.
+    There is no upper round limit.
 */
 awd_get_scaled_multiplier( mark )
 {
     multiplier = awd_get_mark_multiplier( mark );
-    roundsOver = awd_get_current_round() - AWD_SCALE_START_ROUND;
+    round = awd_get_current_round();
 
-    if ( roundsOver <= 0 )
+    if ( round <= AWD_SCALE_START_ROUND )
     {
         return multiplier;
     }
 
-    if ( roundsOver > AWD_SCALE_MAX_ROUNDS )
-    {
-        roundsOver = AWD_SCALE_MAX_ROUNDS;
-    }
-
-    growth = 1.0 + AWD_SCALE_RATE * mark / AWD_MAX_CUSTOM_MARK;
-
-    for ( i = 0; i < roundsOver; i++ )
-    {
-        multiplier = multiplier * growth;
-    }
-
-    return multiplier;
+    return multiplier *
+        awd_get_round_growth(
+            mark,
+            round
+        );
 }
 
 
